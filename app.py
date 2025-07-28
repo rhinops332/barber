@@ -1,1 +1,370 @@
+import os
+import json
+from datetime import datetime, timedelta
+from flask import Flask, request, jsonify, render_template as original_render_template, redirect, session, g
+import smtplib
+from email.message import EmailMessage
 
+app = Flask(__name__)
+app.secret_key = os.getenv("SECRET_KEY", "default_secret")
+
+# קבצים
+WEEKLY_SCHEDULE_FILE = "weekly_schedule.json"
+OVERRIDES_FILE = "overrides.json"
+BOT_KNOWLEDGE_FILE = "bot_knowledge.txt"
+APPOINTMENTS_FILE = "appointments.json"
+
+# שירותים ומחירים
+services_prices = {
+    "Men's Haircut": 80,
+    "Women's Haircut": 120,
+    "Blow Dry": 70,
+    "Color": 250
+}
+
+# --- פונקציות עזר ---
+
+def load_json(filename):
+    if not os.path.exists(filename):
+        return {}
+    with open(filename, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def save_json(filename, data):
+    with open(filename, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+def load_text(filename):
+    if not os.path.exists(filename):
+        return ""
+    with open(filename, "r", encoding="utf-8") as f:
+        return f.read()
+
+def save_text(filename, content):
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(content.strip())
+
+def load_appointments():
+    return load_json(APPOINTMENTS_FILE)
+
+def save_appointments(data):
+    save_json(APPOINTMENTS_FILE, data)
+
+# --- יצירת רשימת שעות שבועית עם שינויים ---
+
+def generate_week_slots():
+    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
+    overrides = load_json(OVERRIDES_FILE)
+    today = datetime.today()
+    week_slots = {}
+
+    heb_days = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
+
+    for i in range(7):
+        current_date = today + timedelta(days=i)
+        date_str = current_date.strftime("%Y-%m-%d")
+        weekday = current_date.weekday()  # 0=Monday ... 6=Sunday
+        day_name = heb_days[weekday]
+
+        day_key = str(weekday)
+        scheduled_times = weekly_schedule.get(day_key, [])
+
+        override = overrides.get(date_str, {"add": [], "remove": []})
+        add_times = override.get("add", [])
+        remove_times = override.get("remove", [])
+
+        final_times = sorted(set(scheduled_times + add_times) - set(remove_times))
+        week_slots[date_str] = {
+            "day_name": day_name,
+            "times": final_times
+        }
+
+    return week_slots
+
+def is_slot_available(date, time):
+    week_slots = generate_week_slots()
+    day_info = week_slots.get(date)
+    if not day_info:
+        return False
+    return time in day_info["times"]
+
+# --- לפני כל בקשה - העברת session ל-g ---
+
+@app.before_request
+def before_request():
+    g.username = session.get('username')
+    g.is_admin = session.get('is_admin')
+
+# --- החלפת render_template ---
+
+def render_template(template_name_or_list, **context):
+    context['session'] = {
+        'username': g.get('username'),
+        'is_admin': g.get('is_admin')
+    }
+    return original_render_template(template_name_or_list, **context)
+
+# --- ניהול התחברות ---
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    error = None
+    admin_user = os.environ.get("ADMIN_USERNAME", "admin")
+    admin_password = os.environ.get("ADMIN_PASSWORD", "1234")
+
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "").strip()
+
+        if username == admin_user and password == admin_password:
+            session['username'] = username
+            session['is_admin'] = True
+            return redirect("/admin_command")
+        else:
+            error = "שם משתמש או סיסמה שגויים"
+
+    return render_template("login.html", error=error)
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/login")
+
+# --- דף ניהול ראשי ---
+
+@app.route("/admin_command", methods=["GET"])
+def admin_command():
+    if not session.get("is_admin"):
+        return redirect("/login")
+
+    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
+    overrides = load_json(OVERRIDES_FILE)
+    week_slots = generate_week_slots()
+    bot_knowledge = load_text(BOT_KNOWLEDGE_FILE)
+    appointments = load_appointments()
+
+    return render_template("admin_command.html",
+                           weekly_schedule=weekly_schedule,
+                           overrides=overrides,
+                           week_slots=week_slots,
+                           bot_knowledge=bot_knowledge,
+                           appointments=appointments)
+
+# --- ניהול שגרה שבועית ---
+
+@app.route("/weekly_schedule", methods=["POST"])
+def update_weekly_schedule():
+    if not session.get("is_admin"):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    data = request.get_json()
+    action = data.get("action")
+    day_key = data.get("day_key")
+    time = data.get("time")
+    new_time = data.get("new_time")
+
+    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
+
+    if day_key not in [str(i) for i in range(7)]:
+        return jsonify({"error": "Invalid day key"}), 400
+
+    day_times = weekly_schedule.get(day_key, [])
+
+    if action == "add" and time:
+        if time not in day_times:
+            day_times.append(time)
+            day_times.sort()
+            weekly_schedule[day_key] = day_times
+    elif action == "remove" and time:
+        if time in day_times:
+            day_times.remove(time)
+            weekly_schedule[day_key] = day_times
+    elif action == "edit" and time and new_time:
+        if time in day_times:
+            day_times.remove(time)
+            if new_time not in day_times:
+                day_times.append(new_time)
+                day_times.sort()
+            weekly_schedule[day_key] = day_times
+    else:
+        return jsonify({"error": "Invalid action or missing time"}), 400
+
+    save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
+    return jsonify({"message": "Weekly schedule updated", "weekly_schedule": weekly_schedule})
+
+# --- ניהול שינויים חד פעמיים (overrides) ---
+
+@app.route("/overrides", methods=["POST"])
+def update_overrides():
+    if not session.get("is_admin"):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    data = request.get_json()
+    action = data.get("action")
+    date = data.get("date")
+    time = data.get("time")
+
+    overrides = load_json(OVERRIDES_FILE)
+    day_override = overrides.get(date, {"add": [], "remove": []})
+
+    if action == "add":
+        if time and time not in day_override["add"]:
+            day_override["add"].append(time)
+            if time in day_override["remove"]:
+                day_override["remove"].remove(time)
+    elif action == "remove":
+        if time and time not in day_override["remove"]:
+            day_override["remove"].append(time)
+            if time in day_override["add"]:
+                day_override["add"].remove(time)
+    elif action == "clear":
+        overrides.pop(date, None)
+        save_json(OVERRIDES_FILE, overrides)
+        return jsonify({"message": f"Overrides cleared for {date}"})
+
+    else:
+        return jsonify({"error": "Invalid action"}), 400
+
+    overrides[date] = day_override
+    save_json(OVERRIDES_FILE, overrides)
+    return jsonify({"message": "Overrides updated", "overrides": overrides})
+
+# --- ניהול טקסט ידע של הבוט ---
+
+@app.route("/bot_knowledge", methods=["GET", "POST"])
+def bot_knowledge():
+    if not session.get("is_admin"):
+        return redirect("/login")
+
+    if request.method == "POST":
+        content = request.form.get("content", "")
+        save_text(BOT_KNOWLEDGE_FILE, content)
+        return redirect("/admin_command")
+
+    content = load_text(BOT_KNOWLEDGE_FILE)
+    return render_template("bot_knowledge.html", content=content)
+
+# --- ניהול הזמנות ---
+
+@app.route("/book", methods=["POST"])
+def book_appointment():
+    data = request.get_json()
+    name = data.get("name", "").strip()
+    phone = data.get("phone", "").strip()
+    date = data.get("date", "").strip()
+    time = data.get("time", "").strip()
+    service = data.get("service", "").strip()
+
+    if not all([name, phone, date, time, service]):
+        return jsonify({"error": "Missing fields"}), 400
+
+    if service not in services_prices:
+        return jsonify({"error": "Unknown service"}), 400
+
+    if not is_slot_available(date, time):
+        return jsonify({"error": "This time slot is not available"}), 400
+
+    appointments = load_appointments()
+    date_appointments = appointments.get(date, [])
+
+    # בדיקה אם השעה תפוסה
+    for appt in date_appointments:
+        if appt["time"] == time:
+            return jsonify({"error": "This time slot is already booked"}), 400
+
+    appointment = {
+        "name": name,
+        "phone": phone,
+        "time": time,
+        "service": service,
+        "price": services_prices[service]
+    }
+    date_appointments.append(appointment)
+    appointments[date] = date_appointments
+    save_appointments(appointments)
+
+    try:
+        send_email(name, phone, date, time, service, services_prices[service])
+    except Exception as e:
+        print("Error sending email:", e)
+
+    return jsonify({"message": f"Appointment booked for {date} at {time} for {service}."})
+
+# --- שליחת אימייל ---
+
+def send_email(name, phone, date, time, service, price):
+    msg = EmailMessage()
+    msg.set_content(f"""
+New appointment booked:
+
+Name: {name}
+Phone: {phone}
+Date: {date}
+Time: {time}
+Service: {service}
+Price: {price}₪
+""")
+    msg['Subject'] = f'New Appointment - {name}'
+    msg['From'] = 'nextwaveaiandweb@gmail.com'  # שנה למייל שלך
+    msg['To'] = 'nextwaveaiandweb@gmail.com'    # שנה למייל שלך
+
+    try:
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        server.login('nextwaveaiandweb@gmail.com', 'vmhb kmke ptlk kdzs')  # שנה לסיסמה/טוקן שלך
+        server.send_message(msg)
+        server.quit()
+        print("Email sent successfully")
+    except Exception as e:
+        print("Failed to send email:", e)
+
+# --- דף הצגת תורים (מנהל בלבד) ---
+
+@app.route("/appointments")
+def view_appointments():
+    if not session.get("is_admin"):
+        return redirect("/login")
+    appointments = load_appointments()
+    return render_template("appointments.html", appointments=appointments)
+
+# --- דף הבית ---
+
+@app.route("/")
+def index():
+    week_slots = generate_week_slots()
+    return render_template("index.html", week_slots=week_slots, services=services_prices)
+
+# --- API - החזרת זמני זמינות (לצורך הטמעה בJS) ---
+
+@app.route("/availability")
+def availability():
+    week_slots = generate_week_slots()
+    result = {}
+    for date, info in week_slots.items():
+        result[date] = info["times"]
+    return jsonify(result)
+
+# --- API - שאלות לבוט ---
+
+@app.route("/ask", methods=["POST"])
+def ask_bot():
+    data = request.get_json()
+    question = data.get("message", "").strip()
+
+    knowledge_text = load_text(BOT_KNOWLEDGE_FILE)
+
+    if not question:
+        answer = "אנא כתוב שאלה."
+    elif "שעות" in question or "תורים" in question:
+        answer = "השעות הזמינות הן לפי השגרה השבועית, אפשר לראות בדף ההזמנות."
+    elif "מחיר" in question:
+        answer = "המחירים שונים לפי השירות, למשל תספורת גברים 80 ש\"ח."
+    else:
+        answer = "מצטער, לא הבנתי את השאלה. נסה לשאול משהו אחר."
+
+    return jsonify({"answer": answer})
+
+# --- הפעלת השרת ---
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 3000))
+    app.run(host="0.0.0.0", port=port)
