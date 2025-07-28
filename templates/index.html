@@ -1,1 +1,367 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HairBoss - Book Appointment</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    max-width: 700px;
+    margin: 30px auto;
+    padding: 20px;
+    background: #f0f4ff;
+    color: #2c3e50;
+  }
+  h1, h2 {
+    text-align: center;
+    margin: 0 0 20px;
+  }
+  #days-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .day-btn {
+    padding: 12px 0;
+    border: none;
+    border-radius: 10px;
+    background: #3498db;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  .day-btn:hover, .day-btn.active {
+    background: #2980b9;
+  }
+  #availability {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .slot-btn {
+    padding: 8px 14px;
+    margin: 5px;
+    border: none;
+    border-radius: 6px;
+    background: #2ecc71;
+    color: white;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  .slot-btn.unavailable {
+    background: #bbb;
+    cursor: default;
+  }
+  .slot-btn:hover:not(.unavailable) {
+    background: #27ae60;
+  }
+  #form-container {
+    display: none;
+    margin-top: 20px;
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 0 8px #ccc;
+  }
+  form input, form select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 12px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+  }
+  form button {
+    width: 100%;
+    padding: 12px;
+    background: #2980b9;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  form button:hover {
+    background: #1f6391;
+  }
+  #response {
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  #botBtn {
+    display: block;
+    margin: 20px auto 0;
+    padding: 12px;
+    background: #27ae60;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    width: 260px;
+  }
+  #bot-window {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 320px;
+    height: 400px;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    box-shadow: 0 0 14px rgba(0,0,0,0.18);
+    padding: 10px;
+    box-sizing: border-box;
+    display: none;
+    resize: both;
+    font-size: 14px;
+  }
+  #bot-header {
+    position: relative;
+    text-align: center;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+  }
+  #bot-expand {
+    position: absolute;
+    left: 8px;
+    top: 8px;
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #555;
+  }
+  #bot-messages {
+    height: 290px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    padding: 8px;
+    background: #fafafa;
+    border-radius: 6px;
+    margin-bottom: 10px;
+  }
+  #bot-input {
+    display: flex;
+    gap: 8px;
+  }
+  #bot-input input {
+    flex-grow: 1;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+  }
+  #bot-input button {
+    background: #27ae60;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 14px;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  #bot-input button:hover {
+    background: #1e8449;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  {% if session.username %}
+    <div style="float: right; margin-top: -50px; margin-right: 10px;">
+      👤 !שלום, {{ session.username }} |
+      <a href="/logout" style="color: red; text-decoration: none;">🔓 התנתק</a>
+      {% if session.is_admin %}
+        | <a href="/admin_command" style="color: green; text-decoration: none;">🔧 ניהול</a>
+      {% endif %}
+    </div>
+  {% else %}
+    <div style="float: right; margin-top: -40px; margin-right: 10px;">
+      <a href="/login">🔐 התחברות</a>
+    </div>
+  {% endif %}
+</header>
+
+
+<h1>HairBoss ✂️</h1>
+<h2>Book Your Appointment</h2>
+
+<div id="response"></div>
+
+<div id="days-buttons"></div>
+<div id="availability"></div>
+
+<div id="form-container">
+  <form id="bookingForm">
+    <input type="text" id="name" placeholder="Full Name" required />
+    <input type="text" id="phone" placeholder="Phone Number" required />
+    <select id="service" required>
+      <option value="">Select Service</option>
+      <option>Men's Haircut</option>
+      <option>Women's Haircut</option>
+      <option>Blow Dry</option>
+      <option>Color</option>
+    </select>
+    <input type="hidden" id="date" />
+    <input type="hidden" id="time" />
+    <button type="submit">Book Appointment</button>
+  </form>
+</div>
+
+<button id="botBtn" onclick="toggleBotWindow()">Need Help? Ask Our AI Bot</button>
+
+<div id="bot-window">
+  <div id="bot-header">
+    <button id="bot-expand" onclick="resizeBot()">↕</button>
+    <h3>Ask our AI Bot</h3>
+  </div>
+  <div id="bot-messages"></div>
+  <div id="bot-input">
+    <input type="text" id="bot-user-input" placeholder="Type your question..." />
+    <button onclick="sendBotMessage()">Send</button>
+  </div>
+</div>
+
+<script>
+let allDates = [];
+let availabilityData = {};
+let chosenDate = '';
+let chosenTime = '';
+
+async function loadAvailability() {
+  const res = await fetch('/availability');
+  const data = await res.json();
+  availabilityData = data;
+  allDates = Object.keys(data);
+  createDayButtons();
+  showDayAvailability(allDates[0]);
+}
+
+function createDayButtons() {
+  const container = document.getElementById('days-buttons');
+  container.innerHTML = '';
+  allDates.forEach(dateStr => {
+    const btn = document.createElement('button');
+    btn.textContent = dateStr;
+    btn.className = 'day-btn';
+    btn.onclick = () => {
+      showDayAvailability(dateStr);
+      Array.from(container.children).forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    };
+    container.appendChild(btn);
+  });
+  if(container.children.length) container.children[0].classList.add('active');
+}
+
+function showDayAvailability(date) {
+  const container = document.getElementById('availability');
+  container.innerHTML = '';
+  chosenDate = date;
+
+  const slots = availabilityData[date];
+  const dayDiv = document.createElement('div');
+  dayDiv.innerHTML = `<h3>${new Date(new Date().getFullYear(), ...date.split('/').slice(1).map(x=>x-1), date.split('/')[0]).toLocaleDateString('en-US', {weekday:'long'})}</h3>`;
+
+  const allTimes = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+      "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00"];
+
+  allTimes.forEach(time => {
+    const btn = document.createElement('button');
+    btn.textContent = time;
+    btn.className = 'slot-btn';
+    if (!slots.includes(time)) {
+      btn.classList.add('unavailable');
+      btn.disabled = true;
+    }
+    btn.onclick = () => {
+      if (btn.disabled) return;
+      chosenTime = time;
+      document.getElementById('date').value = chosenDate;
+      document.getElementById('time').value = chosenTime;
+      Array.from(document.getElementsByClassName('slot-btn')).forEach(b => b.style.background = '');
+      btn.style.background = '#3498db';
+      document.getElementById('form-container').style.display = 'block';
+    };
+    dayDiv.appendChild(btn);
+  });
+  container.appendChild(dayDiv);
+}
+
+document.getElementById('bookingForm').onsubmit = async e => {
+  e.preventDefault();
+  const name = document.getElementById('name').value;
+  const phone = document.getElementById('phone').value;
+  const service = document.getElementById('service').value;
+  const date = document.getElementById('date').value;
+  const time = document.getElementById('time').value;
+
+  if (!date || !time) {
+    alert('You must select a time slot.');
+    return;
+  }
+
+  const res = await fetch('/book', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({name, phone, date, time, service})
+  });
+  const data = await res.json();
+  const responseDiv = document.getElementById('response');
+  if (data.message) {
+    responseDiv.style.color = 'green';
+    responseDiv.textContent = data.message;
+    document.getElementById('form-container').style.display = 'none';
+  } else {
+    responseDiv.style.color = 'red';
+    responseDiv.textContent = data.error;
+  }
+  loadAvailability();
+};
+
+function toggleBotWindow() {
+  const bot = document.getElementById('bot-window');
+  bot.style.display = bot.style.display === 'block' ? 'none' : 'block';
+}
+
+async function sendBotMessage() {
+  const input = document.getElementById('bot-user-input');
+  const message = input.value.trim();
+  if (!message) return;
+
+  const messagesDiv = document.getElementById('bot-messages');
+  messagesDiv.innerHTML += `<div><b>You:</b> ${message}</div>`;
+  input.value = '';
+  const res = await fetch('/ask', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({message})
+  });
+  const data = await res.json();
+  if (data.answer) {
+    messagesDiv.innerHTML += `<div><b>Bot:</b> ${data.answer}</div>`;
+  }
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function resizeBot() {
+  const bot = document.getElementById('bot-window');
+  if (bot.style.width === '520px') {
+    bot.style.width = '320px';
+    bot.style.height = '400px';
+  } else {
+    bot.style.width = '520px';
+    bot.style.height = '520px';
+  }
+}
+
+loadAvailability();
+</script>
+
+</body>
+</html>
