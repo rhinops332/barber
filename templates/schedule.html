@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ניהול שגרה שבועית - HairBoss</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 20px;
+      background: #f8f9fa;
+      color: #2c3e50;
+      direction: rtl;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .day-button {
+      display: inline-block;
+      padding: 10px 16px;
+      margin: 6px;
+      border: none;
+      background: #2980b9;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .day-button.active {
+      background: #1c5986;
+    }
+
+    .day-section {
+      display: none;
+      margin-top: 20px;
+      padding: 15px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 0 5px #ccc;
+    }
+
+    .time-slot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #e9f7ef;
+      margin-bottom: 8px;
+      padding: 8px 12px;
+      border-radius: 6px;
+    }
+
+    .time-slot input {
+      width: 80px;
+      padding: 5px;
+      margin-left: 10px;
+    }
+
+    .time-slot button {
+      margin-right: 5px;
+      padding: 6px 10px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .btn-edit {
+      background-color: #f39c12;
+      color: white;
+    }
+
+    .btn-delete {
+      background-color: #e74c3c;
+      color: white;
+    }
+
+    .btn-booked {
+      background-color: #95a5a6;
+      color: white;
+    }
+
+    .btn-add-slot {
+      background: #2ecc71;
+      color: white;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .btn-toggle-day {
+      background: #c0392b;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 10px;
+      float: left;
+      margin-top: -50px;
+    }
+
+    #save-btn {
+      background: #27ae60;
+      color: white;
+      font-weight: bold;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 10px;
+      display: block;
+      margin: 30px auto;
+    }
+  </style>
+</head>
+<body>
+
+<h1>ניהול שגרה שבועית</h1>
+
+<div id="day-buttons">
+  <button class="day-button" onclick="openDay('ראשון')">ראשון</button>
+  <button class="day-button" onclick="openDay('שני')">שני</button>
+  <button class="day-button" onclick="openDay('שלישי')">שלישי</button>
+  <button class="day-button" onclick="openDay('רביעי')">רביעי</button>
+  <button class="day-button" onclick="openDay('חמישי')">חמישי</button>
+  <button class="day-button" onclick="openDay('שישי')">שישי</button>
+  <button class="day-button" onclick="openDay('שבת')">שבת</button>
+</div>
+
+<div id="day-sections"></div>
+
+<button id="save-btn" onclick="saveSchedule()">💾 שמור שגרה</button>
+
+<script>
+const daysOfWeek = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+const schedule = {};  // כאן תיטען השגרה הקיימת מהשרת אם תבחר
+
+function openDay(day) {
+  document.querySelectorAll('.day-button').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.day-section').forEach(sec => sec.style.display = 'none');
+  document.querySelector(`[data-day="${day}"]`).style.display = 'block';
+  event.target.classList.add('active');
+}
+
+function createDaySections() {
+  const container = document.getElementById('day-sections');
+  daysOfWeek.forEach(day => {
+    const section = document.createElement('div');
+    section.className = 'day-section';
+    section.dataset.day = day;
+
+    const toggleBtn = document.createElement('button');
+    toggleBtn.className = 'btn-toggle-day';
+    toggleBtn.textContent = 'כבה יום זה';
+    toggleBtn.onclick = () => toggleDay(section, toggleBtn);
+    section.appendChild(toggleBtn);
+
+    const slotContainer = document.createElement('div');
+    slotContainer.className = 'slots-container';
+    section.appendChild(slotContainer);
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'btn-add-slot';
+    addBtn.textContent = '+ הוסף שעה';
+    addBtn.onclick = () => addSlot(slotContainer);
+    section.appendChild(addBtn);
+
+    container.appendChild(section);
+  });
+}
+
+function addSlot(container, timeValue = '') {
+  const slot = document.createElement('div');
+  slot.className = 'time-slot';
+
+  const input = document.createElement('input');
+  input.type = 'time';
+  input.value = timeValue;
+  slot.appendChild(input);
+
+  const editBtn = document.createElement('button');
+  editBtn.className = 'btn-edit';
+  editBtn.textContent = 'ערוך';
+  editBtn.onclick = () => input.disabled = !input.disabled;
+  slot.appendChild(editBtn);
+
+  const bookedBtn = document.createElement('button');
+  bookedBtn.className = 'btn-booked';
+  bookedBtn.textContent = 'מוזמן';
+  bookedBtn.onclick = () => input.style.backgroundColor = '#ccc';
+  slot.appendChild(bookedBtn);
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'btn-delete';
+  deleteBtn.textContent = 'X';
+  deleteBtn.onclick = () => container.removeChild(slot);
+  slot.appendChild(deleteBtn);
+
+  container.appendChild(slot);
+}
+
+function toggleDay(section, button) {
+  const slots = section.querySelector('.slots-container');
+  if (slots.style.display === 'none') {
+    slots.style.display = 'block';
+    button.textContent = 'כבה יום זה';
+  } else {
+    slots.style.display = 'none';
+    button.textContent = 'הפעל יום זה';
+  }
+}
+
+function saveSchedule() {
+  const result = {};
+  document.querySelectorAll('.day-section').forEach(section => {
+    const day = section.dataset.day;
+    const slots = Array.from(section.querySelectorAll('input[type="time"]'))
+      .filter(input => input.style.backgroundColor !== 'rgb(204, 204, 204)')
+      .map(input => input.value);
+    result[day] = slots;
+  });
+
+  fetch('/save_weekly_schedule', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(result)
+  }).then(res => res.json()).then(data => {
+    alert(data.message || 'נשמר בהצלחה!');
+  });
+}
+
+createDaySections();
+</script>
+
+</body>
+</html>
