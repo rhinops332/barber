@@ -148,6 +148,11 @@ def login():
 
     return render_template('login.html', error=error, admin_user=admin_user)
 
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/")
+
 # --- דף ניהול ראשי ---
 
 @app.route("/admin_command", methods=["GET"])
