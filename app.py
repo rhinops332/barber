@@ -156,7 +156,7 @@ def admin_command():
                            bot_knowledge=bot_knowledge,
                            appointments=appointments)
 
-# --- ניהול שגרה שבועית ---
+# --- ניהול שגרה שבועית (POST קיים) ---
 
 @app.route("/weekly_schedule", methods=["POST"])
 def update_weekly_schedule():
@@ -198,7 +198,21 @@ def update_weekly_schedule():
     save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
     return jsonify({"message": "Weekly schedule updated", "weekly_schedule": weekly_schedule})
 
-# --- ניהול שינויים חד פעמיים (overrides) ---
+# --- ניהול שגרה שבועית (GET חדש) ---
+
+@app.route("/weekly_schedule", methods=["GET"])
+def weekly_schedule_page():
+    if not session.get("is_admin"):
+        return redirect("/login")
+    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
+    heb_days = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
+    days_with_times = []
+    for day_key in map(str, range(7)):
+        times = weekly_schedule.get(day_key, [])
+        days_with_times.append({"day_key": day_key, "day_name": heb_days[int(day_key)], "times": times})
+    return render_template("weekly_schedule.html", days=days_with_times)
+
+# --- ניהול שינויים חד פעמיים (POST קיים) ---
 
 @app.route("/overrides", methods=["POST"])
 def update_overrides():
@@ -234,6 +248,33 @@ def update_overrides():
     overrides[date] = day_override
     save_json(OVERRIDES_FILE, overrides)
     return jsonify({"message": "Overrides updated", "overrides": overrides})
+
+# --- ניהול שינויים חד פעמיים (GET חדש) ---
+
+@app.route("/overrides", methods=["GET"])
+def overrides_page():
+    if not session.get("is_admin"):
+        return redirect("/login")
+
+    overrides = load_json(OVERRIDES_FILE)
+    today = datetime.today()
+    heb_days = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
+
+    days = []
+    for i in range(7):
+        current_date = today + timedelta(days=i)
+        date_str = current_date.strftime("%Y-%m-%d")
+        weekday = current_date.weekday()
+        day_name = heb_days[weekday]
+        day_override = overrides.get(date_str, {"add": [], "remove": []})
+        days.append({
+            "date": date_str,
+            "day_name": day_name,
+            "add": sorted(day_override.get("add", [])),
+            "remove": sorted(day_override.get("remove", []))
+        })
+
+    return render_template("overrides.html", days=days)
 
 # --- ניהול טקסט ידע של הבוט ---
 
