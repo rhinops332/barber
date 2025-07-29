@@ -63,7 +63,7 @@ def generate_week_slots():
     for i in range(7):
         current_date = today + timedelta(days=i)
         date_str = current_date.strftime("%Y-%m-%d")
-        weekday = current_date.weekday()  # 0=Monday ... 6=Sunday
+        weekday = current_date.weekday()
         day_name = heb_days[weekday]
 
         day_key = str(weekday)
@@ -74,9 +74,16 @@ def generate_week_slots():
         remove_times = override.get("remove", [])
 
         if remove_times == ["__all__"]:
-            final_times = []
+            all_final = []
         else:
-            final_times = sorted(set(scheduled_times + add_times) - set(remove_times))
+            all_final = sorted(set(scheduled_times + add_times + remove_times))
+
+        final_times = []
+        for t in all_final:
+            if remove_times == ["__all__"] or t in remove_times:
+                final_times.append({"time": t, "available": False})
+            else:
+                final_times.append({"time": t, "available": True})
 
         week_slots[date_str] = {
             "day_name": day_name,
@@ -84,6 +91,7 @@ def generate_week_slots():
         }
 
     return week_slots
+
 
 def is_slot_available(date, time):
     week_slots = generate_week_slots()
@@ -388,10 +396,12 @@ def index():
 @app.route("/availability")
 def availability():
     week_slots = generate_week_slots()
-    result = {}
+    formatted_slots = {}
     for date, info in week_slots.items():
-        result[date] = info["times"]
-    return jsonify(result)
+        formatted_date = datetime.strptime(date, "%Y-%m-%d").strftime("%d/%m/%Y")
+        formatted_slots[formatted_date] = info["times"]
+    return jsonify(formatted_slots)
+
 
 # --- API - שאלות לבוט ---
 
