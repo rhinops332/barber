@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ניהול שינויים חד פעמיים - HairBoss</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 20px;
+      background: #f4f4f4;
+      direction: rtl;
+    }
+
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 30px;
+    }
+
+    .day-section {
+      background: white;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .day-section h3 {
+      margin-top: 0;
+    }
+
+    .time-slot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      padding: 8px 12px;
+      background: #e8f5e9;
+      border-radius: 6px;
+    }
+
+    .time-slot input {
+      width: 90px;
+      padding: 5px;
+      margin-left: 10px;
+    }
+
+    .time-slot button {
+      padding: 6px 10px;
+      border: none;
+      border-radius: 5px;
+      margin-right: 5px;
+      cursor: pointer;
+    }
+
+    .btn-delete {
+      background-color: #e74c3c;
+      color: white;
+    }
+
+    .btn-edit {
+      background-color: #f39c12;
+      color: white;
+    }
+
+    .btn-add {
+      background: #27ae60;
+      color: white;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .date-header {
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .date-input {
+      padding: 8px;
+      width: 200px;
+      margin-bottom: 10px;
+    }
+
+    .btn-load {
+      padding: 8px 12px;
+      background: #2980b9;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+
+    #save-btn {
+      background: #2ecc71;
+      color: white;
+      font-weight: bold;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 10px;
+      display: block;
+      margin: 30px auto;
+    }
+  </style>
+</head>
+<body>
+
+<h1>ניהול שינויים חד פעמיים</h1>
+
+<div>
+  <input type="date" id="override-date" class="date-input" />
+  <button class="btn-load" onclick="loadOverride()">טען תאריך</button>
+</div>
+
+<div id="day-section" class="day-section" style="display: none;">
+  <h3 id="day-label"></h3>
+  <div class="slots-container" id="slots-container"></div>
+  <button class="btn-add" onclick="addOverrideSlot()">+ הוסף שעה</button>
+</div>
+
+<button id="save-btn" onclick="saveOverride()" style="display:none;">💾 שמור שינויים</button>
+
+<script>
+let overrideSlots = [];
+
+function loadOverride() {
+  const date = document.getElementById("override-date").value;
+  if (!date) return alert("יש לבחור תאריך");
+
+  fetch("/get_override?date=" + date)
+    .then(res => res.json())
+    .then(data => {
+      overrideSlots = data.times || [];
+      document.getElementById("slots-container").innerHTML = '';
+      document.getElementById("day-label").innerText = "שעות ליום: " + date;
+      document.getElementById("day-section").style.display = "block";
+      document.getElementById("save-btn").style.display = "block";
+      overrideSlots.forEach(t => addOverrideSlot(t));
+    });
+}
+
+function addOverrideSlot(time = "") {
+  const container = document.getElementById("slots-container");
+  const div = document.createElement("div");
+  div.className = "time-slot";
+
+  const input = document.createElement("input");
+  input.type = "time";
+  input.value = time;
+  div.appendChild(input);
+
+  const deleteBtn = document.createElement("button");
+  deleteBtn.textContent = "X";
+  deleteBtn.className = "btn-delete";
+  deleteBtn.onclick = () => container.removeChild(div);
+  div.appendChild(deleteBtn);
+
+  container.appendChild(div);
+}
+
+function saveOverride() {
+  const date = document.getElementById("override-date").value;
+  if (!date) return alert("יש לבחור תאריך");
+
+  const times = Array.from(document.querySelectorAll('#slots-container input'))
+    .map(input => input.value)
+    .filter(val => !!val);
+
+  fetch("/save_override", {
+    method: "POST",
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ date, times })
+  }).then(res => res.json()).then(data => {
+    alert(data.message || "השינויים נשמרו בהצלחה");
+  });
+}
+</script>
+
+</body>
+</html>
