@@ -272,24 +272,31 @@ function showDayAvailability(date) {
       "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00"];
 
   allTimes.forEach(time => {
-    const btn = document.createElement('button');
-    btn.textContent = time;
-    btn.className = 'slot-btn';
-    if (!slots.includes(time)) {
-      btn.classList.add('unavailable');
-      btn.disabled = true;
-    }
-    btn.onclick = () => {
-      if (btn.disabled) return;
-      chosenTime = time;
-      document.getElementById('date').value = chosenDate;
-      document.getElementById('time').value = chosenTime;
-      Array.from(document.getElementsByClassName('slot-btn')).forEach(b => b.style.background = '');
-      btn.style.background = '#3498db';
-      document.getElementById('form-container').style.display = 'block';
-    };
-    dayDiv.appendChild(btn);
-  });
+  const btn = document.createElement('button');
+  btn.textContent = time;
+  btn.className = 'slot-btn';
+
+  if (!slots.includes(time)) {
+    btn.classList.add('unavailable');
+    btn.disabled = true;
+  }
+
+  btn.onclick = () => {
+    if (btn.disabled) return;
+    chosenTime = time;
+    document.getElementById('date').value = chosenDate;
+    document.getElementById('time').value = chosenTime;
+    Array.from(document.getElementsByClassName('slot-btn')).forEach(b => {
+      b.classList.remove('selected');
+      b.style.background = '';
+    });
+    btn.classList.add('selected');
+    btn.style.background = '#3498db';
+    document.getElementById('form-container').style.display = 'block';
+  };
+
+  dayDiv.appendChild(btn);
+});
   container.appendChild(dayDiv);
 }
 
