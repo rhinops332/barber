@@ -73,7 +73,10 @@ def generate_week_slots():
         add_times = override.get("add", [])
         remove_times = override.get("remove", [])
 
-        final_times = sorted(set(scheduled_times + add_times) - set(remove_times))
+       if remove_times == ["__all__"]:
+    final_times = []
+else:
+    final_times = sorted(set(scheduled_times + add_times) - set(remove_times))
         week_slots[date_str] = {
             "day_name": day_name,
             "times": final_times
@@ -198,6 +201,25 @@ def update_weekly_schedule():
     save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
     return jsonify({"message": "Weekly schedule updated", "weekly_schedule": weekly_schedule})
 
+@app.route("/weekly_toggle_day", methods=["POST"])
+def toggle_weekly_day():
+    if not session.get("is_admin"):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    data = request.get_json()
+    day_key = data.get("day_key")
+    enabled = data.get("enabled")
+
+    if day_key not in [str(i) for i in range(7)]:
+        return jsonify({"error": "Invalid day key"}), 400
+
+    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
+    weekly_schedule[day_key] = [] if not enabled else weekly_schedule.get(day_key, [])
+    save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
+
+    return jsonify({"message": "Day updated", "weekly_schedule": weekly_schedule})
+
+
 # --- ניהול שינויים חד פעמיים (overrides) ---
 
 @app.route("/overrides", methods=["POST"])
@@ -234,6 +256,27 @@ def update_overrides():
     overrides[date] = day_override
     save_json(OVERRIDES_FILE, overrides)
     return jsonify({"message": "Overrides updated", "overrides": overrides})
+
+@app.route("/overrides_toggle_day", methods=["POST"])
+def toggle_override_day():
+    if not session.get("is_admin"):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    data = request.get_json()
+    date = data.get("date")
+    enabled = data.get("enabled")
+
+    overrides = load_json(OVERRIDES_FILE)
+
+    if not enabled:
+        overrides[date] = {"add": [], "remove": ["__all__"]}
+    else:
+        if date in overrides and overrides[date].get("remove") == ["__all__"]:
+            overrides.pop(date)
+
+    save_json(OVERRIDES_FILE, overrides)
+    return jsonify({"message": "Day override toggled", "overrides": overrides})
+
 
 # --- ניהול טקסט ידע של הבוט ---
 
