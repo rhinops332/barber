@@ -166,12 +166,20 @@ def admin_command():
     bot_knowledge = load_text(BOT_KNOWLEDGE_FILE)
     appointments = load_appointments()
 
+    # יצירת רשימת שעות קבועה מ-08:00 עד 20:00 כל חצי שעה
+    default_times = []
+    for hour in range(8, 20):
+        default_times.append(f"{hour:02d}:00")
+        default_times.append(f"{hour:02d}:30")
+    default_times.append("20:00")
+
     return render_template("admin_command.html",
                            weekly_schedule=weekly_schedule,
                            overrides=overrides,
                            week_slots=week_slots,
                            bot_knowledge=bot_knowledge,
-                           appointments=appointments)
+                           appointments=appointments,
+                           default_times=default_times)
 
 # --- ניהול שגרה שבועית ---
 
