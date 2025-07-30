@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -187,7 +186,6 @@
   {% endif %}
 </header>
 
-
 <h1>HairBoss ✂️</h1>
 <h2>Book Your Appointment</h2>
 
@@ -239,7 +237,9 @@ async function loadAvailability() {
   availabilityData = data;
   allDates = Object.keys(data);
   createDayButtons();
-  showDayAvailability(allDates[0]);
+  if (allDates.length > 0) {
+    showDayAvailability(allDates[0]);
+  }
 }
 
 function createDayButtons() {
@@ -264,39 +264,32 @@ function showDayAvailability(date) {
   container.innerHTML = '';
   chosenDate = date;
 
-  const slots = availabilityData[date];
+  const slots = availabilityData[date] || [];
+
   const dayDiv = document.createElement('div');
-  dayDiv.innerHTML = `<h3>${new Date(new Date().getFullYear(), ...date.split('/').slice(1).map(x=>x-1), date.split('/')[0]).toLocaleDateString('en-US', {weekday:'long'})}</h3>`;
+  dayDiv.innerHTML = `<h3>${date}</h3>`;
 
-  const allTimes = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-      "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00"];
+  slots.forEach(time => {
+    const btn = document.createElement('button');
+    btn.textContent = time;
+    btn.className = 'slot-btn';
 
-  allTimes.forEach(time => {
-  const btn = document.createElement('button');
-  btn.textContent = time;
-  btn.className = 'slot-btn';
+    btn.onclick = () => {
+      chosenTime = time;
+      document.getElementById('date').value = chosenDate;
+      document.getElementById('time').value = chosenTime;
+      Array.from(document.getElementsByClassName('slot-btn')).forEach(b => {
+        b.classList.remove('selected');
+        b.style.background = '';
+      });
+      btn.classList.add('selected');
+      btn.style.background = '#3498db';
+      document.getElementById('form-container').style.display = 'block';
+    };
 
-  if (!slots.includes(time)) {
-    btn.classList.add('unavailable');
-    btn.disabled = true;
-  }
+    dayDiv.appendChild(btn);
+  });
 
-  btn.onclick = () => {
-    if (btn.disabled) return;
-    chosenTime = time;
-    document.getElementById('date').value = chosenDate;
-    document.getElementById('time').value = chosenTime;
-    Array.from(document.getElementsByClassName('slot-btn')).forEach(b => {
-      b.classList.remove('selected');
-      b.style.background = '';
-    });
-    btn.classList.add('selected');
-    btn.style.background = '#3498db';
-    document.getElementById('form-container').style.display = 'block';
-  };
-
-  dayDiv.appendChild(btn);
-});
   container.appendChild(dayDiv);
 }
 
