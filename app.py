@@ -394,13 +394,7 @@ Price: {price}₪
 @app.route("/availability")
 def availability():
     week_slots = generate_week_slots()
-    formatted_slots = {}
-    for date, info in week_slots.items():
-        # כאן שינינו את הפורמט כדי להראות רק יום וחודש
-        formatted_date = datetime.strptime(date, "%Y-%m-%d").strftime("%d/%m")
-        formatted_slots[formatted_date] = info["times"]
-    return jsonify(formatted_slots)
-
+    return jsonify(week_slots)  # מחזיר מפתחות כמו "2025-08-01"
 
 # --- דף הבית ---
 
