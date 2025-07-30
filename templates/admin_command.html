@@ -157,12 +157,11 @@ async function toggleOverrideTime(date, time, enable) {
 <div class="section">
   <h2>שגרה שבועית (שעות פעילות קבועות)</h2>
 
-  {% set day_names = ["שני","שלישי","רביעי","חמישי","שישי","שבת","ראשון"] %}
+  {% set day_names = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"] %}
   {% set default_times = [] %}
   {% for hour in range(8,20) %}
     {% for minute in [0,30] %}
-      {% set time_str = "%02d:%02d" | format(hour, minute) %}
-      {% do default_times.append(time_str) %}
+      {% set _ = default_times.append("%02d:%02d" | format(hour, minute)) %}
     {% endfor %}
   {% endfor %}
   {% do default_times.append("20:00") %}
@@ -230,7 +229,7 @@ async function toggleOverrideTime(date, time, enable) {
           {% set removed = time in override_remove or override_remove == ['__all__'] %}
           <button
             class="time-btn {% if removed %}disabled{% endif %}"
-            onclick="event.stopPropagation(); toggleOverrideTime('{{date}}', '{{time}}', {{ 'true' if !added else 'false' }})">
+            onclick="event.stopPropagation(); toggleOverrideTime('{{date}}', '{{time}}', {{ 'true' if not added else 'false' }})">
             {{ time }}
             <span class="actions">
               {% if added %}
