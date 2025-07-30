@@ -231,6 +231,14 @@ let availabilityData = {};
 let chosenDate = '';
 let chosenTime = '';
 
+function formatHebrewDay(dateStr) {
+  const date = new Date(dateStr);
+  const days = ['יום ראשון','יום שני','יום שלישי','יום רביעי','יום חמישי','יום שישי','יום שבת'];
+  const dayName = days[date.getDay()];
+  const formattedDate = date.toLocaleDateString('he-IL');
+  return `${dayName} - ${formattedDate}`;
+}
+
 async function loadAvailability() {
   const res = await fetch('/availability');
   const data = await res.json();
@@ -246,17 +254,30 @@ function createDayButtons() {
   const container = document.getElementById('days-buttons');
   container.innerHTML = '';
   allDates.forEach(dateStr => {
+    const wrapper = document.createElement('div');
+    wrapper.style.textAlign = 'center';
+
+    const label = document.createElement('div');
+    label.textContent = formatHebrewDay(dateStr);
+    label.style.fontSize = '14px';
+    label.style.marginBottom = '4px';
+
     const btn = document.createElement('button');
     btn.textContent = dateStr;
     btn.className = 'day-btn';
     btn.onclick = () => {
       showDayAvailability(dateStr);
-      Array.from(container.children).forEach(b => b.classList.remove('active'));
+      Array.from(document.getElementsByClassName('day-btn')).forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
     };
-    container.appendChild(btn);
+
+    wrapper.appendChild(label);
+    wrapper.appendChild(btn);
+    container.appendChild(wrapper);
   });
-  if(container.children.length) container.children[0].classList.add('active');
+  if (container.children.length) {
+    container.querySelector('.day-btn').classList.add('active');
+  }
 }
 
 function showDayAvailability(date) {
@@ -267,7 +288,7 @@ function showDayAvailability(date) {
   const slots = availabilityData[date] || [];
 
   const dayDiv = document.createElement('div');
-  dayDiv.innerHTML = `<h3>${date}</h3>`;
+  dayDiv.innerHTML = `<h3>${formatHebrewDay(date)}</h3>`;
 
   slots.forEach(time => {
     const btn = document.createElement('button');
@@ -293,6 +314,7 @@ function showDayAvailability(date) {
   container.appendChild(dayDiv);
 }
 
+// שאר הקוד כמו שהיה:
 document.getElementById('bookingForm').onsubmit = async e => {
   e.preventDefault();
   const name = document.getElementById('name').value;
