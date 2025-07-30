@@ -39,17 +39,6 @@ function toggleSection(id) {
   elem.classList.toggle('active');
 }
 
-// --- כל השעות ברירת מחדל בין 08:00 ל-20:00 בחצי שעה ---
-function generateDefaultTimes() {
-  const times = [];
-  for(let h=8; h<20; h++) {
-    times.push(`${h.toString().padStart(2,'0')}:00`);
-    times.push(`${h.toString().padStart(2,'0')}:30`);
-  }
-  times.push('20:00'); // מוסיף גם 20:00 בדיוק
-  return times;
-}
-
 // --- שגרה שבועית ---
 
 async function toggleWeeklyDay(day_key, enabled) {
@@ -140,7 +129,6 @@ async function toggleOverrideTime(date, time, enable) {
     await updateOverrides('remove', date, time);
   }
 }
-
 </script>
 </head>
 <body>
@@ -157,14 +145,7 @@ async function toggleOverrideTime(date, time, enable) {
 <div class="section">
   <h2>שגרה שבועית (שעות פעילות קבועות)</h2>
 
-  {% set day_names = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"] %}
-  {% set default_times = [] %}
-  {% for hour in range(8,20) %}
-    {% for minute in [0,30] %}
-      {% set _ = default_times.append("%02d:%02d" | format(hour, minute)) %}
-    {% endfor %}
-  {% endfor %}
-  {% do default_times.append("20:00") %}
+  {% set day_names = ["שני","שלישי","רביעי","חמישי","שישי","שבת","ראשון"] %}
 
   {% for day_key in ['0','1','2','3','4','5','6'] %}
   <div class="day-container">
