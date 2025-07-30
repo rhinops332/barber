@@ -409,16 +409,6 @@ def index():
     week_slots = generate_week_slots()
     return render_template("index.html", week_slots=week_slots, services=services_prices)
 
-# --- API - החזרת זמני זמינות (לצורך הטמעה בJS) ---
-
-@app.route("/availability")
-def availability():
-    week_slots = generate_week_slots()
-    formatted_slots = {}
-    for date, info in week_slots.items():
-        formatted_date = datetime.strptime(date, "%Y-%m-%d").strftime("%d/%m/%Y")
-        formatted_slots[formatted_date] = info["times"]
-    return jsonify(formatted_slots)
 
 
 # --- API - שאלות לבוט ---
