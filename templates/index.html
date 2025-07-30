@@ -284,38 +284,27 @@ function createDayButtons() {
 }
 
 function showDayAvailability(date) {
-  const container = document.getElementById('availability');
+  const container = document.getElementById('slots-container');
+  const dayName = formatHebrewDay(date);
+  const formattedDate = new Date(date).toLocaleDateString('he-IL');
+  document.getElementById('selected-date-title').textContent = `${dayName} - ${formattedDate}`;
+
   container.innerHTML = '';
-  chosenDate = date;
+  const slots = availabilityData[date];
+  if (!slots || !slots.length) {
+    container.innerHTML = '<p>אין שעות פנויות</p>';
+    return;
+  }
 
-  const slots = availabilityData[date] || [];
-
-  const dayDiv = document.createElement('div');
-  dayDiv.innerHTML = `<h3>${formatHebrewDay(date)}</h3>`;
-
-  slots.forEach(time => {
+  slots.forEach(slot => {
     const btn = document.createElement('button');
-    btn.textContent = time;
-    btn.className = 'slot-btn';
-
-    btn.onclick = () => {
-      chosenTime = time;
-      document.getElementById('date').value = chosenDate;
-      document.getElementById('time').value = chosenTime;
-      Array.from(document.getElementsByClassName('slot-btn')).forEach(b => {
-        b.classList.remove('selected');
-        b.style.background = '';
-      });
-      btn.classList.add('selected');
-      btn.style.background = '#3498db';
-      document.getElementById('form-container').style.display = 'block';
-    };
-
-    dayDiv.appendChild(btn);
+    btn.textContent = slot.time;  // ✅ עכשיו יוצג רק הזמן עצמו, לא [object Object]
+    btn.className = slot.available ? 'slot-btn available' : 'slot-btn unavailable';
+    btn.disabled = !slot.available;
+    container.appendChild(btn);
   });
-
-  container.appendChild(dayDiv);
 }
+
 
 
 document.getElementById('bookingForm').onsubmit = async e => {
