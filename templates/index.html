@@ -258,15 +258,15 @@ function createDayButtons() {
     wrapper.style.textAlign = 'center';
 
     const label = document.createElement('div');
-   btn.textContent = new Date(dateStr).toLocaleDateString('he-IL', {
-  day: '2-digit',
-  month: '2-digit'
-});
+    label.textContent = formatHebrewDay(dateStr);  // רק שם היום
     label.style.fontSize = '14px';
     label.style.marginBottom = '4px';
 
     const btn = document.createElement('button');
-    btn.textContent = dateStr;
+    btn.textContent = new Date(dateStr).toLocaleDateString('he-IL', {
+      day: '2-digit',
+      month: '2-digit'
+    }); // רק תאריך בכפתור
     btn.className = 'day-btn';
     btn.onclick = () => {
       showDayAvailability(dateStr);
