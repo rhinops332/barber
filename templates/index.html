@@ -39,6 +39,7 @@
   #availability {
     text-align: center;
     margin-bottom: 20px;
+   
   }
   .slot-btn {
     padding: 8px 14px;
@@ -192,7 +193,11 @@
 <div id="response"></div>
 
 <div id="days-buttons"></div>
-<div id="availability"></div>
+<div id="availability">
+  <h3 id="selected-date-title" style="text-align:center; margin-bottom: 10px;"></h3>
+  <div id="slots-container" style="text-align:center;"></div>
+</div>
+
 
 <div id="form-container">
   <form id="bookingForm">
@@ -234,10 +239,9 @@ let chosenTime = '';
 function formatHebrewDay(dateStr) {
   const date = new Date(dateStr);
   const days = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
-  const dayName = days[date.getDay()];
-  const formattedDate = date.toLocaleDateString('he-IL');
-  return dayName;
+  return days[date.getDay()];
 }
+
 
 async function loadAvailability() {
   const res = await fetch('/availability');
@@ -258,7 +262,7 @@ function createDayButtons() {
     wrapper.style.textAlign = 'center';
 
     const label = document.createElement('div');
-    label.textContent = formatHebrewDay(dateStr);  // רק שם היום
+    label.textContent = formatHebrewDay(dateStr); // שם היום (מעל הכפתור)
     label.style.fontSize = '14px';
     label.style.marginBottom = '4px';
 
@@ -266,7 +270,7 @@ function createDayButtons() {
     btn.textContent = new Date(dateStr).toLocaleDateString('he-IL', {
       day: '2-digit',
       month: '2-digit'
-    }); // רק תאריך בכפתור
+    }); // תאריך בלבד על הכפתור
     btn.className = 'day-btn';
     btn.onclick = () => {
       showDayAvailability(dateStr);
@@ -286,25 +290,32 @@ function createDayButtons() {
 function showDayAvailability(date) {
   const container = document.getElementById('slots-container');
   const dayName = formatHebrewDay(date);
-  const formattedDate = new Date(date).toLocaleDateString('he-IL');
+  const formattedDate = new Date(date).toLocaleDateString('he-IL', {
+    day: '2-digit',
+    month: '2-digit'
+  });
   document.getElementById('selected-date-title').textContent = `${dayName} - ${formattedDate}`;
 
   container.innerHTML = '';
-  const slots = availabilityData[date];
-  if (!slots || !slots.length) {
+  const slots = availabilityData[date]?.times || availabilityData[date] || [];
+  if (!slots.length) {
     container.innerHTML = '<p>אין שעות פנויות</p>';
     return;
   }
 
   slots.forEach(slot => {
     const btn = document.createElement('button');
-    btn.textContent = slot.time;  // ✅ עכשיו יוצג רק הזמן עצמו, לא [object Object]
+    btn.textContent = slot.time;
     btn.className = slot.available ? 'slot-btn available' : 'slot-btn unavailable';
     btn.disabled = !slot.available;
+    btn.onclick = () => {
+      document.getElementById('date').value = date;
+      document.getElementById('time').value = slot.time;
+      document.getElementById('form-container').style.display = 'block';
+    };
     container.appendChild(btn);
   });
 }
-
 
 document.getElementById('bookingForm').onsubmit = async e => {
   e.preventDefault();
@@ -348,7 +359,7 @@ async function sendBotMessage() {
   if (!message) return;
 
   const messagesDiv = document.getElementById('bot-messages');
-  messagesDiv.innerHTML += <div><b>You:</b> ${message}</div>;
+  messagesDiv.innerHTML += `<div><b>You:</b> ${message}</div>`;
   input.value = '';
   const res = await fetch('/ask', {
     method: 'POST',
@@ -357,7 +368,7 @@ async function sendBotMessage() {
   });
   const data = await res.json();
   if (data.answer) {
-    messagesDiv.innerHTML += <div><b>Bot:</b> ${data.answer}</div>;
+    messagesDiv.innerHTML += `<div><b>Bot:</b> ${data.answer}</div>`;
   }
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
