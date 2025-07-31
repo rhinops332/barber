@@ -98,7 +98,10 @@ def is_slot_available(date, time):
     day_info = week_slots.get(date)
     if not day_info:
         return False
-    return time in day_info["times"]
+    for t in day_info["times"]:
+        if t["time"] == time and t.get("available", True):
+            return True
+    return False
 
 # --- לפני כל בקשה - העברת session ל-g ---
 
@@ -382,7 +385,10 @@ Price: {price}₪
 
     try:
         server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
-        server.login('nextwaveaiandweb@gmail.com', 'vmhb kmke ptlk kdzs')  # שנה לסיסמה/טוקן שלך
+        EMAIL_USER = os.environ.get("EMAIL_USER")
+        EMAIL_PASS = os.environ.get("EMAIL_PASS")
+
+        server.login(EMAIL_USER, EMAIL_PASS)
         server.send_message(msg)
         server.quit()
         print("Email sent successfully")
