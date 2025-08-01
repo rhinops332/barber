@@ -60,10 +60,9 @@ def save_appointments(data):
 
 def generate_week_slots():
     weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
-    overrides = load_one_time_changes()  # טען את השינויים החד-פעמיים
+    overrides = load_one_time_changes()
     today = datetime.today()
     week_slots = {}
-
     heb_days = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
 
     for i in range(7):
@@ -71,7 +70,6 @@ def generate_week_slots():
         date_str = current_date.strftime("%Y-%m-%d")
         weekday = current_date.weekday()
         day_name = heb_days[weekday]
-
         day_key = str(weekday)
         scheduled_times = weekly_schedule.get(day_key, [])
 
@@ -80,10 +78,8 @@ def generate_week_slots():
         remove_times = override.get("remove", [])
 
         if remove_times == ["__all__"]:
-            # כל היום כבוי - אין זמינים
             final_times = []
         else:
-            # times שמגיעים מהשגרה + תוספות, בלי ההסרות
             all_final = sorted(set(scheduled_times + add_times))
             final_times = []
             for t in all_final:
@@ -109,14 +105,10 @@ def is_slot_available(date, time):
             return True
     return False
 
-# --- לפני כל בקשה - העברת session ל-g ---
-
 @app.before_request
 def before_request():
     g.username = session.get('username')
     g.is_admin = session.get('is_admin')
-
-# --- החלפת render_template ---
 
 def render_template(template_name_or_list, **context):
     context['session'] = {
@@ -125,7 +117,7 @@ def render_template(template_name_or_list, **context):
     }
     return original_render_template(template_name_or_list, **context)
 
-# --- ניהול התחברות ---
+# --- התחברות ---
 
 @app.route("/login", methods=['GET', 'POST'])
 def login():
@@ -139,21 +131,17 @@ def login():
 
         if not username:
             error = "יש להזין שם משתמש"
-            return render_template('login.html', error=error, admin_user=admin_user)
-
-        if username == admin_user:
+        elif username == admin_user:
             if password == admin_password:
                 session['username'] = username
                 session['is_admin'] = True
                 return redirect('/admin_command')
             else:
                 error = "סיסמה שגויה"
-                return render_template('login.html', error=error, admin_user=admin_user)
-
-        # משתמש רגיל - אין צורך בסיסמה
-        session['username'] = username
-        session['is_admin'] = False
-        return redirect('/')
+        else:
+            session['username'] = username
+            session['is_admin'] = False
+            return redirect('/')
 
     return render_template('login.html', error=error, admin_user=admin_user)
 
@@ -162,9 +150,27 @@ def logout():
     session.clear()
     return redirect("/")
 
-# --- דף ניהול ראשי ---
+# --- דפי HTML נפרדים ---
 
-@app.route("/admin_command", methods=["GET"])
+@app.route("/admin/weekly")
+def weekly_schedule_page():
+    if not session.get("is_admin"):
+        return redirect("/login")
+
+    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
+    return render_template("schedule.html", weekly_schedule=weekly_schedule)
+
+@app.route("/admin/one-time")
+def one_time_changes_page():
+    if not session.get("is_admin"):
+        return redirect("/login")
+
+    overrides = load_one_time_changes()
+    return render_template("one_time_changes.html", overrides=overrides)
+
+# --- דף ראשי של ניהול ---
+
+@app.route("/admin_command")
 def admin_command():
     if not session.get("is_admin"):
         return redirect("/login")
@@ -175,7 +181,6 @@ def admin_command():
     bot_knowledge = load_text(BOT_KNOWLEDGE_FILE)
     appointments = load_appointments()
 
-    # 🔽 הוסף את זה כאן (מתחת לכל הטעינות)
     default_times = []
     current_time = datetime.strptime("08:00", "%H:%M")
     end_time = datetime.strptime("20:00", "%H:%M")
@@ -184,13 +189,12 @@ def admin_command():
         current_time += timedelta(minutes=30)
 
     return render_template("admin_command.html",
-                           weekly_schedule=weekly_schedule,
-                           overrides=overrides,
-                           week_slots=week_slots,
-                           bot_knowledge=bot_knowledge,
-                           appointments=appointments,
-                           default_times=default_times)  # 👈 אל תשכח להוסיף את זה כאן
-
+        weekly_schedule=weekly_schedule,
+        overrides=overrides,
+        week_slots=week_slots,
+        bot_knowledge=bot_knowledge,
+        appointments=appointments,
+        default_times=default_times)
 # --- ניהול שגרה שבועית ---
 
 @app.route("/weekly_schedule", methods=["POST"])
