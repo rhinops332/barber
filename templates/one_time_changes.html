@@ -1,0 +1,30 @@
+{% for date, slots in one_time_changes.items() %}
+  <div style="border:1px solid #ccc; padding:10px; margin-bottom:20px; border-radius:10px;">
+    <h3>{{ date }} - {{ format_day_name(date) }}</h3>
+
+    <!-- פעולות על כל היום -->
+    <div style="margin-bottom: 10px;">
+      <button onclick="toggleDay('{{ date }}')">🔁 הפעל/כבה את כל היום</button>
+      <button onclick="addSlotPrompt('{{ date }}')">➕ הוסף שעה</button>
+    </div>
+
+    <!-- רשימת השעות -->
+    <div>
+      {% for slot in slots %}
+        <div style="margin:5px 0;">
+          <strong>{{ slot.time }}</strong>
+          {% if slot.available %}
+            <span style="color:green;">🟢 פעיל</span>
+          {% else %}
+            <span style="color:red;">🔴 כבוי</span>
+          {% endif %}
+
+          <!-- פעולות לשעה -->
+          <button onclick="editSlotPrompt('{{ date }}', '{{ slot.time }}')">✏️ ערוך</button>
+          <button onclick="deleteSlot('{{ date }}', '{{ slot.time }}')">🗑️ מחק</button>
+          <button onclick="toggleSlot('{{ date }}', '{{ slot.time }}')">🔁 הפעל/כבה</button>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+{% endfor %}
