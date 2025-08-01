@@ -13,6 +13,7 @@ WEEKLY_SCHEDULE_FILE = "weekly_schedule.json"
 OVERRIDES_FILE = "overrides.json"
 BOT_KNOWLEDGE_FILE = "bot_knowledge.txt"
 APPOINTMENTS_FILE = "appointments.json"
+ONE_TIME_FILE = "one_time_changes.json"   # <-- הוסף את זה
 
 # שירותים ומחירים
 services_prices = {
@@ -34,12 +35,6 @@ def save_json(filename, data):
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
-def load_one_time_changes():
-    return load_json(OVERRIDES_FILE)
-
-def save_one_time_changes(data):
-    save_json(OVERRIDES_FILE, data)
-
 def load_text(filename):
     if not os.path.exists(filename):
         return ""
@@ -56,13 +51,21 @@ def load_appointments():
 def save_appointments(data):
     save_json(APPOINTMENTS_FILE, data)
 
+# פונקציות ל-one-time changes:
+def load_one_time_changes():
+    return load_json(ONE_TIME_FILE)
+
+def save_one_time_changes(data):
+    save_json(ONE_TIME_FILE, data)
+
 # --- יצירת רשימת שעות שבועית עם שינויים ---
 
 def generate_week_slots():
     weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
-    overrides = load_one_time_changes()
+    overrides = load_json(OVERRIDES_FILE)
     today = datetime.today()
     week_slots = {}
+
     heb_days = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
 
     for i in range(7):
@@ -70,6 +73,7 @@ def generate_week_slots():
         date_str = current_date.strftime("%Y-%m-%d")
         weekday = current_date.weekday()
         day_name = heb_days[weekday]
+
         day_key = str(weekday)
         scheduled_times = weekly_schedule.get(day_key, [])
 
@@ -78,15 +82,17 @@ def generate_week_slots():
         remove_times = override.get("remove", [])
 
         if remove_times == ["__all__"]:
-            final_times = []
+            all_final = []
         else:
-            all_final = sorted(set(scheduled_times + add_times))
-            final_times = []
-            for t in all_final:
-                if t in remove_times:
-                    final_times.append({"time": t, "available": False})
-                else:
-                    final_times.append({"time": t, "available": True})
+            # תיקון: להסיר את הזמנים שנמצאים ב-remove_times
+            all_final = sorted(set(scheduled_times + add_times) - set(remove_times))
+
+        final_times = []
+        for t in all_final:
+            if remove_times == ["__all__"] or t in remove_times:
+                final_times.append({"time": t, "available": False})
+            else:
+                final_times.append({"time": t, "available": True})
 
         week_slots[date_str] = {
             "day_name": day_name,
@@ -94,6 +100,7 @@ def generate_week_slots():
         }
 
     return week_slots
+
 
 def is_slot_available(date, time):
     week_slots = generate_week_slots()
@@ -105,10 +112,14 @@ def is_slot_available(date, time):
             return True
     return False
 
+# --- לפני כל בקשה - העברת session ל-g ---
+
 @app.before_request
 def before_request():
     g.username = session.get('username')
     g.is_admin = session.get('is_admin')
+
+# --- החלפת render_template ---
 
 def render_template(template_name_or_list, **context):
     context['session'] = {
@@ -117,7 +128,7 @@ def render_template(template_name_or_list, **context):
     }
     return original_render_template(template_name_or_list, **context)
 
-# --- התחברות ---
+# --- ניהול התחברות ---
 
 @app.route("/login", methods=['GET', 'POST'])
 def login():
@@ -131,17 +142,21 @@ def login():
 
         if not username:
             error = "יש להזין שם משתמש"
-        elif username == admin_user:
+            return render_template('login.html', error=error, admin_user=admin_user)
+
+        if username == admin_user:
             if password == admin_password:
                 session['username'] = username
                 session['is_admin'] = True
-                return redirect('/admin_command')
+                return redirect('/main_admin')
             else:
                 error = "סיסמה שגויה"
-        else:
-            session['username'] = username
-            session['is_admin'] = False
-            return redirect('/')
+                return render_template('login.html', error=error, admin_user=admin_user)
+
+        # משתמש רגיל - אין צורך בסיסמה
+        session['username'] = username
+        session['is_admin'] = False
+        return redirect('/')
 
     return render_template('login.html', error=error, admin_user=admin_user)
 
@@ -150,27 +165,9 @@ def logout():
     session.clear()
     return redirect("/")
 
-# --- דפי HTML נפרדים ---
+# --- דף ניהול ראשי ---
 
-@app.route("/admin/weekly")
-def weekly_schedule_page():
-    if not session.get("is_admin"):
-        return redirect("/login")
-
-    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
-    return render_template("schedule.html", weekly_schedule=weekly_schedule)
-
-@app.route("/admin/one-time")
-def one_time_changes_page():
-    if not session.get("is_admin"):
-        return redirect("/login")
-
-    overrides = load_one_time_changes()
-    return render_template("one_time_changes.html", overrides=overrides)
-
-# --- דף ראשי של ניהול ---
-
-@app.route("/admin_command")
+@app.route("/admin_command", methods=["GET"])
 def admin_command():
     if not session.get("is_admin"):
         return redirect("/login")
@@ -181,6 +178,7 @@ def admin_command():
     bot_knowledge = load_text(BOT_KNOWLEDGE_FILE)
     appointments = load_appointments()
 
+    # יצירת רשימת שעות 08:00 עד 20:00 ב-30 דק'
     default_times = []
     current_time = datetime.strptime("08:00", "%H:%M")
     end_time = datetime.strptime("20:00", "%H:%M")
@@ -189,12 +187,36 @@ def admin_command():
         current_time += timedelta(minutes=30)
 
     return render_template("admin_command.html",
-        weekly_schedule=weekly_schedule,
-        overrides=overrides,
-        week_slots=week_slots,
-        bot_knowledge=bot_knowledge,
-        appointments=appointments,
-        default_times=default_times)
+                           weekly_schedule=weekly_schedule,
+                           overrides=overrides,
+                           week_slots=week_slots,
+                           bot_knowledge=bot_knowledge,
+                           appointments=appointments,
+                           default_times=default_times)
+
+
+@app.route("/main_admin")
+def main_admin():
+    if not session.get("is_admin"):
+        return redirect("/login")
+    return render_template("main_admin.html")
+
+@app.route("/admin/routine")
+def admin_routine():
+    if not session.get("is_admin"):
+        return redirect("/login")
+
+    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
+    return render_template("admin_routine.html", weekly_schedule=weekly_schedule)
+
+@app.route("/admin/overrides")
+def admin_overrides():
+    if not session.get("is_admin"):
+        return redirect("/login")
+
+    overrides = load_json(OVERRIDES_FILE)
+    return render_template("admin_overrides.html", overrides=overrides)
+
 # --- ניהול שגרה שבועית ---
 
 @app.route("/weekly_schedule", methods=["POST"])
@@ -268,153 +290,108 @@ def update_overrides():
     date = data.get("date")
     time = data.get("time")
 
-    overrides = load_one_time_changes()
-    if date not in overrides:
-        overrides[date] = {"add": [], "remove": []}
-
-    day_override = overrides[date]
+    overrides = load_json(OVERRIDES_FILE)
+    day_override = overrides.get(date, {"add": [], "remove": []})
 
     if action == "add":
         if time and time not in day_override["add"]:
             day_override["add"].append(time)
-        if time and time in day_override["remove"]:
-            day_override["remove"].remove(time)
+            if time in day_override["remove"]:
+                day_override["remove"].remove(time)
     elif action == "remove":
         if time and time not in day_override["remove"]:
             day_override["remove"].append(time)
-        if time and time in day_override["add"]:
-            day_override["add"].remove(time)
+            if time in day_override["add"]:
+                day_override["add"].remove(time)
     elif action == "clear":
         overrides.pop(date, None)
-        save_one_time_changes(overrides)
+        save_json(OVERRIDES_FILE, overrides)
         return jsonify({"message": f"Overrides cleared for {date}"})
+
     else:
         return jsonify({"error": "Invalid action"}), 400
 
     overrides[date] = day_override
-    save_one_time_changes(overrides)
+    save_json(OVERRIDES_FILE, overrides)
     return jsonify({"message": "Overrides updated", "overrides": overrides})
+
+@app.route("/overrides_toggle_day", methods=["POST"])
+def toggle_override_day():
+    if not session.get("is_admin"):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    data = request.get_json()
+    date = data.get("date")
+    enabled = data.get("enabled")
+
+    overrides = load_json(OVERRIDES_FILE)
+
+    if not enabled:
+        overrides[date] = {"add": [], "remove": ["__all__"]}
+    else:
+        if date in overrides and overrides[date].get("remove") == ["__all__"]:
+            overrides.pop(date)
+
+    save_json(OVERRIDES_FILE, overrides)
+    return jsonify({"message": "Day override toggled", "overrides": overrides})
 
 @app.route('/admin/one-time/toggle_day', methods=['POST'])
 def toggle_day():
     data = request.json
-    date = data.get('date')
-    if not date:
-        return jsonify({'error': 'Missing date'}), 400
+    date = data['date']
+    one_time = load_one_time_changes()
+    if date not in one_time:
+        return jsonify({'error': 'Date not found'}), 404
 
-    overrides = load_one_time_changes()
-    if date not in overrides:
-        overrides[date] = {"add": [], "remove": []}
+    # Toggle all slots
+    all_disabled = all(not slot['available'] for slot in one_time[date])
+    for slot in one_time[date]:
+        slot['available'] = not all_disabled
 
-    remove_list = overrides[date].get("remove", [])
-    # אם כל היום כבוי (__all__ בתוך remove) אז נדליק, אחרת נכבה
-    if "__all__" in remove_list:
-        # הדלק יום - הסר __all__ מהרשימה
-        remove_list = [t for t in remove_list if t != "__all__"]
-    else:
-        # כבה יום - הוסף __all__ לרשימה והסר את כל ה-add
-        remove_list = ["__all__"]
-        overrides[date]["add"] = []
-
-    overrides[date]["remove"] = remove_list
-
-    save_one_time_changes(overrides)
-    return jsonify({"message": "Day toggled successfully", "overrides": overrides})
+    save_one_time_changes(one_time)
+    return jsonify({'message': 'Day toggled successfully'})
 
 @app.route('/admin/one-time/delete', methods=['POST'])
 def delete_slot():
     data = request.json
-    date = data.get('date')
-    time = data.get('time')
-    if not date or not time:
-        return jsonify({'error': 'Missing date or time'}), 400
-
-    overrides = load_one_time_changes()
-    if date in overrides:
-        if time in overrides[date].get("add", []):
-            overrides[date]["add"].remove(time)
-        if time in overrides[date].get("remove", []):
-            overrides[date]["remove"].remove(time)
-        # אם אחרי המחיקה הרשימות ריקות אפשר לשמור את זה כך
-        save_one_time_changes(overrides)
-
+    date, time = data['date'], data['time']
+    one_time = load_one_time_changes()
+    if date in one_time:
+        one_time[date] = [slot for slot in one_time[date] if slot['time'] != time]
+        save_one_time_changes(one_time)
     return jsonify({'message': 'Slot deleted'})
 
 @app.route('/admin/one-time/edit', methods=['POST'])
 def edit_slot():
     data = request.json
-    date = data.get('date')
-    old_time = data.get('old_time')
-    new_time = data.get('new_time')
-    if not date or not old_time or not new_time:
-        return jsonify({'error': 'Missing parameters'}), 400
-
-    overrides = load_one_time_changes()
-    if date not in overrides:
-        return jsonify({'error': 'Date not found'}), 404
-
-    # הסר את old_time מכל מקום
-    if old_time in overrides[date].get("add", []):
-        overrides[date]["add"].remove(old_time)
-    if old_time in overrides[date].get("remove", []):
-        overrides[date]["remove"].remove(old_time)
-
-    # הוסף את new_time לפי הגדרה: אם old_time היה ב-add או remove - לשמור על סטטוס?  
-    # (בפשטות נניח שזמין כברירת מחדל)
-    overrides[date]["add"].append(new_time)
-    overrides[date]["add"] = sorted(set(overrides[date]["add"]))
-
-    save_one_time_changes(overrides)
+    date, old_time, new_time = data['date'], data['old_time'], data['new_time']
+    one_time = load_one_time_changes()
+    for slot in one_time.get(date, []):
+        if slot['time'] == old_time:
+            slot['time'] = new_time
+            break
+    save_one_time_changes(one_time)
     return jsonify({'message': 'Slot edited'})
 
 @app.route('/admin/one-time/toggle_slot', methods=['POST'])
 def toggle_slot():
     data = request.json
-    date = data.get('date')
-    time = data.get('time')
-    if not date or not time:
-        return jsonify({'error': 'Missing date or time'}), 400
-
-    overrides = load_one_time_changes()
-    if date not in overrides:
-        return jsonify({'error': 'Date not found'}), 404
-
-    if time in overrides[date].get("add", []):
-        overrides[date]["add"].remove(time)
-        overrides[date]["remove"].append(time)
-    elif time in overrides[date].get("remove", []):
-        overrides[date]["remove"].remove(time)
-        overrides[date]["add"].append(time)
-    else:
-        # אם לא קיים בשום רשימה, נניח שמוסיפים ל-add
-        overrides[date]["add"].append(time)
-
-    overrides[date]["add"] = sorted(set(overrides[date]["add"]))
-    overrides[date]["remove"] = sorted(set(overrides[date]["remove"]))
-
-    save_one_time_changes(overrides)
+    date, time = data['date'], data['time']
+    one_time = load_one_time_changes()
+    for slot in one_time.get(date, []):
+        if slot['time'] == time:
+            slot['available'] = not slot['available']
+            break
+    save_one_time_changes(one_time)
     return jsonify({'message': 'Slot toggled'})
 
 @app.route('/admin/one-time/add', methods=['POST'])
 def add_slot():
     data = request.json
-    date = data.get('date')
-    time = data.get('time')
-    if not date or not time:
-        return jsonify({'error': 'Missing date or time'}), 400
-
-    overrides = load_one_time_changes()
-    if date not in overrides:
-        overrides[date] = {"add": [], "remove": []}
-
-    if time not in overrides[date]["add"]:
-        overrides[date]["add"].append(time)
-        # אם הזמן קיים ב-remove - להסיר אותו משם
-        if time in overrides[date]["remove"]:
-            overrides[date]["remove"].remove(time)
-
-    overrides[date]["add"] = sorted(set(overrides[date]["add"]))
-    save_one_time_changes(overrides)
+    date, time = data['date'], data['time']
+    one_time = load_one_time_changes()
+    one_time.setdefault(date, []).append({'time': time, 'available': True})
+    save_one_time_changes(one_time)
     return jsonify({'message': 'Slot added'})
 
 # --- ניהול טקסט ידע של הבוט ---
@@ -427,7 +404,7 @@ def bot_knowledge():
     if request.method == "POST":
         content = request.form.get("content", "")
         save_text(BOT_KNOWLEDGE_FILE, content)
-        return redirect("/admin_command")
+        return redirect("/main_admin")
 
     content = load_text(BOT_KNOWLEDGE_FILE)
     return render_template("bot_knowledge.html", content=content)
