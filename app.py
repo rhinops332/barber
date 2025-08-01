@@ -269,18 +269,21 @@ def update_overrides():
     time = data.get("time")
 
     overrides = load_one_time_changes()
-    day_override = overrides.get(date, {"add": [], "remove": []})
+    if date not in overrides:
+        overrides[date] = {"add": [], "remove": []}
+
+    day_override = overrides[date]
 
     if action == "add":
         if time and time not in day_override["add"]:
             day_override["add"].append(time)
-            if time in day_override["remove"]:
-                day_override["remove"].remove(time)
+        if time and time in day_override["remove"]:
+            day_override["remove"].remove(time)
     elif action == "remove":
         if time and time not in day_override["remove"]:
             day_override["remove"].append(time)
-            if time in day_override["add"]:
-                day_override["add"].remove(time)
+        if time and time in day_override["add"]:
+            day_override["add"].remove(time)
     elif action == "clear":
         overrides.pop(date, None)
         save_one_time_changes(overrides)
@@ -295,60 +298,123 @@ def update_overrides():
 @app.route('/admin/one-time/toggle_day', methods=['POST'])
 def toggle_day():
     data = request.json
-    date = data['date']
-    one_time = load_one_time_changes()
-    if date not in one_time:
-        return jsonify({'error': 'Date not found'}), 404
+    date = data.get('date')
+    if not date:
+        return jsonify({'error': 'Missing date'}), 400
 
-    # Toggle all slots
-    all_disabled = all(not slot['available'] for slot in one_time[date])
-    for slot in one_time[date]:
-        slot['available'] = not all_disabled
+    overrides = load_one_time_changes()
+    if date not in overrides:
+        overrides[date] = {"add": [], "remove": []}
 
-    save_one_time_changes(one_time)
-    return jsonify({'message': 'Day toggled successfully'})
+    remove_list = overrides[date].get("remove", [])
+    # אם כל היום כבוי (__all__ בתוך remove) אז נדליק, אחרת נכבה
+    if "__all__" in remove_list:
+        # הדלק יום - הסר __all__ מהרשימה
+        remove_list = [t for t in remove_list if t != "__all__"]
+    else:
+        # כבה יום - הוסף __all__ לרשימה והסר את כל ה-add
+        remove_list = ["__all__"]
+        overrides[date]["add"] = []
+
+    overrides[date]["remove"] = remove_list
+
+    save_one_time_changes(overrides)
+    return jsonify({"message": "Day toggled successfully", "overrides": overrides})
 
 @app.route('/admin/one-time/delete', methods=['POST'])
 def delete_slot():
     data = request.json
-    date, time = data['date'], data['time']
-    one_time = load_one_time_changes()
-    if date in one_time:
-        one_time[date] = [slot for slot in one_time[date] if slot['time'] != time]
-        save_one_time_changes(one_time)
+    date = data.get('date')
+    time = data.get('time')
+    if not date or not time:
+        return jsonify({'error': 'Missing date or time'}), 400
+
+    overrides = load_one_time_changes()
+    if date in overrides:
+        if time in overrides[date].get("add", []):
+            overrides[date]["add"].remove(time)
+        if time in overrides[date].get("remove", []):
+            overrides[date]["remove"].remove(time)
+        # אם אחרי המחיקה הרשימות ריקות אפשר לשמור את זה כך
+        save_one_time_changes(overrides)
+
     return jsonify({'message': 'Slot deleted'})
 
 @app.route('/admin/one-time/edit', methods=['POST'])
 def edit_slot():
     data = request.json
-    date, old_time, new_time = data['date'], data['old_time'], data['new_time']
-    one_time = load_one_time_changes()
-    for slot in one_time.get(date, []):
-        if slot['time'] == old_time:
-            slot['time'] = new_time
-            break
-    save_one_time_changes(one_time)
+    date = data.get('date')
+    old_time = data.get('old_time')
+    new_time = data.get('new_time')
+    if not date or not old_time or not new_time:
+        return jsonify({'error': 'Missing parameters'}), 400
+
+    overrides = load_one_time_changes()
+    if date not in overrides:
+        return jsonify({'error': 'Date not found'}), 404
+
+    # הסר את old_time מכל מקום
+    if old_time in overrides[date].get("add", []):
+        overrides[date]["add"].remove(old_time)
+    if old_time in overrides[date].get("remove", []):
+        overrides[date]["remove"].remove(old_time)
+
+    # הוסף את new_time לפי הגדרה: אם old_time היה ב-add או remove - לשמור על סטטוס?  
+    # (בפשטות נניח שזמין כברירת מחדל)
+    overrides[date]["add"].append(new_time)
+    overrides[date]["add"] = sorted(set(overrides[date]["add"]))
+
+    save_one_time_changes(overrides)
     return jsonify({'message': 'Slot edited'})
 
 @app.route('/admin/one-time/toggle_slot', methods=['POST'])
 def toggle_slot():
     data = request.json
-    date, time = data['date'], data['time']
-    one_time = load_one_time_changes()
-    for slot in one_time.get(date, []):
-        if slot['time'] == time:
-            slot['available'] = not slot['available']
-            break
-    save_one_time_changes(one_time)
+    date = data.get('date')
+    time = data.get('time')
+    if not date or not time:
+        return jsonify({'error': 'Missing date or time'}), 400
+
+    overrides = load_one_time_changes()
+    if date not in overrides:
+        return jsonify({'error': 'Date not found'}), 404
+
+    if time in overrides[date].get("add", []):
+        overrides[date]["add"].remove(time)
+        overrides[date]["remove"].append(time)
+    elif time in overrides[date].get("remove", []):
+        overrides[date]["remove"].remove(time)
+        overrides[date]["add"].append(time)
+    else:
+        # אם לא קיים בשום רשימה, נניח שמוסיפים ל-add
+        overrides[date]["add"].append(time)
+
+    overrides[date]["add"] = sorted(set(overrides[date]["add"]))
+    overrides[date]["remove"] = sorted(set(overrides[date]["remove"]))
+
+    save_one_time_changes(overrides)
     return jsonify({'message': 'Slot toggled'})
 
 @app.route('/admin/one-time/add', methods=['POST'])
 def add_slot():
     data = request.json
-    date, time = data['date'], data['time']
-    one_time = load_one_time_changes()
-    one_time.setdefault(date, []).append({'time': time, 'available': True})
-    save_one_time_changes(one_time)
+    date = data.get('date')
+    time = data.get('time')
+    if not date or not time:
+        return jsonify({'error': 'Missing date or time'}), 400
+
+    overrides = load_one_time_changes()
+    if date not in overrides:
+        overrides[date] = {"add": [], "remove": []}
+
+    if time not in overrides[date]["add"]:
+        overrides[date]["add"].append(time)
+        # אם הזמן קיים ב-remove - להסיר אותו משם
+        if time in overrides[date]["remove"]:
+            overrides[date]["remove"].remove(time)
+
+    overrides[date]["add"] = sorted(set(overrides[date]["add"]))
+    save_one_time_changes(overrides)
     return jsonify({'message': 'Slot added'})
 
 # --- ניהול טקסט ידע של הבוט ---
