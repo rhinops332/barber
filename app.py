@@ -303,6 +303,64 @@ def toggle_override_day():
     save_json(OVERRIDES_FILE, overrides)
     return jsonify({"message": "Day override toggled", "overrides": overrides})
 
+@app.route('/admin/one-time/toggle_day', methods=['POST'])
+def toggle_day():
+    data = request.json
+    date = data['date']
+    one_time = load_one_time_changes()
+    if date not in one_time:
+        return jsonify({'error': 'Date not found'}), 404
+
+    # Toggle all slots
+    all_disabled = all(not slot['available'] for slot in one_time[date])
+    for slot in one_time[date]:
+        slot['available'] = not all_disabled
+
+    save_one_time_changes(one_time)
+    return jsonify({'message': 'Day toggled successfully'})
+
+@app.route('/admin/one-time/delete', methods=['POST'])
+def delete_slot():
+    data = request.json
+    date, time = data['date'], data['time']
+    one_time = load_one_time_changes()
+    if date in one_time:
+        one_time[date] = [slot for slot in one_time[date] if slot['time'] != time]
+        save_one_time_changes(one_time)
+    return jsonify({'message': 'Slot deleted'})
+
+@app.route('/admin/one-time/edit', methods=['POST'])
+def edit_slot():
+    data = request.json
+    date, old_time, new_time = data['date'], data['old_time'], data['new_time']
+    one_time = load_one_time_changes()
+    for slot in one_time.get(date, []):
+        if slot['time'] == old_time:
+            slot['time'] = new_time
+            break
+    save_one_time_changes(one_time)
+    return jsonify({'message': 'Slot edited'})
+
+@app.route('/admin/one-time/toggle_slot', methods=['POST'])
+def toggle_slot():
+    data = request.json
+    date, time = data['date'], data['time']
+    one_time = load_one_time_changes()
+    for slot in one_time.get(date, []):
+        if slot['time'] == time:
+            slot['available'] = not slot['available']
+            break
+    save_one_time_changes(one_time)
+    return jsonify({'message': 'Slot toggled'})
+
+@app.route('/admin/one-time/add', methods=['POST'])
+def add_slot():
+    data = request.json
+    date, time = data['date'], data['time']
+    one_time = load_one_time_changes()
+    one_time.setdefault(date, []).append({'time': time, 'available': True})
+    save_one_time_changes(one_time)
+    return jsonify({'message': 'Slot added'})
 
 # --- ניהול טקסט ידע של הבוט ---
 
