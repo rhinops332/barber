@@ -2,56 +2,101 @@
 <html lang="he">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ניהול HairBoss - דף אדמין</title>
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f4f6fa;
-      color: #333;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #e0e7ff, #f9fafb);
+      color: #222;
       direction: rtl;
       text-align: center;
-      padding: 40px;
+      padding: 50px 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 40px;
     }
     h1 {
-      font-size: 2.5em;
-      margin-bottom: 40px;
+      font-size: 2.8rem;
+      margin-bottom: 0;
+      color: #2c3e50;
+      text-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
     .nav-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 30px;
       max-width: 1000px;
-      margin: auto;
+      margin: 0 auto;
+      width: 100%;
     }
     .nav-item {
       background: white;
-      border-radius: 20px;
-      padding: 20px;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-      transition: transform 0.2s;
+      border-radius: 25px;
+      padding: 30px 20px;
+      box-shadow:
+        0 8px 15px rgba(46, 61, 73, 0.1),
+        0 3px 6px rgba(46, 61, 73, 0.06);
+      transition: transform 0.3s cubic-bezier(.25,.8,.25,1),
+                  box-shadow 0.3s cubic-bezier(.25,.8,.25,1);
       text-decoration: none;
-      color: inherit;
+      color: #34495e;
+      user-select: none;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
-    .nav-item:hover {
-      transform: scale(1.03);
+    .nav-item:hover, .nav-item:focus {
+      transform: translateY(-6px);
+      box-shadow:
+        0 12px 20px rgba(46, 61, 73, 0.15),
+        0 6px 10px rgba(46, 61, 73, 0.1);
+      color: #1abc9c;
+      outline: none;
     }
     .nav-item img {
-      width: 80px;
-      height: 80px;
-      margin-bottom: 15px;
+      width: 90px;
+      height: 90px;
+      margin-bottom: 18px;
+      filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1));
     }
     .nav-item span {
-      display: block;
-      font-size: 1.2em;
-      font-weight: bold;
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      user-select: none;
     }
     .logout {
-      display: inline-block;
-      margin-top: 40px;
-      color: red;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #e74c3c;
       text-decoration: none;
-      font-weight: bold;
+      margin-top: 40px;
+      padding: 10px 25px;
+      border-radius: 30px;
+      border: 2px solid #e74c3c;
+      width: fit-content;
+      margin-left: auto;
+      margin-right: auto;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    .logout:hover, .logout:focus {
+      background-color: #e74c3c;
+      color: white;
+      outline: none;
+      cursor: pointer;
+    }
+    @media (max-width: 500px) {
+      .nav-item img {
+        width: 70px;
+        height: 70px;
+      }
+      .nav-item span {
+        font-size: 1.1rem;
+      }
     }
   </style>
 </head>
@@ -59,30 +104,30 @@
 
   <h1>דף ניהול HairBoss</h1>
 
-  <div class="nav-grid">
-    <a href="/appointments" class="nav-item">
-      <img src="/static/icons/appointments.png" alt="רשימת תורים" />
+  <div class="nav-grid" role="navigation" aria-label="תפריט ניהול">
+    <a href="/appointments" class="nav-item" tabindex="0" aria-label="רשימת תורים">
+      <img src="/static/icons/appointments.png" alt="" aria-hidden="true" />
       <span>רשימת תורים</span>
     </a>
-    <a href="/admin_command" class="nav-item">
-      <img src="/static/icons/weekly.png" alt="שגרה שבועית" />
+    <a href="/admin_command" class="nav-item" tabindex="0" aria-label="שגרה שבועית">
+      <img src="/static/icons/weekly.png" alt="" aria-hidden="true" />
       <span>שגרה שבועית</span>
     </a>
-    <a href="/admin_overrides" class="nav-item">
-      <img src="/static/icons/override.png" alt="שינויים חד פעמיים" />
+    <a href="/admin_overrides" class="nav-item" tabindex="0" aria-label="שינויים חד פעמיים">
+      <img src="/static/icons/override.png" alt="" aria-hidden="true" />
       <span>שינויים חד פעמיים</span>
     </a>
-    <a href="/bot_knowledge" class="nav-item">
-      <img src="/static/icons/bot.png" alt="ידע הבוט" />
+    <a href="/bot_knowledge" class="nav-item" tabindex="0" aria-label="ידע הבוט">
+      <img src="/static/icons/bot.png" alt="" aria-hidden="true" />
       <span>ידע הבוט</span>
     </a>
-    <a href="/" target="_blank" class="nav-item">
-      <img src="/static/icons/home.png" alt="עמוד ההזמנות" />
+    <a href="/" target="_blank" class="nav-item" tabindex="0" aria-label="עמוד ההזמנות">
+      <img src="/static/icons/home.png" alt="" aria-hidden="true" />
       <span>עמוד ההזמנות</span>
     </a>
   </div>
 
-  <a href="/logout" class="logout">נתק חשבון</a>
+  <a href="/logout" class="logout" tabindex="0">נתק חשבון</a>
 
 </body>
 </html>
