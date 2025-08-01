@@ -34,6 +34,12 @@ def save_json(filename, data):
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
+def load_one_time_changes():
+    return load_json(OVERRIDES_FILE)
+
+def save_one_time_changes(data):
+    save_json(OVERRIDES_FILE, data)
+
 def load_text(filename):
     if not os.path.exists(filename):
         return ""
@@ -54,7 +60,7 @@ def save_appointments(data):
 
 def generate_week_slots():
     weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
-    overrides = load_json(OVERRIDES_FILE)
+    overrides = load_one_time_changes()  # טען את השינויים החד-פעמיים
     today = datetime.today()
     week_slots = {}
 
@@ -74,16 +80,17 @@ def generate_week_slots():
         remove_times = override.get("remove", [])
 
         if remove_times == ["__all__"]:
-            all_final = []
+            # כל היום כבוי - אין זמינים
+            final_times = []
         else:
-            all_final = sorted(set(scheduled_times + add_times + remove_times))
-
-        final_times = []
-        for t in all_final:
-            if remove_times == ["__all__"] or t in remove_times:
-                final_times.append({"time": t, "available": False})
-            else:
-                final_times.append({"time": t, "available": True})
+            # times שמגיעים מהשגרה + תוספות, בלי ההסרות
+            all_final = sorted(set(scheduled_times + add_times))
+            final_times = []
+            for t in all_final:
+                if t in remove_times:
+                    final_times.append({"time": t, "available": False})
+                else:
+                    final_times.append({"time": t, "available": True})
 
         week_slots[date_str] = {
             "day_name": day_name,
@@ -91,7 +98,6 @@ def generate_week_slots():
         }
 
     return week_slots
-
 
 def is_slot_available(date, time):
     week_slots = generate_week_slots()
@@ -258,7 +264,7 @@ def update_overrides():
     date = data.get("date")
     time = data.get("time")
 
-    overrides = load_json(OVERRIDES_FILE)
+    overrides = load_one_time_changes()
     day_override = overrides.get(date, {"add": [], "remove": []})
 
     if action == "add":
@@ -273,35 +279,14 @@ def update_overrides():
                 day_override["add"].remove(time)
     elif action == "clear":
         overrides.pop(date, None)
-        save_json(OVERRIDES_FILE, overrides)
+        save_one_time_changes(overrides)
         return jsonify({"message": f"Overrides cleared for {date}"})
-
     else:
         return jsonify({"error": "Invalid action"}), 400
 
     overrides[date] = day_override
-    save_json(OVERRIDES_FILE, overrides)
+    save_one_time_changes(overrides)
     return jsonify({"message": "Overrides updated", "overrides": overrides})
-
-@app.route("/overrides_toggle_day", methods=["POST"])
-def toggle_override_day():
-    if not session.get("is_admin"):
-        return jsonify({"error": "Unauthorized"}), 403
-
-    data = request.get_json()
-    date = data.get("date")
-    enabled = data.get("enabled")
-
-    overrides = load_json(OVERRIDES_FILE)
-
-    if not enabled:
-        overrides[date] = {"add": [], "remove": ["__all__"]}
-    else:
-        if date in overrides and overrides[date].get("remove") == ["__all__"]:
-            overrides.pop(date)
-
-    save_json(OVERRIDES_FILE, overrides)
-    return jsonify({"message": "Day override toggled", "overrides": overrides})
 
 @app.route('/admin/one-time/toggle_day', methods=['POST'])
 def toggle_day():
