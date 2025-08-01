@@ -1,30 +1,371 @@
-{% for date, slots in one_time_changes.items() %}
-  <div style="border:1px solid #ccc; padding:10px; margin-bottom:20px; border-radius:10px;">
-    <h3>{{ date }} - {{ format_day_name(date) }}</h3>
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ניהול שינויים חד-פעמיים - HairBoss</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 20px;
+      background: #f8f9fa;
+      color: #2c3e50;
+      direction: rtl;
+    }
 
-    <!-- פעולות על כל היום -->
-    <div style="margin-bottom: 10px;">
-      <button onclick="toggleDay('{{ date }}')">🔁 הפעל/כבה את כל היום</button>
-      <button onclick="addSlotPrompt('{{ date }}')">➕ הוסף שעה</button>
-    </div>
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
 
-    <!-- רשימת השעות -->
-    <div>
-      {% for slot in slots %}
-        <div style="margin:5px 0;">
-          <strong>{{ slot.time }}</strong>
-          {% if slot.available %}
-            <span style="color:green;">🟢 פעיל</span>
-          {% else %}
-            <span style="color:red;">🔴 כבוי</span>
-          {% endif %}
+    .date-button {
+      display: inline-block;
+      padding: 10px 16px;
+      margin: 6px;
+      border: none;
+      background: #2980b9;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
 
-          <!-- פעולות לשעה -->
-          <button onclick="editSlotPrompt('{{ date }}', '{{ slot.time }}')">✏️ ערוך</button>
-          <button onclick="deleteSlot('{{ date }}', '{{ slot.time }}')">🗑️ מחק</button>
-          <button onclick="toggleSlot('{{ date }}', '{{ slot.time }}')">🔁 הפעל/כבה</button>
-        </div>
-      {% endfor %}
-    </div>
-  </div>
-{% endfor %}
+    .date-button.active {
+      background: #1c5986;
+    }
+
+    .date-section {
+      display: none;
+      margin-top: 20px;
+      padding: 15px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 0 5px #ccc;
+    }
+
+    .time-slot {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 10px;
+      background: #e9f7ef;
+      margin-bottom: 8px;
+      padding: 8px 12px;
+      border-radius: 6px;
+    }
+
+    .time-slot input[type="time"] {
+      width: 90px;
+      padding: 5px;
+    }
+
+    .time-slot button {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .btn-edit {
+      background-color: #f39c12;
+      color: white;
+    }
+
+    .btn-delete {
+      background-color: #e74c3c;
+      color: white;
+    }
+
+    .btn-toggle-day {
+      background: #c0392b;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 10px;
+      margin-bottom: 15px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .btn-add-slot {
+      background: #2ecc71;
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+  </style>
+</head>
+<body>
+
+<h1>ניהול שינויים חד-פעמיים</h1>
+
+<div id="date-buttons"></div>
+
+<div id="date-sections"></div>
+
+<script>
+let overrides = {};
+let activeDate = null;
+
+async function fetchOverrides() {
+  const res = await fetch('/admin/one-time');
+  const text = await res.text();
+  // כמו בשגרה - נטען מה-Jinja (render_template) כי אין API JSON נפרד
+}
+
+function init() {
+  overrides = {{ overrides|tojson }};
+  buildDateButtons();
+  buildDateSections();
+  if(Object.keys(overrides).length) {
+    openDate(Object.keys(overrides)[0]);
+  }
+}
+
+function buildDateButtons() {
+  const container = document.getElementById('date-buttons');
+  container.innerHTML = '';
+  Object.keys(overrides).forEach(date => {
+    const btn = document.createElement('button');
+    btn.textContent = date;
+    btn.className = 'date-button';
+    btn.dataset.date = date;
+    btn.onclick = () => openDate(date);
+    container.appendChild(btn);
+  });
+}
+
+function buildDateSections() {
+  const container = document.getElementById('date-sections');
+  container.innerHTML = '';
+
+  Object.entries(overrides).forEach(([date, data]) => {
+    const section = document.createElement('div');
+    section.className = 'date-section';
+    section.dataset.date = date;
+    section.style.display = 'none';
+
+    // כפתור כיבוי/הפעלה יום
+    const toggleBtn = document.createElement('button');
+    toggleBtn.className = 'btn-toggle-day';
+
+    // נניח יום כבוי = כל השעות לא זמינות
+    const allOff = data.remove && data.remove.includes('__all__');
+    toggleBtn.textContent = allOff ? 'הפעל יום זה' : 'כבה יום זה';
+    toggleBtn.onclick = () => toggleDay(date, toggleBtn, section);
+    section.appendChild(toggleBtn);
+
+    const slotContainer = document.createElement('div');
+    slotContainer.className = 'slots-container';
+    section.appendChild(slotContainer);
+
+    // השעות שצריך להציג:
+    // בשינויים יש 2 רשימות: add (זמנים זמינים) ו-remove (זמנים לא זמינים).
+    // נפעיל לוגיקה פשוטה להצגה:
+    let allTimes = [];
+    if(data.add) allTimes = allTimes.concat(data.add);
+    if(data.remove) {
+      data.remove.forEach(t => {
+        if(t !== '__all__' && !allTimes.includes(t)) {
+          allTimes.push(t);
+        }
+      });
+    }
+    allTimes.sort();
+
+    allTimes.forEach(time => {
+      addSlot(slotContainer, time, data.add && data.add.includes(time));
+    });
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'btn-add-slot';
+    addBtn.textContent = '+ הוסף שעה';
+    addBtn.onclick = () => addSlot(slotContainer);
+    section.appendChild(addBtn);
+
+    container.appendChild(section);
+  });
+}
+
+function openDate(date) {
+  activeDate = date;
+  document.querySelectorAll('.date-button').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.date-section').forEach(s => s.style.display = 'none');
+  document.querySelector(`.date-button[data-date="${date}"]`).classList.add('active');
+  document.querySelector(`.date-section[data-date="${date}"]`).style.display = 'block';
+}
+
+function addSlot(container, timeValue = '', available = true) {
+  const slot = document.createElement('div');
+  slot.className = 'time-slot';
+
+  const input = document.createElement('input');
+  input.type = 'time';
+  input.value = timeValue;
+  input.disabled = true;
+  slot.appendChild(input);
+
+  const editBtn = document.createElement('button');
+  editBtn.className = 'btn-edit';
+  editBtn.textContent = 'ערוך';
+  editBtn.onclick = () => {
+    input.disabled = !input.disabled;
+    if(!input.disabled) input.focus();
+  };
+  slot.appendChild(editBtn);
+
+  const toggleAvailableBtn = document.createElement('button');
+  toggleAvailableBtn.textContent = available ? 'זמין' : 'לא זמין';
+  toggleAvailableBtn.style.backgroundColor = available ? '#2ecc71' : '#e74c3c';
+  toggleAvailableBtn.style.color = 'white';
+  toggleAvailableBtn.style.border = 'none';
+  toggleAvailableBtn.style.borderRadius = '6px';
+  toggleAvailableBtn.style.fontWeight = 'bold';
+  toggleAvailableBtn.style.cursor = 'pointer';
+  toggleAvailableBtn.onclick = () => {
+    available = !available;
+    toggleAvailableBtn.textContent = available ? 'זמין' : 'לא זמין';
+    toggleAvailableBtn.style.backgroundColor = available ? '#2ecc71' : '#e74c3c';
+  };
+  slot.appendChild(toggleAvailableBtn);
+
+  const saveBtn = document.createElement('button');
+  saveBtn.textContent = 'שמור';
+  saveBtn.style.backgroundColor = '#27ae60';
+  saveBtn.style.color = 'white';
+  saveBtn.style.border = 'none';
+  saveBtn.style.borderRadius = '6px';
+  saveBtn.style.marginRight = '10px';
+  saveBtn.style.cursor = 'pointer';
+  saveBtn.onclick = async () => {
+    if(!input.value) {
+      alert('אנא הזן שעה חוקית');
+      return;
+    }
+    await saveEditSlot(activeDate, slot, input.value, input.dataset.oldValue, available);
+    input.dataset.oldValue = input.value;
+    input.disabled = true;
+  };
+  slot.appendChild(saveBtn);
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'btn-delete';
+  deleteBtn.textContent = 'X';
+  deleteBtn.onclick = async () => {
+    if(confirm('בטוח שברצונך למחוק שעה זו?')) {
+      await deleteSlot(activeDate, input.value);
+      slot.remove();
+    }
+  };
+  slot.appendChild(deleteBtn);
+
+  input.dataset.oldValue = timeValue;
+
+  container.appendChild(slot);
+}
+
+async function toggleDay(date, button, section) {
+  // יום כבוי = מוסיפים '__all__' ל-remove
+  // יום פעיל = מורידים '__all__' מ-remove
+  let data = overrides[date];
+  if(!data) data = {add: [], remove: []};
+  const allOff = data.remove && data.remove.includes('__all__');
+  const newAllOff = !allOff;
+
+  const res = await fetch('/one_time_toggle_day', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({date, enabled: !newAllOff})
+  });
+  const resp = await res.json();
+  if(res.ok) {
+    if(newAllOff) {
+      overrides[date].remove = ['__all__'];
+      overrides[date].add = [];
+    } else {
+      overrides[date].remove = overrides[date].remove.filter(x => x !== '__all__');
+    }
+    button.textContent = newAllOff ? 'הפעל יום זה' : 'כבה יום זה';
+    const slotContainer = section.querySelector('.slots-container');
+    slotContainer.innerHTML = '';
+  } else {
+    alert('שגיאה בעדכון יום');
+  }
+}
+
+async function saveEditSlot(date, slotElement, newTime, oldTime, available) {
+  const isNew = !oldTime;
+
+  if(isNew) {
+    const res = await fetch('/one_time_changes', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({action: 'add', date, time: newTime, available})
+    });
+    const data = await res.json();
+    if(res.ok) {
+      if(!overrides[date]) overrides[date] = {add: [], remove: []};
+      if(available) {
+        overrides[date].add.push(newTime);
+      } else {
+        overrides[date].remove.push(newTime);
+      }
+      alert('השעה נוספה בהצלחה');
+    } else {
+      alert('שגיאה בהוספת שעה: ' + (data.error || ''));
+      slotElement.remove();
+    }
+  } else {
+    const res = await fetch('/one_time_changes', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({action: 'edit', date, time: oldTime, new_time: newTime, available})
+    });
+    const data = await res.json();
+    if(res.ok) {
+      // עדכן במערכת המקומית
+      if(!overrides[date]) overrides[date] = {add: [], remove: []};
+      // הסר את oldTime מהוספות ומהסרות
+      overrides[date].add = overrides[date].add.filter(t => t !== oldTime);
+      overrides[date].remove = overrides[date].remove.filter(t => t !== oldTime);
+      if(available) overrides[date].add.push(newTime);
+      else overrides[date].remove.push(newTime);
+      alert('השעה עודכנה בהצלחה');
+    } else {
+      alert('שגיאה בעריכת שעה: ' + (data.error || ''));
+      slotElement.querySelector('input[type="time"]').value = oldTime;
+    }
+  }
+}
+
+async function deleteSlot(date, time) {
+  const res = await fetch('/one_time_changes', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({action: 'remove', date, time})
+  });
+  const data = await res.json();
+  if(res.ok) {
+    if(overrides[date]) {
+      overrides[date].add = overrides[date].add.filter(t => t !== time);
+      overrides[date].remove = overrides[date].remove.filter(t => t !== time);
+    }
+    alert('השעה נמחקה בהצלחה');
+  } else {
+    alert('שגיאה במחיקת שעה: ' + (data.error || ''));
+  }
+}
+
+window.onload = init;
+</script>
+
+</body>
+</html>
