@@ -1,496 +1,364 @@
-import os
-import json
-from datetime import datetime, timedelta
-from flask import Flask, request, jsonify, render_template as original_render_template, redirect, session, g
-import smtplib
-from email.message import EmailMessage
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ניהול שגרה שבועית - HairBoss</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 20px;
+      background: #f8f9fa;
+      color: #2c3e50;
+      direction: rtl;
+    }
 
-app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "default_secret")
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
 
-# קבצים
-WEEKLY_SCHEDULE_FILE = "weekly_schedule.json"
-OVERRIDES_FILE = "overrides.json"
-BOT_KNOWLEDGE_FILE = "bot_knowledge.txt"
-APPOINTMENTS_FILE = "appointments.json"
+    .day-button {
+      display: inline-block;
+      padding: 10px 16px;
+      margin: 6px;
+      border: none;
+      background: #2980b9;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
 
-# שירותים ומחירים
-services_prices = {
-    "Men's Haircut": 80,
-    "Women's Haircut": 120,
-    "Blow Dry": 70,
-    "Color": 250
+    .day-button.active {
+      background: #1c5986;
+    }
+
+    .day-section {
+      display: none;
+      margin-top: 20px;
+      padding: 15px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 0 5px #ccc;
+    }
+
+    .time-slot {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 10px;
+      background: #e9f7ef;
+      margin-bottom: 8px;
+      padding: 8px 12px;
+      border-radius: 6px;
+    }
+
+    .time-slot input[type="time"] {
+      width: 90px;
+      padding: 5px;
+    }
+
+    .time-slot button {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .btn-edit {
+      background-color: #f39c12;
+      color: white;
+    }
+
+    .btn-delete {
+      background-color: #e74c3c;
+      color: white;
+    }
+
+    .btn-toggle-day {
+      background: #c0392b;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 10px;
+      margin-bottom: 15px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .btn-add-slot {
+      background: #2ecc71;
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    #save-status {
+      margin-top: 10px;
+      color: green;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+<h1>ניהול שגרה שבועית</h1>
+
+<div id="day-buttons"></div>
+
+<div id="day-sections"></div>
+
+<script>
+const hebDays = ['שני','שלישי','רביעי','חמישי','שישי','שבת','ראשון'];
+// מיפוי day_key למחרוזת יום
+const dayMap = {0:'שני',1:'שלישי',2:'רביעי',3:'חמישי',4:'שישי',5:'שבת',6:'ראשון'};
+
+let weeklySchedule = {};  // ייטען מהשרת
+let activeDay = null;
+
+async function fetchSchedule() {
+  const res = await fetch('/admin/weekly');
+  const html = await res.text();
+  // לא טוענים מה-html, נטעין דרך API:
+  // נעשה fetch נוסף לראוט המתאים JSON:
+  // מכיוון שאין ראוט נפרד JSON - נשתמש בראוט שמחזיר json
+  // אבל כרגע אין כזה. לכן נטען weekly_schedule מה-Jinja
+  // במקום זאת, נוסיף כאן טען סטטי:
+  // ליתר דיוק, נשלב את weekly_schedule מהשרת באמצעות Jinja:
 }
 
-# --- פונקציות עזר ---
+function init() {
+  // weeklySchedule מגיע מהשרת כמשתנה שמוטמע ע"י Jinja
+  weeklySchedule = {{ weekly_schedule|tojson }};
+  
+  buildDayButtons();
+  buildDaySections();
+  openDay(0);
+}
 
-def load_json(filename):
-    if not os.path.exists(filename):
-        return {}
-    with open(filename, "r", encoding="utf-8") as f:
-        return json.load(f)
+function buildDayButtons() {
+  const container = document.getElementById('day-buttons');
+  container.innerHTML = '';
+  for(let i=0; i<7; i++) {
+    const btn = document.createElement('button');
+    btn.textContent = dayMap[i];
+    btn.className = 'day-button';
+    btn.dataset.dayKey = i;
+    btn.onclick = () => openDay(i);
+    container.appendChild(btn);
+  }
+}
 
-def save_json(filename, data):
-    with open(filename, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+function buildDaySections() {
+  const container = document.getElementById('day-sections');
+  container.innerHTML = '';
 
-def load_text(filename):
-    if not os.path.exists(filename):
-        return ""
-    with open(filename, "r", encoding="utf-8") as f:
-        return f.read()
+  for(let i=0; i<7; i++) {
+    const dayKey = i;
+    const dayName = dayMap[i];
+    const section = document.createElement('div');
+    section.className = 'day-section';
+    section.dataset.dayKey = dayKey;
+    section.style.display = 'none';
 
-def save_text(filename, content):
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write(content.strip())
+    // כפתור כיבוי/הפעלה יום
+    const toggleBtn = document.createElement('button');
+    toggleBtn.className = 'btn-toggle-day';
+    const enabled = (weeklySchedule[dayKey] && weeklySchedule[dayKey].length > 0);
+    toggleBtn.textContent = enabled ? 'כבה יום זה' : 'הפעל יום זה';
+    toggleBtn.onclick = () => toggleDay(dayKey, toggleBtn, section);
+    section.appendChild(toggleBtn);
 
-def load_appointments():
-    return load_json(APPOINTMENTS_FILE)
+    // מכולת שעות
+    const slotContainer = document.createElement('div');
+    slotContainer.className = 'slots-container';
+    section.appendChild(slotContainer);
 
-def save_appointments(data):
-    save_json(APPOINTMENTS_FILE, data)
-
-# --- יצירת רשימת שעות שבועית עם שינויים ---
-
-def generate_week_slots():
-    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
-    overrides = load_json(OVERRIDES_FILE)
-    today = datetime.today()
-    week_slots = {}
-
-    heb_days = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
-
-    for i in range(7):
-        current_date = today + timedelta(days=i)
-        date_str = current_date.strftime("%Y-%m-%d")
-        weekday = current_date.weekday()
-        day_name = heb_days[weekday]
-
-        day_key = str(weekday)
-        scheduled_times = weekly_schedule.get(day_key, [])
-
-        override = overrides.get(date_str, {"add": [], "remove": []})
-        add_times = override.get("add", [])
-        remove_times = override.get("remove", [])
-
-        if remove_times == ["__all__"]:
-            all_final = []
-        else:
-            all_final = sorted(set(scheduled_times + add_times + remove_times))
-
-        final_times = []
-        for t in all_final:
-            if remove_times == ["__all__"] or t in remove_times:
-                final_times.append({"time": t, "available": False})
-            else:
-                final_times.append({"time": t, "available": True})
-
-        week_slots[date_str] = {
-            "day_name": day_name,
-            "times": final_times
-        }
-
-    return week_slots
-
-
-def is_slot_available(date, time):
-    week_slots = generate_week_slots()
-    day_info = week_slots.get(date)
-    if not day_info:
-        return False
-    for t in day_info["times"]:
-        if t["time"] == time and t.get("available", True):
-            return True
-    return False
-
-# --- לפני כל בקשה - העברת session ל-g ---
-
-@app.before_request
-def before_request():
-    g.username = session.get('username')
-    g.is_admin = session.get('is_admin')
-
-# --- החלפת render_template ---
-
-def render_template(template_name_or_list, **context):
-    context['session'] = {
-        'username': g.get('username'),
-        'is_admin': g.get('is_admin')
+    // בנה את השעות
+    if(enabled) {
+      weeklySchedule[dayKey].forEach(time => {
+        addSlot(slotContainer, time);
+      });
     }
-    return original_render_template(template_name_or_list, **context)
 
-# --- ניהול התחברות ---
+    // כפתור הוספת שעה חדשה
+    const addBtn = document.createElement('button');
+    addBtn.className = 'btn-add-slot';
+    addBtn.textContent = '+ הוסף שעה';
+    addBtn.onclick = () => addSlot(slotContainer);
+    section.appendChild(addBtn);
 
-@app.route("/login", methods=['GET', 'POST'])
-def login():
-    error = None
-    admin_user = os.environ.get('ADMIN_USERNAME')
-    admin_password = os.environ.get('ADMIN_PASSWORD') or "1234"
+    container.appendChild(section);
+  }
+}
 
-    if request.method == 'POST':
-        username = request.form['username'].strip()
-        password = request.form.get('password', '')
+function openDay(dayKey) {
+  activeDay = dayKey;
+  document.querySelectorAll('.day-button').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.day-section').forEach(s => s.style.display = 'none');
+  document.querySelector(`.day-button[data-day-key="${dayKey}"]`).classList.add('active');
+  document.querySelector(`.day-section[data-day-key="${dayKey}"]`).style.display = 'block';
+}
 
-        if not username:
-            error = "יש להזין שם משתמש"
-            return render_template('login.html', error=error, admin_user=admin_user)
+function addSlot(container, timeValue = '') {
+  const slot = document.createElement('div');
+  slot.className = 'time-slot';
 
-        if username == admin_user:
-            if password == admin_password:
-                session['username'] = username
-                session['is_admin'] = True
-                return redirect('/admin_command')
-            else:
-                error = "סיסמה שגויה"
-                return render_template('login.html', error=error, admin_user=admin_user)
+  const input = document.createElement('input');
+  input.type = 'time';
+  input.value = timeValue;
+  input.disabled = true;
+  slot.appendChild(input);
 
-        # משתמש רגיל - אין צורך בסיסמה
-        session['username'] = username
-        session['is_admin'] = False
-        return redirect('/')
+  const editBtn = document.createElement('button');
+  editBtn.className = 'btn-edit';
+  editBtn.textContent = 'ערוך';
+  editBtn.onclick = () => {
+    input.disabled = !input.disabled;
+    if(!input.disabled) input.focus();
+  }
+  slot.appendChild(editBtn);
 
-    return render_template('login.html', error=error, admin_user=admin_user)
-
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect("/")
-
-# --- דף ניהול ראשי ---
-
-@app.route("/admin_command", methods=["GET"])
-def admin_command():
-    if not session.get("is_admin"):
-        return redirect("/login")
-
-    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
-    overrides = load_json(OVERRIDES_FILE)
-    week_slots = generate_week_slots()
-    bot_knowledge = load_text(BOT_KNOWLEDGE_FILE)
-    appointments = load_appointments()
-
-    # 🔽 הוסף את זה כאן (מתחת לכל הטעינות)
-    default_times = []
-    current_time = datetime.strptime("08:00", "%H:%M")
-    end_time = datetime.strptime("20:00", "%H:%M")
-    while current_time <= end_time:
-        default_times.append(current_time.strftime("%H:%M"))
-        current_time += timedelta(minutes=30)
-
-    return render_template("admin_command.html",
-                           weekly_schedule=weekly_schedule,
-                           overrides=overrides,
-                           week_slots=week_slots,
-                           bot_knowledge=bot_knowledge,
-                           appointments=appointments,
-                           default_times=default_times)  # 👈 אל תשכח להוסיף את זה כאן
-
-# --- ניהול שגרה שבועית ---
-
-@app.route("/weekly_schedule", methods=["POST"])
-def update_weekly_schedule():
-    if not session.get("is_admin"):
-        return jsonify({"error": "Unauthorized"}), 403
-
-    data = request.get_json()
-    action = data.get("action")
-    day_key = data.get("day_key")
-    time = data.get("time")
-    new_time = data.get("new_time")
-
-    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
-
-    if day_key not in [str(i) for i in range(7)]:
-        return jsonify({"error": "Invalid day key"}), 400
-
-    day_times = weekly_schedule.get(day_key, [])
-
-    if action == "add" and time:
-        if time not in day_times:
-            day_times.append(time)
-            day_times.sort()
-            weekly_schedule[day_key] = day_times
-    elif action == "remove" and time:
-        if time in day_times:
-            day_times.remove(time)
-            weekly_schedule[day_key] = day_times
-    elif action == "edit" and time and new_time:
-        if time in day_times:
-            day_times.remove(time)
-            if new_time not in day_times:
-                day_times.append(new_time)
-                day_times.sort()
-            weekly_schedule[day_key] = day_times
-    else:
-        return jsonify({"error": "Invalid action or missing time"}), 400
-
-    save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
-    return jsonify({"message": "Weekly schedule updated", "weekly_schedule": weekly_schedule})
-
-@app.route("/weekly_toggle_day", methods=["POST"])
-def toggle_weekly_day():
-    if not session.get("is_admin"):
-        return jsonify({"error": "Unauthorized"}), 403
-
-    data = request.get_json()
-    day_key = data.get("day_key")
-    enabled = data.get("enabled")
-
-    if day_key not in [str(i) for i in range(7)]:
-        return jsonify({"error": "Invalid day key"}), 400
-
-    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
-    weekly_schedule[day_key] = [] if not enabled else weekly_schedule.get(day_key, [])
-    save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
-
-    return jsonify({"message": "Day updated", "weekly_schedule": weekly_schedule})
-
-
-# --- ניהול שינויים חד פעמיים (overrides) ---
-
-@app.route("/overrides", methods=["POST"])
-def update_overrides():
-    if not session.get("is_admin"):
-        return jsonify({"error": "Unauthorized"}), 403
-
-    data = request.get_json()
-    action = data.get("action")
-    date = data.get("date")
-    time = data.get("time")
-
-    overrides = load_json(OVERRIDES_FILE)
-    day_override = overrides.get(date, {"add": [], "remove": []})
-
-    if action == "add":
-        if time and time not in day_override["add"]:
-            day_override["add"].append(time)
-            if time in day_override["remove"]:
-                day_override["remove"].remove(time)
-    elif action == "remove":
-        if time and time not in day_override["remove"]:
-            day_override["remove"].append(time)
-            if time in day_override["add"]:
-                day_override["add"].remove(time)
-    elif action == "clear":
-        overrides.pop(date, None)
-        save_json(OVERRIDES_FILE, overrides)
-        return jsonify({"message": f"Overrides cleared for {date}"})
-
-    else:
-        return jsonify({"error": "Invalid action"}), 400
-
-    overrides[date] = day_override
-    save_json(OVERRIDES_FILE, overrides)
-    return jsonify({"message": "Overrides updated", "overrides": overrides})
-
-@app.route("/overrides_toggle_day", methods=["POST"])
-def toggle_override_day():
-    if not session.get("is_admin"):
-        return jsonify({"error": "Unauthorized"}), 403
-
-    data = request.get_json()
-    date = data.get("date")
-    enabled = data.get("enabled")
-
-    overrides = load_json(OVERRIDES_FILE)
-
-    if not enabled:
-        overrides[date] = {"add": [], "remove": ["__all__"]}
-    else:
-        if date in overrides and overrides[date].get("remove") == ["__all__"]:
-            overrides.pop(date)
-
-    save_json(OVERRIDES_FILE, overrides)
-    return jsonify({"message": "Day override toggled", "overrides": overrides})
-
-@app.route('/admin/one-time/toggle_day', methods=['POST'])
-def toggle_day():
-    data = request.json
-    date = data['date']
-    one_time = load_one_time_changes()
-    if date not in one_time:
-        return jsonify({'error': 'Date not found'}), 404
-
-    # Toggle all slots
-    all_disabled = all(not slot['available'] for slot in one_time[date])
-    for slot in one_time[date]:
-        slot['available'] = not all_disabled
-
-    save_one_time_changes(one_time)
-    return jsonify({'message': 'Day toggled successfully'})
-
-@app.route('/admin/one-time/delete', methods=['POST'])
-def delete_slot():
-    data = request.json
-    date, time = data['date'], data['time']
-    one_time = load_one_time_changes()
-    if date in one_time:
-        one_time[date] = [slot for slot in one_time[date] if slot['time'] != time]
-        save_one_time_changes(one_time)
-    return jsonify({'message': 'Slot deleted'})
-
-@app.route('/admin/one-time/edit', methods=['POST'])
-def edit_slot():
-    data = request.json
-    date, old_time, new_time = data['date'], data['old_time'], data['new_time']
-    one_time = load_one_time_changes()
-    for slot in one_time.get(date, []):
-        if slot['time'] == old_time:
-            slot['time'] = new_time
-            break
-    save_one_time_changes(one_time)
-    return jsonify({'message': 'Slot edited'})
-
-@app.route('/admin/one-time/toggle_slot', methods=['POST'])
-def toggle_slot():
-    data = request.json
-    date, time = data['date'], data['time']
-    one_time = load_one_time_changes()
-    for slot in one_time.get(date, []):
-        if slot['time'] == time:
-            slot['available'] = not slot['available']
-            break
-    save_one_time_changes(one_time)
-    return jsonify({'message': 'Slot toggled'})
-
-@app.route('/admin/one-time/add', methods=['POST'])
-def add_slot():
-    data = request.json
-    date, time = data['date'], data['time']
-    one_time = load_one_time_changes()
-    one_time.setdefault(date, []).append({'time': time, 'available': True})
-    save_one_time_changes(one_time)
-    return jsonify({'message': 'Slot added'})
-
-# --- ניהול טקסט ידע של הבוט ---
-
-@app.route("/bot_knowledge", methods=["GET", "POST"])
-def bot_knowledge():
-    if not session.get("is_admin"):
-        return redirect("/login")
-
-    if request.method == "POST":
-        content = request.form.get("content", "")
-        save_text(BOT_KNOWLEDGE_FILE, content)
-        return redirect("/admin_command")
-
-    content = load_text(BOT_KNOWLEDGE_FILE)
-    return render_template("bot_knowledge.html", content=content)
-
-# --- ניהול הזמנות ---
-
-@app.route("/book", methods=["POST"])
-def book_appointment():
-    data = request.get_json()
-    name = data.get("name", "").strip()
-    phone = data.get("phone", "").strip()
-    date = data.get("date", "").strip()
-    time = data.get("time", "").strip()
-    service = data.get("service", "").strip()
-
-    if not all([name, phone, date, time, service]):
-        return jsonify({"error": "Missing fields"}), 400
-
-    if service not in services_prices:
-        return jsonify({"error": "Unknown service"}), 400
-
-    if not is_slot_available(date, time):
-        return jsonify({"error": "This time slot is not available"}), 400
-
-    appointments = load_appointments()
-    date_appointments = appointments.get(date, [])
-
-    # בדיקה אם השעה תפוסה
-    for appt in date_appointments:
-        if appt["time"] == time:
-            return jsonify({"error": "This time slot is already booked"}), 400
-
-    appointment = {
-        "name": name,
-        "phone": phone,
-        "time": time,
-        "service": service,
-        "price": services_prices[service]
+  const saveBtn = document.createElement('button');
+  saveBtn.textContent = 'שמור';
+  saveBtn.style.backgroundColor = '#27ae60';
+  saveBtn.style.color = 'white';
+  saveBtn.style.border = 'none';
+  saveBtn.style.borderRadius = '6px';
+  saveBtn.style.marginRight = '10px';
+  saveBtn.style.cursor = 'pointer';
+  saveBtn.onclick = async () => {
+    if(!input.value) {
+      alert('אנא הזן שעה חוקית');
+      return;
     }
-    date_appointments.append(appointment)
-    appointments[date] = date_appointments
-    save_appointments(appointments)
+    await saveEditSlot(activeDay, slot, input.value, input.dataset.oldValue);
+    input.dataset.oldValue = input.value;
+    input.disabled = true;
+  };
+  slot.appendChild(saveBtn);
 
-    try:
-        send_email(name, phone, date, time, service, services_prices[service])
-    except Exception as e:
-        print("Error sending email:", e)
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'btn-delete';
+  deleteBtn.textContent = 'X';
+  deleteBtn.onclick = async () => {
+    if (confirm('בטוח שברצונך למחוק שעה זו?')) {
+      await deleteSlot(activeDay, input.value);
+      slot.remove();
+    }
+  };
+  slot.appendChild(deleteBtn);
 
-    return jsonify({"message": f"Appointment booked for {date} at {time} for {service}."})
+  input.dataset.oldValue = timeValue;
 
-# --- שליחת אימייל ---
+  container.appendChild(slot);
+}
 
-def send_email(name, phone, date, time, service, price):
-    msg = EmailMessage()
-    msg.set_content(f"""
-New appointment booked:
+async function toggleDay(dayKey, button, section) {
+  const enabled = (weeklySchedule[dayKey] && weeklySchedule[dayKey].length > 0);
+  const newEnabled = !enabled;
 
-Name: {name}
-Phone: {phone}
-Date: {date}
-Time: {time}
-Service: {service}
-Price: {price}₪
-""")
-    msg['Subject'] = f'New Appointment - {name}'
-    msg['From'] = 'nextwaveaiandweb@gmail.com'  # שנה למייל שלך
-    msg['To'] = 'nextwaveaiandweb@gmail.com'    # שנה למייל שלך
+  // שלח לשרת את השינוי
+  const res = await fetch('/weekly_toggle_day', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({day_key: dayKey.toString(), enabled: newEnabled})
+  });
+  const data = await res.json();
 
-    try:
-        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
-        EMAIL_USER = os.environ.get("EMAIL_USER")
-        EMAIL_PASS = os.environ.get("EMAIL_PASS")
+  if (res.ok) {
+    // עדכן בנתונים המקומיים
+    if(newEnabled) {
+      if(!weeklySchedule[dayKey]) weeklySchedule[dayKey] = [];
+    } else {
+      weeklySchedule[dayKey] = [];
+    }
+    // עדכן כפתור ומראה שעות
+    button.textContent = newEnabled ? 'כבה יום זה' : 'הפעל יום זה';
+    const slotContainer = section.querySelector('.slots-container');
+    slotContainer.innerHTML = '';
+    if(newEnabled) {
+      // אפשר להשאיר ריק
+    }
+  } else {
+    alert('שגיאה בעדכון יום');
+  }
+}
 
-        server.login(EMAIL_USER, EMAIL_PASS)
-        server.send_message(msg)
-        server.quit()
-        print("Email sent successfully")
-    except Exception as e:
-        print("Failed to send email:", e)
+async function saveEditSlot(dayKey, slotElement, newTime, oldTime) {
+  // אם oldTime ריק -> הוספה, אחרת עריכה
+  const isNew = !oldTime;
 
-# --- דף הצגת תורים (מנהל בלבד) ---
+  if(isNew) {
+    // הוסף שעה חדשה
+    const res = await fetch('/weekly_schedule', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({action: 'add', day_key: dayKey.toString(), time: newTime})
+    });
+    const data = await res.json();
+    if(res.ok) {
+      weeklySchedule[dayKey].push(newTime);
+      weeklySchedule[dayKey].sort();
+      alert('השעה נוספה בהצלחה');
+    } else {
+      alert('שגיאה בהוספת שעה: ' + (data.error || ''));
+      slotElement.remove();
+    }
+  } else {
+    // עריכה
+    const res = await fetch('/weekly_schedule', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({action: 'edit', day_key: dayKey.toString(), time: oldTime, new_time: newTime})
+    });
+    const data = await res.json();
+    if(res.ok) {
+      // עדכן במערכת המקומית
+      const times = weeklySchedule[dayKey];
+      const idx = times.indexOf(oldTime);
+      if(idx >= 0) {
+        times[idx] = newTime;
+        times.sort();
+      }
+      alert('השעה עודכנה בהצלחה');
+    } else {
+      alert('שגיאה בעריכת שעה: ' + (data.error || ''));
+      // החזר לשעה הישנה
+      slotElement.querySelector('input[type="time"]').value = oldTime;
+    }
+  }
+}
 
-@app.route("/availability")
-def availability():
-    week_slots = generate_week_slots()
-    return jsonify(week_slots)  # מחזיר מפתחות כמו "2025-08-01"
+async function deleteSlot(dayKey, time) {
+  const res = await fetch('/weekly_schedule', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({action: 'remove', day_key: dayKey.toString(), time: time})
+  });
+  const data = await res.json();
+  if(res.ok) {
+    const idx = weeklySchedule[dayKey].indexOf(time);
+    if(idx >= 0) {
+      weeklySchedule[dayKey].splice(idx, 1);
+    }
+    alert('השעה נמחקה בהצלחה');
+  } else {
+    alert('שגיאה במחיקת שעה: ' + (data.error || ''));
+  }
+}
 
-# --- דף הבית ---
+// הפעל התחלה
+window.onload = init;
+</script>
 
-@app.route("/")
-def index():
-    week_slots = generate_week_slots()
-    return render_template("index.html", week_slots=week_slots, services=services_prices)
-
-
-
-# --- API - שאלות לבוט ---
-
-@app.route("/ask", methods=["POST"])
-def ask_bot():
-    data = request.get_json()
-    question = data.get("message", "").strip()
-
-    knowledge_text = load_text(BOT_KNOWLEDGE_FILE)
-
-    if not question:
-        answer = "אנא כתוב שאלה."
-    elif "שעות" in question or "תורים" in question:
-        answer = "השעות הזמינות הן לפי השגרה השבועית, אפשר לראות בדף ההזמנות."
-    elif "מחיר" in question:
-        answer = "המחירים שונים לפי השירות, למשל תספורת גברים 80 ש\"ח."
-    else:
-        answer = "מצטער, לא הבנתי את השאלה. נסה לשאול משהו אחר."
-
-    return jsonify({"answer": answer})
-
-# --- הפעלת השרת ---
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 3000))
-    app.run(host="0.0.0.0", port=port)
+</body>
+</html>
