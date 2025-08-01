@@ -165,9 +165,12 @@
       await updateWeeklySchedule(enable ? 'add' : 'remove', day_key, time);
     }
 
-    async function updateOverrides(action, date, time=null) {
+    // ======= עבור שינויים חד פעמיים בדיוק כמו השגרה =======
+
+    async function updateOverrides(action, date, time = null, new_time = null) {
       const body = { action, date };
       if (time) body.time = time;
+      if (new_time) body.new_time = new_time;
       const res = await fetch('/overrides', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -193,15 +196,7 @@
     async function editOverrideTime(date, old_time) {
       const new_time = prompt('הזן שעה חדשה במקום: ' + old_time);
       if (new_time)
-        await fetch('/admin/one-time/edit', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ date, old_time, new_time })
-        }).then(() => location.reload());
-    }
-
-    async function toggleOverrideTime(date, time, enable) {
-      await updateOverrides(enable ? 'add' : 'remove', date, time);
+        await updateOverrides('edit', date, old_time, new_time);
     }
 
     async function toggleOverrideDay(date, enabled) {
@@ -211,6 +206,10 @@
         body: JSON.stringify({ date, enabled })
       });
       location.reload();
+    }
+
+    async function toggleOverrideTime(date, time, enable) {
+      await updateOverrides(enable ? 'add' : 'remove', date, time);
     }
 
     async function clearOverrideDate(date) {
@@ -269,20 +268,19 @@
     <div class="day-container">
       <div class="day-header" onclick="toggleSection('override-times-{{date}}')">
         <span>{{ date }}</span>
-        <button class="toggle-day-btn {% if override.remove == ['__all__'] %} {% else %}enabled{% endif %}"
-          onclick="event.stopPropagation(); toggleOverrideDay('{{date}}', {{ 'false' if override.remove != ['__all__'] else 'true' }})">
-          {% if override.remove == ['__all__'] %}הפעל יום{% else %}כבה יום{% endif %}
+        <button class="toggle-day-btn {% if override.times|length > 0 %}enabled{% endif %}"
+          onclick="event.stopPropagation(); toggleOverrideDay('{{date}}', {{ 'false' if override.times|length > 0 else 'true' }})">
+          {% if override.times|length > 0 %}כבה יום{% else %}הפעל יום{% endif %}
         </button>
       </div>
       <div class="times-container" id="override-times-{{date}}">
         {% for time in default_times %}
-          {% set added = time in override.add %}
-          {% set removed = time in override.remove or override.remove == ['__all__'] %}
-          <button class="time-btn {% if removed %}disabled{% endif %}"
-            onclick="event.stopPropagation(); toggleOverrideTime('{{date}}', '{{time}}', {{ 'true' if not added else 'false' }})">
+          {% set enabled = time in override.times %}
+          <button class="time-btn {% if not enabled %}disabled{% endif %}"
+            onclick="event.stopPropagation(); toggleOverrideTime('{{date}}', '{{time}}', {{ 'true' if not enabled else 'false' }})">
             {{ time }}
             <span class="actions">
-              {% if added %}
+              {% if enabled %}
                 <button onclick="event.stopPropagation(); editOverrideTime('{{date}}', '{{time}}')">✏️</button>
                 <button onclick="event.stopPropagation(); removeOverrideTime('{{date}}', '{{time}}')">✖️</button>
               {% endif %}
