@@ -143,14 +143,7 @@
   </style>
  <script>
   function toggleSection(id) {
-    const container = document.getElementById(id);
-    if (!container) return;
-
-    // תאפשר פתיחה/סגירה רק אם החלונית פעילה (היום מופעל)
-    if (!container.classList.contains('active')) {
-      return;
-    }
-    container.classList.toggle('active');
+    document.getElementById(id).classList.toggle('active');
   }
 
   async function updateWeeklySchedule(action, day_key, time, new_time = null) {
@@ -174,6 +167,7 @@
   }
 
   async function removeWeeklyTime(day_key, time) {
+    // מחיקה שקטה בלי popup ובלי רילואד
     const data = await updateWeeklySchedule('remove', day_key, time);
     if (!data.error) {
       const wrapper = document.getElementById(`time-wrapper-${day_key}-${time.replace(':', '-')}`);
@@ -187,24 +181,29 @@
     const id = `actions-${day_key}-${time.replace(':','-')}`;
     const el = document.getElementById(id);
     if (!el) return;
+    // סוגר את כל שאר התפריטים לפני
     document.querySelectorAll('.actions-container').forEach(c => {
       if (c !== el) c.style.display = 'none';
     });
     el.style.display = (el.style.display === 'block') ? 'none' : 'block';
   }
 
+  // פונקציית עריכה פשוטה: משנה טקסט של הכפתור לשדה input, וכפתורי אישור/ביטול
   function enableEdit(day_key, time) {
     const wrapperId = `time-wrapper-${day_key}-${time.replace(':', '-')}`;
     const wrapper = document.getElementById(wrapperId);
     if (!wrapper) return;
 
+    // מוחקים את תוכן ה-wrapper
     wrapper.innerHTML = '';
 
+    // יוצרים input type=time עם הערך המקורי
     const input = document.createElement('input');
     input.type = 'time';
     input.value = time;
     input.id = `edit-input-${day_key}-${time.replace(':', '-')}`;
 
+    // כפתור אישור
     const saveBtn = document.createElement('button');
     saveBtn.textContent = '✓';
     saveBtn.style.marginLeft = '5px';
@@ -217,17 +216,20 @@
       }
       const data = await updateWeeklySchedule('edit', day_key, time, newTime);
       if (!data.error) {
+        // רענן את הדף כדי להראות את השינוי
         location.reload();
       } else {
         alert(data.error);
       }
     };
 
+    // כפתור ביטול
     const cancelBtn = document.createElement('button');
     cancelBtn.textContent = '✖';
     cancelBtn.style.marginLeft = '5px';
     cancelBtn.onclick = (e) => {
       e.stopPropagation();
+      // פשוט רענון הדף כדי לשחזר את התצוגה המקורית
       location.reload();
     };
 
@@ -310,7 +312,7 @@
         </button>
       </div>
 
-      <div class="times-container" id="weekly-times-{{day_key}}">
+      <div class="times-container {% if weekly_schedule[day_key]|length > 0 %}active{% endif %}" id="weekly-times-{{day_key}}">
         {% for time in weekly_schedule[day_key] %}
           <div class="time-wrapper" id="time-wrapper-{{day_key}}-{{time|replace(':','-')}}">
             <button class="time-btn" onclick="toggleActions('{{day_key}}', '{{time}}')">
