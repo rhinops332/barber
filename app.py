@@ -228,12 +228,12 @@ def update_weekly_schedule():
         # אם יש ימים כבויים, אפשר להפעיל (להחזיר רשימת שעות ריקה היא מסמלת הפעלה)
         # אפשר גם לשמור מראש שעות לפי הצורך, כרגע פשוט שומר ריק
         save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
-        return jsonify({"message": "Day enabled", "weekly_schedule": weekly_schedule})
+        return jsonify({"success": True})
 
     if action == "disable_day":
         weekly_schedule[day_key] = []
         save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
-        return jsonify({"message": "Day disabled", "weekly_schedule": weekly_schedule})
+        return jsonify({"success": True})
 
     # אם לא enable/disable, נמשיך לפעולות עם זמן
     day_times = weekly_schedule.get(day_key, [])
