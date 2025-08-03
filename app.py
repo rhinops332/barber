@@ -13,7 +13,7 @@ WEEKLY_SCHEDULE_FILE = "weekly_schedule.json"
 OVERRIDES_FILE = "overrides.json"
 BOT_KNOWLEDGE_FILE = "bot_knowledge.txt"
 APPOINTMENTS_FILE = "appointments.json"
-ONE_TIME_FILE = "one_time_changes.json"   # <-- הוסף את זה
+ONE_TIME_FILE = "one_time_changes.json"   
 
 # שירותים ומחירים
 services_prices = {
@@ -167,55 +167,41 @@ def logout():
 
 # --- דף ניהול ראשי ---
 
-@app.route("/admin_command", methods=["GET"])
-def admin_command():
-    if not session.get("is_admin"):
-        return redirect("/login")
-
-    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
-    overrides = load_json(OVERRIDES_FILE)
-    week_slots = generate_week_slots()
-    bot_knowledge = load_text(BOT_KNOWLEDGE_FILE)
-    appointments = load_appointments()
-
-    # יצירת רשימת שעות 08:00 עד 20:00 ב-30 דק'
-    default_times = []
-    current_time = datetime.strptime("08:00", "%H:%M")
-    end_time = datetime.strptime("20:00", "%H:%M")
-    while current_time <= end_time:
-        default_times.append(current_time.strftime("%H:%M"))
-        current_time += timedelta(minutes=30)
-
-    return render_template("admin_command.html",
-                           weekly_schedule=weekly_schedule,
-                           overrides=overrides,
-                           week_slots=week_slots,
-                           bot_knowledge=bot_knowledge,
-                           appointments=appointments,
-                           default_times=default_times)
-
-
 @app.route("/main_admin")
 def main_admin():
     if not session.get("is_admin"):
         return redirect("/login")
     return render_template("main_admin.html")
 
-@app.route("/admin/routine")
+@app.route("/admin_routine")
 def admin_routine():
     if not session.get("is_admin"):
         return redirect("/login")
 
     weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
+
     return render_template("admin_routine.html", weekly_schedule=weekly_schedule)
 
-@app.route("/admin/overrides")
+                          
+@app.route("/admin_overrides")
 def admin_overrides():
     if not session.get("is_admin"):
         return redirect("/login")
 
     overrides = load_json(OVERRIDES_FILE)
-    return render_template("admin_overrides.html", overrides=overrides)
+    week_slots = generate_week_slots()
+
+    return render_template("admin_overrides.html",
+                           overrides=overrides,
+                           week_slots=week_slots)
+                           
+
+@app.route("/appointments")
+def admin_appointments():
+    if not session.get("is_admin"):
+        return redirect("/login")
+    appointments = load_appointments()
+    return render_template("admin_appointments.html", appointments=appointments)
 
 # --- ניהול שגרה שבועית ---
 
@@ -235,6 +221,21 @@ def update_weekly_schedule():
     if day_key not in [str(i) for i in range(7)]:
         return jsonify({"error": "Invalid day key"}), 400
 
+    # קודם לטפל ב-enable_day ו-disable_day
+    if action == "enable_day":
+        if day_key not in weekly_schedule:
+            weekly_schedule[day_key] = []
+        # אם יש ימים כבויים, אפשר להפעיל (להחזיר רשימת שעות ריקה היא מסמלת הפעלה)
+        # אפשר גם לשמור מראש שעות לפי הצורך, כרגע פשוט שומר ריק
+        save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
+        return jsonify({"message": "Day enabled", "weekly_schedule": weekly_schedule})
+
+    if action == "disable_day":
+        weekly_schedule[day_key] = []
+        save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
+        return jsonify({"message": "Day disabled", "weekly_schedule": weekly_schedule})
+
+    # אם לא enable/disable, נמשיך לפעולות עם זמן
     day_times = weekly_schedule.get(day_key, [])
 
     if action == "add" and time:
