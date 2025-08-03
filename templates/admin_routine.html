@@ -312,7 +312,7 @@
         </button>
       </div>
 
-      <div class="times-container {% if weekly_schedule[day_key]|length > 0 %}active{% endif %}" id="weekly-times-{{day_key}}">
+      <div class="times-container" id="weekly-times-{{day_key}}">
         {% for time in weekly_schedule[day_key] %}
           <div class="time-wrapper" id="time-wrapper-{{day_key}}-{{time|replace(':','-')}}">
             <button class="time-btn" onclick="toggleActions('{{day_key}}', '{{time}}')">
