@@ -251,11 +251,28 @@
   })
   .then(response => response.json())
   .then(data => {
-    console.log(data); // ✅ חשוב!
-    if (data.success) {
-      location.reload();
+    if (!data.error) {
+      // במקום location.reload רק עדכן את הכפתור עצמו בלי לרענן
+      const button = document.querySelector(`.toggle-day-btn[onclick*="'${dayKey}'"]`);
+      if (button) {
+        if (enable) {
+          button.classList.add("enabled");
+          button.innerText = "כבה יום";
+          button.setAttribute("onclick", `event.stopPropagation(); toggleWeeklyDay('${dayKey}', false)`);
+        } else {
+          button.classList.remove("enabled");
+          button.innerText = "הפעל יום";
+          button.setAttribute("onclick", `event.stopPropagation(); toggleWeeklyDay('${dayKey}', true)`);
+        }
+      }
+
+      // וגם תסתיר/תחשוף את רשימת השעות
+      const container = document.getElementById("weekly-times-" + dayKey);
+      if (container) {
+        container.style.display = enable ? "block" : "none";
+      }
     } else {
-      alert("אירעה שגיאה בפעולה: " + (data.error || "לא ידועה"));
+      alert("שגיאה: " + data.error);
     }
   })
   .catch(error => {
@@ -263,7 +280,6 @@
     alert("שגיאה בבקשת fetch");
   });
 }
-
 </script>
 </head>
 <body>
