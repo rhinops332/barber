@@ -3,184 +3,269 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ניהול שינויים חד פעמיים - HairBoss</title>
+  <title>HairBoss - שינויים חד־פעמיים</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      max-width: 900px;
-      margin: 30px auto;
+      max-width: 1000px;
+      margin: 20px auto;
       padding: 20px;
-      background: #f4f4f4;
+      background: #eef2f7;
+      color: #222;
       direction: rtl;
     }
-
-    h1 {
-      text-align: center;
-      color: #2c3e50;
-      margin-bottom: 30px;
-    }
-
-    .day-section {
+    h1, h2 { text-align: center; }
+    .section {
       background: white;
       padding: 15px;
-      margin-bottom: 20px;
       border-radius: 10px;
-      box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 0 10px #ccc;
+      margin-bottom: 30px;
     }
-
-    .day-section h3 {
-      margin-top: 0;
-    }
-
-    .time-slot {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 8px;
-      padding: 8px 12px;
-      background: #e8f5e9;
+    .day-container {
+      border: 1px solid #ccc;
       border-radius: 6px;
+      margin-bottom: 10px;
+      padding: 10px;
     }
-
-    .time-slot input {
-      width: 90px;
-      padding: 5px;
-      margin-left: 10px;
-    }
-
-    .time-slot button {
-      padding: 6px 10px;
-      border: none;
-      border-radius: 5px;
-      margin-right: 5px;
+    .day-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       cursor: pointer;
+      user-select: none;
     }
-
-    .btn-delete {
-      background-color: #e74c3c;
-      color: white;
-    }
-
-    .btn-edit {
-      background-color: #f39c12;
-      color: white;
-    }
-
-    .btn-add {
-      background: #27ae60;
-      color: white;
-      padding: 8px 12px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      margin-top: 10px;
-    }
-
-    .date-header {
+    .day-header span {
       font-weight: bold;
-      margin-bottom: 10px;
+      font-size: 1.1em;
     }
-
-    .date-input {
-      padding: 8px;
-      width: 200px;
-      margin-bottom: 10px;
+    .times-container {
+      margin-top: 10px;
+      display: none;
     }
-
-    .btn-load {
-      padding: 8px 12px;
-      background: #2980b9;
+    .times-container.active {
+      display: block;
+    }
+    .time-wrapper {
+      display: inline-block;
+      position: relative;
+      margin: 5px;
+    }
+    .time-btn {
+      padding: 5px 30px 5px 10px;
+      border-radius: 5px;
+      background: #3498db;
       color: white;
-      border: none;
-      border-radius: 8px;
       cursor: pointer;
-      margin-right: 10px;
+      border: none;
+      font-size: 1em;
+      position: relative;
+      user-select: none;
     }
-
-    #save-btn {
+    .time-btn.disabled {
+      background: #aaa;
+      text-decoration: line-through;
+    }
+    .time-btn.edited {
+      background: #2980b9;
+    }
+    .time-btn.added {
+      background: #f1c40f;
+      color: black;
+    }
+    .time-btn .close-icon {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-weight: bold;
+      font-size: 1.1em;
+      cursor: pointer;
+      padding-left: 5px;
+    }
+    .actions-container {
+      display: none;
+      position: absolute;
+      top: 110%;
+      left: 0;
+      background: #2980b9;
+      border-radius: 5px;
+      padding: 5px;
+      white-space: nowrap;
+      z-index: 10;
+    }
+    .actions-container button {
+      background: transparent;
+      border: none;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      margin-left: 10px;
+      font-size: 0.9em;
+    }
+    .add-time-input { margin-top: 10px; }
+    input[type="time"] { padding: 4px; }
+    button.add-btn {
       background: #2ecc71;
       color: white;
-      font-weight: bold;
-      padding: 12px 20px;
       border: none;
-      border-radius: 10px;
-      display: block;
-      margin: 30px auto;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button.restore-btn {
+      background: #e74c3c;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+    .top-nav {
+      overflow: hidden;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 15px;
+      justify-content: flex-start;
+    }
+    .top-nav a {
+      text-decoration: none;
+      color: #2980b9;
+      font-weight: bold;
+    }
+    .logout {
+      margin-left: auto;
+      color: red;
     }
   </style>
+
+  <script>
+    function toggleSection(id) {
+      document.getElementById(id).classList.toggle('active');
+    }
+
+    async function updateOverride(day_key, time, action, new_time = null) {
+      const res = await fetch('/override', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ day_key, time, action, new_time })
+      });
+      return await res.json();
+    }
+
+    async function removeOverride(day_key, time) {
+      await updateOverride(day_key, time, 'disable');
+      location.reload();
+    }
+
+    function toggleActions(day_key, time) {
+      const id = `actions-${day_key}-${time.replace(':','-')}`;
+      const el = document.getElementById(id);
+      document.querySelectorAll('.actions-container').forEach(c => {
+        if (c !== el) c.style.display = 'none';
+      });
+      el.style.display = el.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function enableEdit(day_key, time) {
+      const wrapperId = `time-wrapper-${day_key}-${time.replace(':','-')}`;
+      const wrapper = document.getElementById(wrapperId);
+      wrapper.innerHTML = '';
+
+      const input = document.createElement('input');
+      input.type = 'time';
+      input.value = time;
+
+      const saveBtn = document.createElement('button');
+      saveBtn.textContent = '✓';
+      saveBtn.style.marginLeft = '5px';
+      saveBtn.onclick = async () => {
+        const newTime = input.value;
+        await updateOverride(day_key, time, 'edit', newTime);
+        location.reload();
+      };
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.textContent = '✖';
+      cancelBtn.style.marginLeft = '5px';
+      cancelBtn.onclick = () => location.reload();
+
+      wrapper.appendChild(input);
+      wrapper.appendChild(saveBtn);
+      wrapper.appendChild(cancelBtn);
+    }
+
+    async function addOverride(day_key) {
+      const input = document.getElementById('override-add-' + day_key);
+      const time = input.value;
+      if (!time) return alert('נא לבחור שעה');
+      await updateOverride(day_key, time, 'add');
+      location.reload();
+    }
+
+    async function restoreDay(day_key) {
+      await fetch('/override', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reset_day', day_key })
+      });
+      location.reload();
+    }
+  </script>
 </head>
 <body>
 
-<h1>ניהול שינויים חד פעמיים</h1>
-
-<div>
-  <input type="date" id="override-date" class="date-input" />
-  <button class="btn-load" onclick="loadOverride()">טען תאריך</button>
+<div class="top-nav">
+  <a href="/main_admin">🔧 מנהל ראשי</a>
+  <a href="/" target="_blank">🏠 עמוד ההזמנות</a>
+  <a href="/logout" class="logout">🚪 התנתק</a>
 </div>
 
-<div id="day-section" class="day-section" style="display: none;">
-  <h3 id="day-label"></h3>
-  <div class="slots-container" id="slots-container"></div>
-  <button class="btn-add" onclick="addOverrideSlot()">+ הוסף שעה</button>
+<h1>HairBoss - שינויים חד־פעמיים</h1>
+
+<div class="section">
+  <h2>לפי ימים</h2>
+
+  {% set day_map = {
+    '6': "ראשון", '0': "שני", '1': "שלישי", '2': "רביעי",
+    '3': "חמישי", '4': "שישי", '5': "שבת"
+  } %}
+
+  {% for day_key in ['6','0','1','2','3','4','5'] %}
+    <div class="day-container">
+      <div class="day-header" onclick="toggleSection('override-times-{{day_key}}')">
+        <span>{{ day_map[day_key] }}</span>
+        <button class="restore-btn" onclick="event.stopPropagation(); restoreDay('{{day_key}}')">🔄 שחזר יום</button>
+      </div>
+
+      <div class="times-container active" id="override-times-{{day_key}}">
+        {% for time in base_schedule[day_key] %}
+          {% set status = overrides[day_key].get(time) %}
+          <div class="time-wrapper" id="time-wrapper-{{day_key}}-{{time|replace(':','-')}}">
+            <button class="time-btn
+              {% if status == 'disabled' %}disabled
+              {% elif status == 'edited' %}edited
+              {% elif status == 'added' %}added
+              {% endif %}"
+              onclick="toggleActions('{{day_key}}', '{{time}}')">
+              {{ time }}
+              <span class="close-icon" onclick="event.stopPropagation(); removeOverride('{{day_key}}', '{{time}}')">✖️</span>
+            </button>
+            <div class="actions-container" id="actions-{{day_key}}-{{time|replace(':','-')}}">
+              <button onclick="event.stopPropagation(); enableEdit('{{day_key}}', '{{time}}')">✏️ עריכה</button>
+            </div>
+          </div>
+        {% endfor %}
+
+        <div class="add-time-input">
+          <input type="time" id="override-add-{{day_key}}">
+          <button class="add-btn" onclick="addOverride('{{day_key}}')">➕ הוסף שעה</button>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
 </div>
-
-<button id="save-btn" onclick="saveOverride()" style="display:none;">💾 שמור שינויים</button>
-
-<script>
-let overrideSlots = [];
-
-function loadOverride() {
-  const date = document.getElementById("override-date").value;
-  if (!date) return alert("יש לבחור תאריך");
-
-  fetch("/get_override?date=" + date)
-    .then(res => res.json())
-    .then(data => {
-      overrideSlots = data.times || [];
-      document.getElementById("slots-container").innerHTML = '';
-      document.getElementById("day-label").innerText = "שעות ליום: " + date;
-      document.getElementById("day-section").style.display = "block";
-      document.getElementById("save-btn").style.display = "block";
-      overrideSlots.forEach(t => addOverrideSlot(t));
-    });
-}
-
-function addOverrideSlot(time = "") {
-  const container = document.getElementById("slots-container");
-  const div = document.createElement("div");
-  div.className = "time-slot";
-
-  const input = document.createElement("input");
-  input.type = "time";
-  input.value = time;
-  div.appendChild(input);
-
-  const deleteBtn = document.createElement("button");
-  deleteBtn.textContent = "X";
-  deleteBtn.className = "btn-delete";
-  deleteBtn.onclick = () => container.removeChild(div);
-  div.appendChild(deleteBtn);
-
-  container.appendChild(div);
-}
-
-function saveOverride() {
-  const date = document.getElementById("override-date").value;
-  if (!date) return alert("יש לבחור תאריך");
-
-  const times = Array.from(document.querySelectorAll('#slots-container input'))
-    .map(input => input.value)
-    .filter(val => !!val);
-
-  fetch("/save_override", {
-    method: "POST",
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ date, times })
-  }).then(res => res.json()).then(data => {
-    alert(data.message || "השינויים נשמרו בהצלחה");
-  });
-}
-</script>
 
 </body>
 </html>
