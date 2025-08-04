@@ -241,7 +241,7 @@
 
       <div class="times-container active" id="override-times-{{day_key}}">
         {% for time in base_schedule[day_key] %}
-          {% set status = overrides[day_key].get(time) %}
+          {% set status = overrides[date].get(time) if overrides[date] is defined else None %}
           <div class="time-wrapper" id="time-wrapper-{{day_key}}-{{time|replace(':','-')}}">
             <button class="time-btn
               {% if status == 'disabled' %}disabled
