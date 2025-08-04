@@ -190,10 +190,12 @@ def admin_overrides():
 
     overrides = load_json(OVERRIDES_FILE)
     week_slots = generate_week_slots()
+    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)  # נוסיף את זה
 
     return render_template("admin_overrides.html",
                            overrides=overrides,
-                           week_slots=week_slots)
+                           week_slots=week_slots,
+                           base_schedule=weekly_schedule)  # נשלח ל־HTML
                            
 
 @app.route("/appointments")
