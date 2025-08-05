@@ -226,7 +226,6 @@
     }
 
     async function deleteDay(date) {
-      if (!confirm('אתה בטוח שברצונך למחוק את כל השינויים ביום זה?')) return;
       await fetch('/overrides', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
