@@ -313,61 +313,60 @@ def update_overrides():
 
     overrides = load_json(OVERRIDES_FILE)
 
-    if action == "clear":
-        # מחיקת כל השינויים של היום (כמו שחזור)
+    if date not in overrides:
+        overrides[date] = {"add": [], "remove": []}
+
+    if action == "remove_many":
+        times = data.get("times", [])
+        for t in times:
+            if t not in overrides[date]["remove"]:
+                overrides[date]["remove"].append(t)
+            if t in overrides[date]["add"]:
+                overrides[date]["add"].remove(t)
+        save_json(OVERRIDES_FILE, overrides)
+        return jsonify({"message": "Multiple times removed", "overrides": overrides})
+
+    elif action == "add" and time:
+        if time not in overrides[date]["add"]:
+            overrides[date]["add"].append(time)
+        # אם השעה נמצאת ב-remove, להסיר אותה משם
+        if time in overrides[date]["remove"]:
+            overrides[date]["remove"].remove(time)
+        save_json(OVERRIDES_FILE, overrides)
+        return jsonify({"message": "Time added", "overrides": overrides})
+
+    elif action == "remove" and time:
+        if time not in overrides[date]["remove"]:
+            overrides[date]["remove"].append(time)
+        if time in overrides[date]["add"]:
+            overrides[date]["add"].remove(time)
+        save_json(OVERRIDES_FILE, overrides)
+        return jsonify({"message": "Time removed", "overrides": overrides})
+
+    elif action == "edit" and time and new_time:
+        if time in overrides[date]["add"]:
+            overrides[date]["add"].remove(time)
+            if new_time not in overrides[date]["add"]:
+                overrides[date]["add"].append(new_time)
+        if time in overrides[date]["remove"]:
+            overrides[date]["remove"].remove(time)
+            # לא מוסיפים את new_time לרשימת remove כי זה כנראה זמין עכשיו
+        save_json(OVERRIDES_FILE, overrides)
+        return jsonify({"message": "Time edited", "overrides": overrides})
+
+    elif action == "clear" and date:
         if date in overrides:
             overrides.pop(date)
         save_json(OVERRIDES_FILE, overrides)
-        return jsonify({"message": "Day restored to weekly schedule", "overrides": overrides})
+        return jsonify({"message": "Day overrides cleared", "overrides": overrides})
 
-    elif action == "delete_day":
-        # ✅ מחיקת כל השינויים של היום כולל מפתח התאריך
-        if date in overrides:
-            overrides.pop(date)
-        save_json(OVERRIDES_FILE, overrides)
-        return jsonify({"message": "Day deleted", "overrides": overrides})
-
-    elif action == "disable_day":
+    elif action == "disable_day" and date:
         overrides[date] = {"add": [], "remove": ["__all__"]}
         save_json(OVERRIDES_FILE, overrides)
         return jsonify({"message": "Day disabled", "overrides": overrides})
 
-    # שאר הפעולות
-    day_override = overrides.get(date, {"add": [], "remove": []})
-
-    if action == "add":
-        if time and time not in day_override["add"]:
-            day_override["add"].append(time)
-            if time in day_override["remove"]:
-                day_override["remove"].remove(time)
-
-    elif action == "remove":
-        if time and time not in day_override["remove"]:
-            day_override["remove"].append(time)
-            if time in day_override["add"]:
-                day_override["add"].remove(time)
-
-    elif action == "edit":
-        if time and new_time:
-            if time in day_override["add"]:
-                day_override["add"].remove(time)
-                if new_time not in day_override["add"]:
-                    day_override["add"].append(new_time)
-            elif time in load_json(WEEKLY_SCHEDULE_FILE).get(str(datetime.strptime(date, "%Y-%m-%d").weekday()), []):
-                if time not in day_override["remove"]:
-                    day_override["remove"].append(time)
-                if new_time not in day_override["add"]:
-                    day_override["add"].append(new_time)
-
     else:
-        return jsonify({"error": "Invalid action"}), 400
-
-    # שומר רק אם זה לא clear/delete/disable
-    if action not in ["clear", "disable_day", "delete_day"]:
-        overrides[date] = day_override
-
-    save_json(OVERRIDES_FILE, overrides)
-    return jsonify({"message": "Overrides updated", "overrides": overrides})
+        return jsonify({"error": "Invalid action or missing parameters"}), 400
 
 
 @app.route("/overrides_toggle_day", methods=["POST"])
