@@ -283,18 +283,31 @@
     saveOpenedDays();
     location.reload();
   }
-   // סימולציה של לחיצה על כל איקס באותו יום (כלומר - מכבה את כל השעות)
-async function deleteDay(date) {
-  const times = Array.from(document.querySelectorAll(`#overrides-times-${date} .time-wrapper`))
-    .map(wrapper => wrapper.id.split('-').slice(3).join(':'));
 
-  for (const time of times) {
-    await updateOverrides(date, time, 'remove');
+  // לחיצה על כפתור "מחק יום" - עצירת אירועים ומחיקה
+  function handleDeleteDayClick(event, date) {
+    event.preventDefault();
+    event.stopPropagation();
+    deleteDay(date);
   }
 
-  reloadKeepingOpened();
-}
+  // סימולציה של לחיצה על כל איקס באותו יום (כלומר - מכבה את כל השעות)
+  async function deleteDay(date) {
+    const wrappers = document.querySelectorAll(`#overrides-times-${date} .time-wrapper`);
+    const times = Array.from(wrappers).map(wrapper => {
+      const parts = wrapper.id.split('-');
+      // מחלץ את השעה והדקה מה-id
+      const hh = parts[parts.length - 2];
+      const mm = parts[parts.length - 1];
+      return hh + ':' + mm;
+    });
 
+    for (const time of times) {
+      await updateOverrides(date, time, 'remove');
+    }
+
+    reloadKeepingOpened();
+  }
 
   // כאשר העמוד נטען - משחזר ימים פתוחים
   window.onload = () => {
@@ -322,7 +335,7 @@ async function deleteDay(date) {
       <div class="day-header" onclick="toggleSection('overrides-times-{{date}}')">
         <span>{{ date_map[date] }}</span>
         <button class="restore-btn" onclick="event.stopPropagation(); restoreDay('{{date}}')">🔄 שחזר יום</button>
-        <button class="delete-day-btn" onclick="event.stopPropagation(); deleteDay('{{date}}')">🗑️ מחק יום</button>
+        <button class="delete-day-btn" onclick="handleDeleteDayClick(event, '{{date}}')">🗑️ מחק יום</button>
       </div>
 
       <div class="times-container" id="overrides-times-{{date}}">
