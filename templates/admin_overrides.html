@@ -34,10 +34,13 @@
       align-items: center;
       cursor: pointer;
       user-select: none;
+      gap: 10px;
+      flex-wrap: wrap;
     }
     .day-header span {
       font-weight: bold;
       font-size: 1.1em;
+      flex-grow: 1;
     }
     .times-container {
       margin-top: 10px;
@@ -113,14 +116,13 @@
       border-radius: 4px;
       cursor: pointer;
     }
-    button.restore-btn {
+    button.restore-btn, button.disable-btn {
       background: #e74c3c;
       color: white;
       border: none;
       padding: 5px 10px;
       border-radius: 4px;
       cursor: pointer;
-      margin-bottom: 10px;
     }
     .top-nav {
       overflow: hidden;
@@ -156,6 +158,24 @@
 
     async function removeOverrides(date, time) {
       await updateOverrides(date, time, 'remove');
+      location.reload();
+    }
+
+    async function disableAllDay(date) {
+      await fetch('/overrides', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'disable_all', date })
+      });
+      location.reload();
+    }
+
+    async function restoreDay(date) {
+      await fetch('/overrides', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'clear', date })
+      });
       location.reload();
     }
 
@@ -203,15 +223,6 @@
       await updateOverrides(date, time, 'add');
       location.reload();
     }
-
-    async function restoreDay(date) {
-      await fetch('/overrides', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'clear', date })
-      });
-      location.reload();
-    }
   </script>
 </head>
 <body>
@@ -232,14 +243,17 @@
       <div class="day-header" onclick="toggleSection('overrides-times-{{date}}')">
         <span>{{ date_map[date] }}</span>
         <button class="restore-btn" onclick="event.stopPropagation(); restoreDay('{{date}}')">🔄 שחזר יום</button>
+        <button class="disable-btn" onclick="event.stopPropagation(); disableAllDay('{{date}}')">⛔ כבה את כל היום</button>
       </div>
 
-      <div class="times-container active" id="overrides-times-{{date}}">
+      <div class="times-container" id="overrides-times-{{date}}">
         {% for slot in week_slots[date].times %}
           {% set time = slot.time %}
           <div class="time-wrapper" id="time-wrapper-{{date}}-{{time|replace(':','-')}}">
             <button class="time-btn
-              {% if not slot.available %}disabled{% endif %}"
+              {% if not slot.available %} disabled{% endif %}
+              {% if slot.added %} added{% endif %}
+              {% if slot.edited %} edited{% endif %}"
               onclick="toggleActions('{{date}}', '{{time}}')">
               {{ time }}
               <span class="close-icon" onclick="event.stopPropagation(); removeOverrides('{{date}}', '{{time}}')">✖️</span>
