@@ -145,8 +145,8 @@
       document.getElementById(id).classList.toggle('active');
     }
 
-    async function updateOverride(date, time, action, new_time = null) {
-      const res = await fetch('/override', {
+    async function updateOverrides(date, time, action, new_time = null) {
+      const res = await fetch('/overrides', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date, time, action, new_time })
@@ -154,8 +154,8 @@
       return await res.json();
     }
 
-    async function removeOverride(date, time) {
-      await updateOverride(date, time, 'disable');
+    async function removeOverrides(date, time) {
+      await updateOverrides(date, time, 'disable');
       location.reload();
     }
 
@@ -182,7 +182,7 @@
       saveBtn.style.marginLeft = '5px';
       saveBtn.onclick = async () => {
         const newTime = input.value;
-        await updateOverride(date, time, 'edit', newTime);
+        await updateOverrides(date, time, 'edit', newTime);
         location.reload();
       };
 
@@ -196,16 +196,16 @@
       wrapper.appendChild(cancelBtn);
     }
 
-    async function addOverride(date) {
-      const input = document.getElementById('override-add-' + date);
+    async function addOverrides(date) {
+      const input = document.getElementById('overrides-add-' + date);
       const time = input.value;
       if (!time) return alert('נא לבחור שעה');
-      await updateOverride(date, time, 'add');
+      await updateOverrides(date, time, 'add');
       location.reload();
     }
 
     async function restoreDay(date) {
-      await fetch('/override', {
+      await fetch('/overrides', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'reset_day', date })
@@ -229,12 +229,12 @@
 
   {% for date in week_dates %}
     <div class="day-container">
-      <div class="day-header" onclick="toggleSection('override-times-{{date}}')">
+      <div class="day-header" onclick="toggleSection('overrides-times-{{date}}')">
         <span>{{ date_map[date] }}</span>
         <button class="restore-btn" onclick="event.stopPropagation(); restoreDay('{{date}}')">🔄 שחזר יום</button>
       </div>
 
-      <div class="times-container active" id="override-times-{{date}}">
+      <div class="times-container active" id="overrides-times-{{date}}">
         {% set day_schedule = base_schedule[date[-1:] if date[-1:] in base_schedule else date[-2:]] %}
         {% for time in day_schedule %}
           {% set status = overrides.get(date, {}).get(time) %}
@@ -246,7 +246,7 @@
               {% endif %}"
               onclick="toggleActions('{{date}}', '{{time}}')">
               {{ time }}
-              <span class="close-icon" onclick="event.stopPropagation(); removeOverride('{{date}}', '{{time}}')">✖️</span>
+              <span class="close-icon" onclick="event.stopPropagation(); removeOverrides('{{date}}', '{{time}}')">✖️</span>
             </button>
             <div class="actions-container" id="actions-{{date}}-{{time|replace(':','-')}}">
               <button onclick="event.stopPropagation(); enableEdit('{{date}}', '{{time}}')">✏️ עריכה</button>
@@ -255,8 +255,8 @@
         {% endfor %}
 
         <div class="add-time-input">
-          <input type="time" id="override-add-{{date}}">
-          <button class="add-btn" onclick="addOverride('{{date}}')">➕ הוסף שעה</button>
+          <input type="time" id="overrides-add-{{date}}">
+          <button class="add-btn" onclick="addOverrides('{{date}}')">➕ הוסף שעה</button>
         </div>
       </div>
     </div>
