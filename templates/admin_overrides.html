@@ -304,7 +304,7 @@
     const res = await fetch('/overrides', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ date, times, action: 'remove_multiple' })
+      body: JSON.stringify({ date, times, action: 'remove_many' })
     });
 
     if (res.ok) {
