@@ -321,19 +321,18 @@ def update_overrides():
         return jsonify({"message": "Day restored to weekly schedule", "overrides": overrides})
 
     elif action == "delete_day":
-        # מחיקת כל השינויים בתוך אותו היום, משאירה את היום קיים אך ריקה מערכים
+        # ✅ מחיקת כל השינויים של היום כולל מפתח התאריך
         if date in overrides:
-            overrides[date] = {"add": [], "remove": []}
-        else:
-            overrides[date] = {"add": [], "remove": []}
+            overrides.pop(date)
         save_json(OVERRIDES_FILE, overrides)
-        return jsonify({"message": "Day changes deleted", "overrides": overrides})
+        return jsonify({"message": "Day deleted", "overrides": overrides})
 
     elif action == "disable_day":
         overrides[date] = {"add": [], "remove": ["__all__"]}
         save_json(OVERRIDES_FILE, overrides)
         return jsonify({"message": "Day disabled", "overrides": overrides})
 
+    # שאר הפעולות
     day_override = overrides.get(date, {"add": [], "remove": []})
 
     if action == "add":
@@ -363,6 +362,7 @@ def update_overrides():
     else:
         return jsonify({"error": "Invalid action"}), 400
 
+    # שומר רק אם זה לא clear/delete/disable
     if action not in ["clear", "disable_day", "delete_day"]:
         overrides[date] = day_override
 
