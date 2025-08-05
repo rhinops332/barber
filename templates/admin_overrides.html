@@ -283,6 +283,18 @@
     saveOpenedDays();
     location.reload();
   }
+   // סימולציה של לחיצה על כל איקס באותו יום (כלומר - מכבה את כל השעות)
+async function deleteDay(date) {
+  const times = Array.from(document.querySelectorAll(`#overrides-times-${date} .time-wrapper`))
+    .map(wrapper => wrapper.id.split('-').slice(3).join(':'));
+
+  for (const time of times) {
+    await updateOverrides(date, time, 'remove');
+  }
+
+  reloadKeepingOpened();
+}
+
 
   // כאשר העמוד נטען - משחזר ימים פתוחים
   window.onload = () => {
