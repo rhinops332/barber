@@ -152,7 +152,7 @@
     }
   </style>
 
-  <script>
+ <script>
   // שמירת הימים הפתוחים ב-localStorage
   function saveOpenedDays() {
     const opened = [];
@@ -167,7 +167,6 @@
     const el = document.getElementById(id);
     el.classList.toggle('active');
 
-    // שמירת מצב פתיחת היום
     let opened = JSON.parse(localStorage.getItem('openedDays') || '[]');
     if (el.classList.contains('active')) {
       if (!opened.includes(id)) opened.push(id);
@@ -186,7 +185,7 @@
     });
   }
 
-  // קריאה לשרת לעדכון השינויים החד-פעמיים
+  // שליחת בקשה לשרת לשינוי override
   async function updateOverrides(date, time, action, new_time = null) {
     const res = await fetch('/overrides', {
       method: 'POST',
@@ -196,13 +195,13 @@
     return await res.json();
   }
 
-  // הסרת שעה (הוספת להסרת שעת override)
+  // הסרת שעה אחת
   async function removeOverrides(date, time) {
     await updateOverrides(date, time, 'remove');
     reloadKeepingOpened();
   }
 
-  // הצגת/הסתרת פעולות עריכה ליד שעה
+  // הצגת תפריט פעולה ליד שעה
   function toggleActions(date, time) {
     const id = 'actions-' + date + '-' + time.replace(/:/g, '-');
     const el = document.getElementById(id);
@@ -212,7 +211,7 @@
     el.style.display = (el.style.display === 'block') ? 'none' : 'block';
   }
 
-  // הפיכת לחצן שעה למצב עריכה (input)
+  // אפשרות עריכת שעה
   function enableEdit(date, time) {
     const wrapperId = 'time-wrapper-' + date + '-' + time.replace(/:/g, '-');
     const wrapper = document.getElementById(wrapperId);
@@ -241,7 +240,7 @@
     wrapper.appendChild(cancelBtn);
   }
 
-  // הוספת שעה חדשה ליום
+  // הוספת שעה
   async function addOverrides(date) {
     const input = document.getElementById('overrides-add-' + date);
     const time = input.value;
@@ -250,7 +249,7 @@
     reloadKeepingOpened();
   }
 
-  // שחזור יום למצב השגרה
+  // שחזור יום (שווה ל־clear)
   async function restoreDay(date) {
     await fetch('/overrides', {
       method: 'POST',
@@ -260,36 +259,37 @@
     reloadKeepingOpened();
   }
 
-  // מחיקת כל השינויים של יום (מחיקת יום)
-  async function deleteDay(date) {
+  // כיבוי כל השעות ביום (במקום למחוק את היום)
+  async function disableDay(date) {
     saveOpenedDays();
     const res = await fetch('/overrides', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'delete_day', date })
+      body: JSON.stringify({ action: 'disable_day', date })
     });
 
     const data = await res.json();
-    console.log('Delete day response:', data);
+    console.log('Disable day response:', data);
 
     if (res.ok) {
-      location.reload();
+      reloadKeepingOpened();
     } else {
-      alert('שגיאה במחיקת היום');
+      alert('שגיאה בכיבוי היום');
     }
   }
 
-  // ריענון הדף ושמירת הימים הפתוחים
+  // ריענון הדף תוך שמירת מצב ימים פתוחים
   function reloadKeepingOpened() {
     saveOpenedDays();
     location.reload();
   }
 
-  // כשנטען הדף - משחזר את הימים שפתוחים
+  // כאשר העמוד נטען - משחזר ימים פתוחים
   window.onload = () => {
     restoreOpenedDays();
   };
-  </script>
+</script>
+
 
 </head>
 <body>
