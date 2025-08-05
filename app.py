@@ -1,19 +1,23 @@
 import os
 import json
+import logging
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, render_template as original_render_template, redirect, session, g
-import smtplib
+from flask_wtf import CSRFProtect
 from email.message import EmailMessage
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "default_secret")
+
+# הגנת CSRF בסיסית
+csrf = CSRFProtect(app)
 
 # קבצים
 WEEKLY_SCHEDULE_FILE = "weekly_schedule.json"
 OVERRIDES_FILE = "overrides.json"
 BOT_KNOWLEDGE_FILE = "bot_knowledge.txt"
 APPOINTMENTS_FILE = "appointments.json"
-ONE_TIME_FILE = "one_time_changes.json"   
+ONE_TIME_FILE = "one_time_changes.json"
 
 # שירותים ומחירים
 services_prices = {
@@ -23,7 +27,15 @@ services_prices = {
     "Color": 250
 }
 
-# --- פונקציות עזר ---
+# לוגינג בסיסי
+logging.basicConfig(level=logging.INFO)
+
+# Cache בזיכרון ל־weekly_schedule ול־overrides
+_cached_weekly_schedule = None
+_cached_overrides = None
+_cache_last_loaded = None
+CACHE_EXPIRY_SECONDS = 15  # לחדש כל 15 שניות
+
 
 def load_json(filename):
     if not os.path.exists(filename):
@@ -31,9 +43,11 @@ def load_json(filename):
     with open(filename, "r", encoding="utf-8") as f:
         return json.load(f)
 
+
 def save_json(filename, data):
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
+
 
 def load_text(filename):
     if not os.path.exists(filename):
@@ -41,22 +55,56 @@ def load_text(filename):
     with open(filename, "r", encoding="utf-8") as f:
         return f.read()
 
+
 def save_text(filename, content):
     with open(filename, "w", encoding="utf-8") as f:
         f.write(content.strip())
 
+
 def load_appointments():
     return load_json(APPOINTMENTS_FILE)
+
 
 def save_appointments(data):
     save_json(APPOINTMENTS_FILE, data)
 
-# פונקציות ל-one-time changes:
+
 def load_one_time_changes():
     return load_json(ONE_TIME_FILE)
 
+
 def save_one_time_changes(data):
     save_json(ONE_TIME_FILE, data)
+
+
+def get_weekly_schedule_cached():
+    """Cache קריאה ל- weekly_schedule."""
+    global _cached_weekly_schedule, _cache_last_loaded
+    now = datetime.now()
+    if not _cached_weekly_schedule or not _cache_last_loaded or (now - _cache_last_loaded).seconds > CACHE_EXPIRY_SECONDS:
+        _cached_weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
+        _cache_last_loaded = now
+    return _cached_weekly_schedule
+
+
+def get_overrides_cached():
+    global _cached_overrides, _cache_last_loaded
+    now = datetime.now()
+    if not _cached_overrides or not _cache_last_loaded or (now - _cache_last_loaded).seconds > CACHE_EXPIRY_SECONDS:
+        _cached_overrides = load_json(OVERRIDES_FILE)
+        _cache_last_loaded = now
+    return _cached_overrides
+
+
+def clear_cache():
+    global _cached_weekly_schedule, _cached_overrides, _cache_last_loaded
+    _cached_weekly_schedule = None
+    _cached_overrides = None
+    _cache_last_loaded = None
+
+
+# מיפוי אחיד: 0=ראשון ... 6=שבת (הכי טבעי בישראל)
+HEB_DAYS = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"]
 
 # --- יצירת רשימת שעות שבועית עם שינויים ---
 
@@ -66,37 +114,43 @@ def generate_week_slots():
     today = datetime.today()
     week_slots = {}
 
-    heb_days = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
-
     for i in range(7):
         current_date = today + timedelta(days=i)
         date_str = current_date.strftime("%Y-%m-%d")
-        weekday = current_date.weekday()
-        day_name = heb_days[weekday]
 
-        day_key = str(weekday)
+        # weekday() בפייתון מחזיר שני=0...ראשון=6, נעביר ל-0=ראשון
+        py_weekday = current_date.weekday()  # שני=0 ... ראשון=6
+        day_index = (py_weekday + 1) % 7
+        day_name = HEB_DAYS[day_index]
+
+        # נשתמש ב-day_index כמפתח לשגרה
+        day_key = str(day_index)
         scheduled_times = weekly_schedule.get(day_key, [])
 
+        # שינויים חד-פעמיים (overrides)
         override = overrides.get(date_str, {"add": [], "remove": []})
         add_times = override.get("add", [])
         remove_times = override.get("remove", [])
 
+        # אם כבו את כל היום בשינויים (remove == ["__all__"]) - כל השעות לא זמינות
         if remove_times == ["__all__"]:
-            all_final = []
+            final_times_list = []
         else:
-            # תיקון: להסיר את הזמנים שנמצאים ב-remove_times
-            all_final = sorted(set(scheduled_times + add_times) - set(remove_times))
+            # שעות לפי שגרה + תוספות פחות מחיקות
+            final_times_set = set(scheduled_times) | set(add_times)
+            final_times_set -= set(remove_times)
+            final_times_list = sorted(final_times_set)
 
-        final_times = []
-        for t in all_final:
-            if remove_times == ["__all__"] or t in remove_times:
-                final_times.append({"time": t, "available": False})
-            else:
-                final_times.append({"time": t, "available": True})
+        # בונים רשימת שעות עם מצב זמין/כבוי
+        times = []
+        for t in final_times_list:
+            # שעה נחשבת כבויה אם מופיעה ב-remove_times או אם כל היום כבוי
+            available = not (remove_times == ["__all__"] or t in remove_times)
+            times.append({"time": t, "available": available})
 
         week_slots[date_str] = {
             "day_name": day_name,
-            "times": final_times
+            "times": times,
         }
 
     return week_slots
@@ -112,6 +166,7 @@ def is_slot_available(date, time):
             return True
     return False
 
+
 # --- לפני כל בקשה - העברת session ל-g ---
 
 @app.before_request
@@ -119,7 +174,12 @@ def before_request():
     g.username = session.get('username')
     g.is_admin = session.get('is_admin')
 
-# --- החלפת render_template ---
+    # Timeout ל-session אחרי 30 דקות ללא פעילות
+    session.permanent = True
+    app.permanent_session_lifetime = timedelta(minutes=30)
+
+
+# --- החלפת render_template להוספת session ל-context ---
 
 def render_template(template_name_or_list, **context):
     context['session'] = {
@@ -127,6 +187,7 @@ def render_template(template_name_or_list, **context):
         'is_admin': g.get('is_admin')
     }
     return original_render_template(template_name_or_list, **context)
+
 
 # --- ניהול התחברות ---
 
@@ -148,22 +209,28 @@ def login():
             if password == admin_password:
                 session['username'] = username
                 session['is_admin'] = True
+                logging.info(f"Admin {username} logged in.")
                 return redirect('/main_admin')
             else:
                 error = "סיסמה שגויה"
+                logging.warning(f"Failed login attempt for admin user {username}.")
                 return render_template('login.html', error=error, admin_user=admin_user)
 
         # משתמש רגיל - אין צורך בסיסמה
         session['username'] = username
         session['is_admin'] = False
+        logging.info(f"User {username} logged in.")
         return redirect('/')
 
     return render_template('login.html', error=error, admin_user=admin_user)
 
+
 @app.route("/logout")
 def logout():
+    logging.info(f"User {session.get('username')} logged out.")
     session.clear()
     return redirect("/")
+
 
 # --- דף ניהול ראשי ---
 
@@ -173,48 +240,17 @@ def main_admin():
         return redirect("/login")
     return render_template("main_admin.html")
 
+
+# --- דפי ניהול שגרה שבועית ---
+
 @app.route("/admin_routine")
 def admin_routine():
     if not session.get("is_admin"):
         return redirect("/login")
 
     weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
-
     return render_template("admin_routine.html", weekly_schedule=weekly_schedule)
 
-                          
-@app.route("/admin_overrides")
-def admin_overrides():
-    overrides = load_json(OVERRIDES_FILE)
-    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
-
-    # נבנה את רשימת התאריכים לשבוע הקרוב
-    today = datetime.today()
-    week_dates = []
-    date_map = {}  # מיפוי תאריך => שם היום (לשימוש ב-HTML)
-    for i in range(7):
-        date = today + timedelta(days=i)
-        day_key = str(date.weekday())  # 0 = Monday
-        date_str = date.strftime("%Y-%m-%d")
-        week_dates.append(date_str)
-        hebrew_day_name = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"][date.weekday()]
-        date_map[date_str] = f"{date.strftime('%-d.%m')} ({hebrew_day_name})"
-
-    return render_template("admin_overrides.html",
-                           overrides=overrides,
-                           base_schedule=weekly_schedule,
-                           week_dates=week_dates,
-                           date_map=date_map)
-                           
-
-@app.route("/appointments")
-def admin_appointments():
-    if not session.get("is_admin"):
-        return redirect("/login")
-    appointments = load_appointments()
-    return render_template("admin_appointments.html", appointments=appointments)
-
-# --- ניהול שגרה שבועית ---
 
 @app.route("/weekly_schedule", methods=["POST"])
 def update_weekly_schedule():
@@ -227,28 +263,28 @@ def update_weekly_schedule():
     time = data.get("time")
     new_time = data.get("new_time")
 
-    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
-
     if day_key not in [str(i) for i in range(7)]:
         return jsonify({"error": "Invalid day key"}), 400
 
-    # קודם לטפל ב-enable_day ו-disable_day
+    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
+    day_times = weekly_schedule.get(day_key, [])
+
+    # ניהול יום כבוי
     if action == "enable_day":
+        # השבתת יום ריק = הפעלת יום, נשאיר את המצב הקיים או נוסיף רשימת שעות ריקה
         if day_key not in weekly_schedule:
             weekly_schedule[day_key] = []
-        # אם יש ימים כבויים, אפשר להפעיל (להחזיר רשימת שעות ריקה היא מסמלת הפעלה)
-        # אפשר גם לשמור מראש שעות לפי הצורך, כרגע פשוט שומר ריק
         save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
+        clear_cache()
         return jsonify({"success": True})
 
     if action == "disable_day":
         weekly_schedule[day_key] = []
         save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
+        clear_cache()
         return jsonify({"success": True})
 
-    # אם לא enable/disable, נמשיך לפעולות עם זמן
-    day_times = weekly_schedule.get(day_key, [])
-
+    # פעולות על שעות
     if action == "add" and time:
         if time not in day_times:
             day_times.append(time)
@@ -269,28 +305,38 @@ def update_weekly_schedule():
         return jsonify({"error": "Invalid action or missing time"}), 400
 
     save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
+    clear_cache()
     return jsonify({"message": "Weekly schedule updated", "weekly_schedule": weekly_schedule})
 
-@app.route("/weekly_toggle_day", methods=["POST"])
-def toggle_weekly_day():
+
+# --- ניהול שינויים חד-פעמיים (overrides) ---
+
+@app.route("/admin_overrides")
+def admin_overrides():
     if not session.get("is_admin"):
-        return jsonify({"error": "Unauthorized"}), 403
+        return redirect("/login")
 
-    data = request.get_json()
-    day_key = data.get("day_key")
-    enabled = data.get("enabled")
-
-    if day_key not in [str(i) for i in range(7)]:
-        return jsonify({"error": "Invalid day key"}), 400
-
+    overrides = load_json(OVERRIDES_FILE)
     weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
-    weekly_schedule[day_key] = [] if not enabled else weekly_schedule.get(day_key, [])
-    save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
 
-    return jsonify({"message": "Day updated", "weekly_schedule": weekly_schedule})
+    today = datetime.today()
+    week_dates = []
+    date_map = {}
 
+    for i in range(7):
+        date = today + timedelta(days=i)
+        date_str = date.strftime("%Y-%m-%d")
+        week_dates.append(date_str)
+        py_weekday = date.weekday()
+        day_index = (py_weekday + 1) % 7
+        date_map[date_str] = day_index
 
-# --- ניהול שינויים חד פעמיים (overrides) ---
+    return render_template("admin_overrides.html",
+                           overrides=overrides,
+                           base_schedule=weekly_schedule,
+                           week_dates=week_dates,
+                           date_map=date_map)
+
 
 @app.route("/overrides", methods=["POST"])
 def update_overrides():
@@ -318,14 +364,16 @@ def update_overrides():
     elif action == "clear":
         overrides.pop(date, None)
         save_json(OVERRIDES_FILE, overrides)
+        clear_cache()
         return jsonify({"message": f"Overrides cleared for {date}"})
-
     else:
         return jsonify({"error": "Invalid action"}), 400
 
     overrides[date] = day_override
     save_json(OVERRIDES_FILE, overrides)
+    clear_cache()
     return jsonify({"message": "Overrides updated", "overrides": overrides})
+
 
 @app.route("/overrides_toggle_day", methods=["POST"])
 def toggle_override_day():
@@ -345,17 +393,23 @@ def toggle_override_day():
             overrides.pop(date)
 
     save_json(OVERRIDES_FILE, overrides)
+    clear_cache()
     return jsonify({"message": "Day override toggled", "overrides": overrides})
+
+
+# --- ניהול שינויים חד-פעמיים ב-one_time_changes (אם רוצים לנהל בנפרד מה-overrides) ---
 
 @app.route('/admin/one-time/toggle_day', methods=['POST'])
 def toggle_day():
+    if not session.get("is_admin"):
+        return jsonify({"error": "Unauthorized"}), 403
+
     data = request.json
     date = data['date']
     one_time = load_one_time_changes()
     if date not in one_time:
         return jsonify({'error': 'Date not found'}), 404
 
-    # Toggle all slots
     all_disabled = all(not slot['available'] for slot in one_time[date])
     for slot in one_time[date]:
         slot['available'] = not all_disabled
@@ -363,8 +417,12 @@ def toggle_day():
     save_one_time_changes(one_time)
     return jsonify({'message': 'Day toggled successfully'})
 
+
 @app.route('/admin/one-time/delete', methods=['POST'])
 def delete_slot():
+    if not session.get("is_admin"):
+        return jsonify({"error": "Unauthorized"}), 403
+
     data = request.json
     date, time = data['date'], data['time']
     one_time = load_one_time_changes()
@@ -373,8 +431,12 @@ def delete_slot():
         save_one_time_changes(one_time)
     return jsonify({'message': 'Slot deleted'})
 
+
 @app.route('/admin/one-time/edit', methods=['POST'])
 def edit_slot():
+    if not session.get("is_admin"):
+        return jsonify({"error": "Unauthorized"}), 403
+
     data = request.json
     date, old_time, new_time = data['date'], data['old_time'], data['new_time']
     one_time = load_one_time_changes()
@@ -385,8 +447,12 @@ def edit_slot():
     save_one_time_changes(one_time)
     return jsonify({'message': 'Slot edited'})
 
+
 @app.route('/admin/one-time/toggle_slot', methods=['POST'])
 def toggle_slot():
+    if not session.get("is_admin"):
+        return jsonify({"error": "Unauthorized"}), 403
+
     data = request.json
     date, time = data['date'], data['time']
     one_time = load_one_time_changes()
@@ -397,14 +463,19 @@ def toggle_slot():
     save_one_time_changes(one_time)
     return jsonify({'message': 'Slot toggled'})
 
+
 @app.route('/admin/one-time/add', methods=['POST'])
 def add_slot():
+    if not session.get("is_admin"):
+        return jsonify({"error": "Unauthorized"}), 403
+
     data = request.json
     date, time = data['date'], data['time']
     one_time = load_one_time_changes()
     one_time.setdefault(date, []).append({'time': time, 'available': True})
     save_one_time_changes(one_time)
     return jsonify({'message': 'Slot added'})
+
 
 # --- ניהול טקסט ידע של הבוט ---
 
@@ -420,6 +491,7 @@ def bot_knowledge():
 
     content = load_text(BOT_KNOWLEDGE_FILE)
     return render_template("bot_knowledge.html", content=content)
+
 
 # --- ניהול הזמנות ---
 
@@ -444,7 +516,6 @@ def book_appointment():
     appointments = load_appointments()
     date_appointments = appointments.get(date, [])
 
-    # בדיקה אם השעה תפוסה
     for appt in date_appointments:
         if appt["time"] == time:
             return jsonify({"error": "This time slot is already booked"}), 400
@@ -463,9 +534,10 @@ def book_appointment():
     try:
         send_email(name, phone, date, time, service, services_prices[service])
     except Exception as e:
-        print("Error sending email:", e)
+        logging.error(f"Error sending email: {e}")
 
     return jsonify({"message": f"Appointment booked for {date} at {time} for {service}."})
+
 
 # --- שליחת אימייל ---
 
@@ -482,27 +554,28 @@ Service: {service}
 Price: {price}₪
 """)
     msg['Subject'] = f'New Appointment - {name}'
-    msg['From'] = 'nextwaveaiandweb@gmail.com'  # שנה למייל שלך
-    msg['To'] = 'nextwaveaiandweb@gmail.com'    # שנה למייל שלך
+    msg['From'] = os.environ.get("EMAIL_USER", "nextwaveaiandweb@gmail.com")  # מומלץ להשתמש במשתני סביבה
+    msg['To'] = os.environ.get("EMAIL_USER", "nextwaveaiandweb@gmail.com")
 
     try:
         server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
         EMAIL_USER = os.environ.get("EMAIL_USER")
         EMAIL_PASS = os.environ.get("EMAIL_PASS")
-
         server.login(EMAIL_USER, EMAIL_PASS)
         server.send_message(msg)
         server.quit()
-        print("Email sent successfully")
+        logging.info("Email sent successfully")
     except Exception as e:
-        print("Failed to send email:", e)
+        logging.error(f"Failed to send email: {e}")
+
 
 # --- דף הצגת תורים (מנהל בלבד) ---
 
 @app.route("/availability")
 def availability():
     week_slots = generate_week_slots()
-    return jsonify(week_slots)  # מחזיר מפתחות כמו "2025-08-01"
+    return jsonify(week_slots)
+
 
 # --- דף הבית ---
 
@@ -510,7 +583,6 @@ def availability():
 def index():
     week_slots = generate_week_slots()
     return render_template("index.html", week_slots=week_slots, services=services_prices)
-
 
 
 # --- API - שאלות לבוט ---
@@ -533,8 +605,9 @@ def ask_bot():
 
     return jsonify({"answer": answer})
 
+
 # --- הפעלת השרת ---
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, debug=True)
