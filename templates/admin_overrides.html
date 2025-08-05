@@ -141,35 +141,40 @@
   </style>
 
   <script>
+    // פונקציה לניקוי מחרוזות לשימוש ב-ID תקין
+    function sanitizeForId(str) {
+      return str.replace(/[^a-zA-Z0-9-_]/g, '-');
+    }
+
     function toggleSection(id) {
       document.getElementById(id).classList.toggle('active');
     }
 
-    async function updateOverride(date, time, action, new_time = null) {
+    async function updateOverride(day_key, time, action, new_time = null) {
       const res = await fetch('/override', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date, time, action, new_time })
+        body: JSON.stringify({ day_key, time, action, new_time })
       });
       return await res.json();
     }
 
-    async function removeOverride(date, time) {
-      await updateOverride(date, time, 'disable');
+    async function removeOverride(day_key, time) {
+      await updateOverride(day_key, time, 'disable');
       location.reload();
     }
 
-    function toggleActions(date, time) {
-      const id = 'actions-' + date + '-' + time.replace(/:/g, '-');
+    function toggleActions(day_key, time) {
+      const id = `actions-${sanitizeForId(day_key)}-${sanitizeForId(time)}`;
       const el = document.getElementById(id);
       document.querySelectorAll('.actions-container').forEach(c => {
         if (c !== el) c.style.display = 'none';
       });
-      el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+      el.style.display = el.style.display === 'block' ? 'none' : 'block';
     }
 
-    function enableEdit(date, time) {
-      const wrapperId = 'time-wrapper-' + date + '-' + time.replace(/:/g, '-');
+    function enableEdit(day_key, time) {
+      const wrapperId = `time-wrapper-${sanitizeForId(day_key)}-${sanitizeForId(time)}`;
       const wrapper = document.getElementById(wrapperId);
       wrapper.innerHTML = '';
 
@@ -182,7 +187,7 @@
       saveBtn.style.marginLeft = '5px';
       saveBtn.onclick = async () => {
         const newTime = input.value;
-        await updateOverride(date, time, 'edit', newTime);
+        await updateOverride(day_key, time, 'edit', newTime);
         location.reload();
       };
 
@@ -196,19 +201,19 @@
       wrapper.appendChild(cancelBtn);
     }
 
-    async function addOverride(date) {
-      const input = document.getElementById('override-add-' + date);
+    async function addOverride(day_key) {
+      const input = document.getElementById('override-add-' + day_key);
       const time = input.value;
       if (!time) return alert('נא לבחור שעה');
-      await updateOverride(date, time, 'add');
+      await updateOverride(day_key, time, 'add');
       location.reload();
     }
 
-    async function restoreDay(date) {
+    async function restoreDay(day_key) {
       await fetch('/override', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'reset_day', date })
+        body: JSON.stringify({ action: 'reset_day', day_key })
       });
       location.reload();
     }
@@ -227,36 +232,40 @@
 <div class="section">
   <h2>לפי ימים</h2>
 
-  {% for date in week_dates %}
+  {% set day_map = {
+    '6': "ראשון", '0': "שני", '1': "שלישי", '2': "רביעי",
+    '3': "חמישי", '4': "שישי", '5': "שבת"
+  } %}
+
+  {% for day_key in ['6','0','1','2','3','4','5'] %}
     <div class="day-container">
-      <div class="day-header" onclick="toggleSection('override-times-{{date}}')">
-        <span>{{ date_map[date] }}</span>
-        <button class="restore-btn" onclick="event.stopPropagation(); restoreDay('{{date}}')">🔄 שחזר יום</button>
+      <div class="day-header" onclick="toggleSection('override-times-{{day_key}}')">
+        <span>{{ day_map[day_key] }}</span>
+        <button class="restore-btn" onclick="event.stopPropagation(); restoreDay('{{day_key}}')">🔄 שחזר יום</button>
       </div>
 
-      <div class="times-container active" id="override-times-{{date}}">
-        {% set day_schedule = base_schedule[date[-1:] if date[-1:] in base_schedule else date[-2:]] %}
-        {% for time in day_schedule %}
-          {% set status = overrides.get(date, {}).get(time) %}
-          <div class="time-wrapper" id="time-wrapper-{{date}}-{{time|replace(':','-')}}">
+      <div class="times-container active" id="override-times-{{day_key}}">
+        {% for time in base_schedule[day_key] %}
+          {% set status = overrides[day_key][time] if overrides.get(day_key) and time in overrides[day_key] else None %}
+          <div class="time-wrapper" id="time-wrapper-{{day_key}}-{{time.replace(':', '-').replace('.', '-')}}">
             <button class="time-btn
               {% if status == 'disabled' %}disabled
               {% elif status == 'edited' %}edited
               {% elif status == 'added' %}added
               {% endif %}"
-              onclick="toggleActions('{{date}}', '{{time}}')">
+              onclick="toggleActions('{{day_key}}', '{{time}}')">
               {{ time }}
-              <span class="close-icon" onclick="event.stopPropagation(); removeOverride('{{date}}', '{{time}}')">✖️</span>
+              <span class="close-icon" onclick="event.stopPropagation(); removeOverride('{{day_key}}', '{{time}}')">✖️</span>
             </button>
-            <div class="actions-container" id="actions-{{date}}-{{time|replace(':','-')}}">
-              <button onclick="event.stopPropagation(); enableEdit('{{date}}', '{{time}}')">✏️ עריכה</button>
+            <div class="actions-container" id="actions-{{day_key}}-{{time.replace(':', '-').replace('.', '-')}}">
+              <button onclick="event.stopPropagation(); enableEdit('{{day_key}}', '{{time}}')">✏️ עריכה</button>
             </div>
           </div>
         {% endfor %}
 
         <div class="add-time-input">
-          <input type="time" id="override-add-{{date}}">
-          <button class="add-btn" onclick="addOverride('{{date}}')">➕ הוסף שעה</button>
+          <input type="time" id="override-add-{{day_key}}">
+          <button class="add-btn" onclick="addOverride('{{day_key}}')">➕ הוסף שעה</button>
         </div>
       </div>
     </div>
