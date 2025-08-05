@@ -235,18 +235,11 @@
       </div>
 
       <div class="times-container active" id="overrides-times-{{date}}">
-        {% set day_override = overrides.get(date, {"add": [], "remove": [], "edit": {}}) %}
         {% for slot in week_slots[date].times %}
           {% set time = slot.time %}
           <div class="time-wrapper" id="time-wrapper-{{date}}-{{time|replace(':','-')}}">
             <button class="time-btn
-              {% if not slot.available %}
-                disabled
-              {% elif time in day_override["add"] %}
-                added
-              {% elif time in day_override["edit"].values() %}
-                edited
-              {% endif %}"
+              {% if not slot.available %}disabled{% endif %}"
               onclick="toggleActions('{{date}}', '{{time}}')">
               {{ time }}
               <span class="close-icon" onclick="event.stopPropagation(); removeOverrides('{{date}}', '{{time}}')">✖️</span>
