@@ -185,17 +185,26 @@ def admin_routine():
                           
 @app.route("/admin_overrides")
 def admin_overrides():
-    if not session.get("is_admin"):
-        return redirect("/login")
-
     overrides = load_json(OVERRIDES_FILE)
-    week_slots = generate_week_slots()
-    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)  # נוסיף את זה
+    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
+
+    # נבנה את רשימת התאריכים לשבוע הקרוב
+    today = datetime.today()
+    week_dates = []
+    date_map = {}  # מיפוי תאריך => שם היום (לשימוש ב-HTML)
+    for i in range(7):
+        date = today + timedelta(days=i)
+        day_key = str(date.weekday())  # 0 = Monday
+        date_str = date.strftime("%Y-%m-%d")
+        week_dates.append(date_str)
+        hebrew_day_name = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"][date.weekday()]
+        date_map[date_str] = f"{date.strftime('%-d.%m')} ({hebrew_day_name})"
 
     return render_template("admin_overrides.html",
                            overrides=overrides,
-                           week_slots=week_slots,
-                           base_schedule=weekly_schedule)  # נשלח ל־HTML
+                           base_schedule=weekly_schedule,
+                           week_dates=week_dates,
+                           date_map=date_map)
                            
 
 @app.route("/appointments")
