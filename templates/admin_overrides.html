@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HairBoss - שינויים חד־פעמיים</title>
+  <title>HairBoss - שינויים חד-פעמיים</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -155,7 +155,7 @@
     }
 
     async function removeOverrides(date, time) {
-      await updateOverrides(date, time, 'disable');
+      await updateOverrides(date, time, 'remove');
       location.reload();
     }
 
@@ -208,7 +208,7 @@
       await fetch('/overrides', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'reset_day', date })
+        body: JSON.stringify({ action: 'clear', date })
       });
       location.reload();
     }
@@ -222,7 +222,7 @@
   <a href="/logout" class="logout">🚪 התנתק</a>
 </div>
 
-<h1>HairBoss - שינויים חד־פעמיים</h1>
+<h1>HairBoss - שינויים חד-פעמיים</h1>
 
 <div class="section">
   <h2>לפי ימים</h2>
@@ -235,15 +235,11 @@
       </div>
 
       <div class="times-container active" id="overrides-times-{{date}}">
-        {% set day_schedule = base_schedule[date[-1:] if date[-1:] in base_schedule else date[-2:]] %}
-        {% for time in day_schedule %}
-          {% set status = overrides.get(date, {}).get(time) %}
+        {% for slot in week_slots[date].times %}
+          {% set time = slot.time %}
           <div class="time-wrapper" id="time-wrapper-{{date}}-{{time|replace(':','-')}}">
             <button class="time-btn
-              {% if status == 'disabled' %}disabled
-              {% elif status == 'edited' %}edited
-              {% elif status == 'added' %}added
-              {% endif %}"
+              {% if not slot.available %}disabled{% endif %}"
               onclick="toggleActions('{{date}}', '{{time}}')">
               {{ time }}
               <span class="close-icon" onclick="event.stopPropagation(); removeOverrides('{{date}}', '{{time}}')">✖️</span>
