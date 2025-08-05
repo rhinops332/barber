@@ -188,11 +188,24 @@ def admin_overrides():
     if not session.get("is_admin"):
         return redirect("/login")
 
-    weekly_schedule = load_weekly_schedule()
-    overrides = load_overrides()
-    week_dates = get_upcoming_week_dates()
-    date_map = {d: format_date_display(d) for d in week_dates}
-    week_slots = generate_week_slots(weekly_schedule, overrides)
+    # טוען את השגרה השבועית והאובריידים ישירות מהקבצים
+    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
+    overrides = load_json(OVERRIDES_FILE)
+
+    # מקבל רשימת תאריכים לשבוע הקרוב בפורמט YYYY-MM-DD
+    today = datetime.today()
+    week_dates = [(today + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)]
+
+    # מיפוי תאריכים לשמות ימי השבוע בעברית עם תאריך מוצג
+    hebrew_day_names = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
+    date_map = {}
+    for d_str in week_dates:
+        d = datetime.strptime(d_str, "%Y-%m-%d")
+        day_name = hebrew_day_names[d.weekday()]
+        date_map[d_str] = f"{d.strftime('%-d.%m')} ({day_name})"
+
+    # יוצר את הרשימה המשולבת של תאריכים ושעות עם זמינות
+    week_slots = generate_week_slots()
 
     return render_template("admin_overrides.html",
                            overrides=overrides,
@@ -200,6 +213,7 @@ def admin_overrides():
                            week_dates=week_dates,
                            date_map=date_map,
                            week_slots=week_slots)
+
 
                            
 @app.route("/appointments")
