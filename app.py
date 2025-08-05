@@ -310,6 +310,7 @@ def update_overrides():
     action = data.get("action")
     date = data.get("date")
     time = data.get("time")
+    new_time = data.get("new_time")
 
     overrides = load_json(OVERRIDES_FILE)
     day_override = overrides.get(date, {"add": [], "remove": []})
@@ -319,22 +320,39 @@ def update_overrides():
             day_override["add"].append(time)
             if time in day_override["remove"]:
                 day_override["remove"].remove(time)
+
     elif action == "remove":
         if time and time not in day_override["remove"]:
             day_override["remove"].append(time)
             if time in day_override["add"]:
                 day_override["add"].remove(time)
-    elif action == "clear":
-        overrides.pop(date, None)
-        save_json(OVERRIDES_FILE, overrides)
-        return jsonify({"message": f"Overrides cleared for {date}"})
+
+    elif action == "edit":
+        if time and new_time:
+            if time in day_override["add"]:
+                day_override["add"].remove(time)
+                if new_time not in day_override["add"]:
+                    day_override["add"].append(new_time)
+            elif time in load_json(WEEKLY_SCHEDULE_FILE).get(str(datetime.strptime(date, "%Y-%m-%d").weekday()), []):
+                # עריכת שעה רגילה
+                if time not in day_override["remove"]:
+                    day_override["remove"].append(time)
+                if new_time not in day_override["add"]:
+                    day_override["add"].append(new_time)
+
+    elif action == "reset_day":
+        if date in overrides:
+            overrides.pop(date)
 
     else:
         return jsonify({"error": "Invalid action"}), 400
 
-    overrides[date] = day_override
+    if action != "reset_day":
+        overrides[date] = day_override
+
     save_json(OVERRIDES_FILE, overrides)
     return jsonify({"message": "Overrides updated", "overrides": overrides})
+
 
 @app.route("/overrides_toggle_day", methods=["POST"])
 def toggle_override_day():
