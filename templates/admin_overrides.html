@@ -34,14 +34,16 @@
       align-items: center;
       cursor: pointer;
       user-select: none;
+      gap: 10px;
     }
     .day-header span {
       font-weight: bold;
       font-size: 1.1em;
+      flex-grow: 1;
     }
     .times-container {
       margin-top: 10px;
-      display: none;
+      display: none;  /* סגור בהתחלה */
     }
     .times-container.active {
       display: block;
@@ -121,6 +123,16 @@
       border-radius: 4px;
       cursor: pointer;
       margin-bottom: 10px;
+    }
+    button.delete-day-btn {
+      background: #c0392b;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-bottom: 10px;
+      margin-left: 10px;
     }
     .top-nav {
       overflow: hidden;
@@ -212,6 +224,16 @@
       });
       location.reload();
     }
+
+    async function deleteDay(date) {
+      if (!confirm('אתה בטוח שברצונך למחוק את כל השינויים ביום זה?')) return;
+      await fetch('/overrides', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete_day', date })
+      });
+      location.reload();
+    }
   </script>
 </head>
 <body>
@@ -232,9 +254,10 @@
       <div class="day-header" onclick="toggleSection('overrides-times-{{date}}')">
         <span>{{ date_map[date] }}</span>
         <button class="restore-btn" onclick="event.stopPropagation(); restoreDay('{{date}}')">🔄 שחזר יום</button>
+        <button class="delete-day-btn" onclick="event.stopPropagation(); deleteDay('{{date}}')">🗑️ מחק יום</button>
       </div>
 
-      <div class="times-container active" id="overrides-times-{{date}}">
+      <div class="times-container" id="overrides-times-{{date}}">
         {% for slot in week_slots[date].times %}
           {% set time = slot.time %}
           <div class="time-wrapper" id="time-wrapper-{{date}}-{{time|replace(':','-')}}">
