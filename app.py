@@ -312,6 +312,19 @@ def update_overrides():
     new_time = data.get("new_time")
 
     overrides = load_json(OVERRIDES_FILE)
+
+    if action == "clear":
+        if date in overrides:
+            overrides.pop(date)
+        save_json(OVERRIDES_FILE, overrides)
+        return jsonify({"message": "Day restored to weekly schedule", "overrides": overrides})
+
+    if action == "disable_day":
+        # מגדיר שהיום כולו מוסתר על ידי 'remove' עם הערך ["__all__"]
+        overrides[date] = {"add": [], "remove": ["__all__"]}
+        save_json(OVERRIDES_FILE, overrides)
+        return jsonify({"message": "Day disabled", "overrides": overrides})
+
     day_override = overrides.get(date, {"add": [], "remove": []})
 
     if action == "add":
@@ -333,20 +346,15 @@ def update_overrides():
                 if new_time not in day_override["add"]:
                     day_override["add"].append(new_time)
             elif time in load_json(WEEKLY_SCHEDULE_FILE).get(str(datetime.strptime(date, "%Y-%m-%d").weekday()), []):
-                # עריכת שעה רגילה
                 if time not in day_override["remove"]:
                     day_override["remove"].append(time)
                 if new_time not in day_override["add"]:
                     day_override["add"].append(new_time)
 
-    elif action == "reset_day":
-        if date in overrides:
-            overrides.pop(date)
-
     else:
         return jsonify({"error": "Invalid action"}), 400
 
-    if action != "reset_day":
+    if action not in ["clear", "disable_day"]:
         overrides[date] = day_override
 
     save_json(OVERRIDES_FILE, overrides)
