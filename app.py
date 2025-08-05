@@ -73,35 +73,30 @@ def generate_week_slots():
         date_str = current_date.strftime("%Y-%m-%d")
         weekday = current_date.weekday()
         day_name = heb_days[weekday]
-        day_key = str(weekday)
 
+        day_key = str(weekday)
         scheduled_times = weekly_schedule.get(day_key, [])
+
         override = overrides.get(date_str, {"add": [], "remove": []})
         add_times = override.get("add", [])
         remove_times = override.get("remove", [])
 
-        slots = []
-
         if remove_times == ["__all__"]:
-            # כל היום כבוי – אך נרצה להראות גם את השעות שהיו בשגרה כדי שיראו שהן מכובות
-            for t in sorted(set(scheduled_times + add_times)):
-                slots.append({"time": t, "available": False, "type": "disabled"})
+            all_final = []
         else:
-            all_times = sorted(set(scheduled_times + add_times + remove_times))
-            for t in all_times:
-                if t in add_times and t not in scheduled_times:
-                    slots.append({"time": t, "available": True, "type": "added"})
-                elif t in add_times and t in scheduled_times:
-                    # עריכת שעה קיימת לשעה חדשה
-                    slots.append({"time": t, "available": True, "type": "edited"})
-                elif t in remove_times:
-                    slots.append({"time": t, "available": False, "type": "disabled"})
-                elif t in scheduled_times:
-                    slots.append({"time": t, "available": True, "type": "normal"})
+            # תיקון: להסיר את הזמנים שנמצאים ב-remove_times
+            all_final = sorted(set(scheduled_times + add_times) - set(remove_times))
+
+        final_times = []
+        for t in all_final:
+            if remove_times == ["__all__"] or t in remove_times:
+                final_times.append({"time": t, "available": False})
+            else:
+                final_times.append({"time": t, "available": True})
 
         week_slots[date_str] = {
             "day_name": day_name,
-            "times": slots
+            "times": final_times
         }
 
     return week_slots
