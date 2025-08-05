@@ -246,7 +246,7 @@
               {% set day_override = overrides.get(date, {"add": [], "remove": []}) %}
               {% if not slot.available %}
                 disabled
-              {% elif time in day_override.add %}
+              {% elif time in day_override["add"] %}
                 added
               {% endif %}
               "
