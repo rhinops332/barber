@@ -214,7 +214,6 @@ def admin_overrides():
                            date_map=date_map,
                            week_slots=week_slots)
 
-
                            
 @app.route("/appointments")
 def admin_appointments():
