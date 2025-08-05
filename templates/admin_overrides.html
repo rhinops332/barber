@@ -284,29 +284,34 @@
     location.reload();
   }
 
-  // לחיצה על כפתור "מחק יום" - עצירת אירועים ומחיקה
+  // טיפול בלחיצה על כפתור "מחק יום"
   function handleDeleteDayClick(event, date) {
     event.preventDefault();
     event.stopPropagation();
     deleteDay(date);
   }
 
-  // סימולציה של לחיצה על כל איקס באותו יום (כלומר - מכבה את כל השעות)
+  // מחיקת כל השעות ביום בבקשה אחת לשרת
   async function deleteDay(date) {
     const wrappers = document.querySelectorAll(`#overrides-times-${date} .time-wrapper`);
     const times = Array.from(wrappers).map(wrapper => {
       const parts = wrapper.id.split('-');
-      // מחלץ את השעה והדקה מה-id
       const hh = parts[parts.length - 2];
       const mm = parts[parts.length - 1];
       return hh + ':' + mm;
     });
 
-    for (const time of times) {
-      await updateOverrides(date, time, 'remove');
-    }
+    const res = await fetch('/overrides', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ date, times, action: 'remove_multiple' })
+    });
 
-    reloadKeepingOpened();
+    if (res.ok) {
+      reloadKeepingOpened();
+    } else {
+      alert('שגיאה במחיקת היום');
+    }
   }
 
   // כאשר העמוד נטען - משחזר ימים פתוחים
@@ -314,7 +319,6 @@
     restoreOpenedDays();
   };
 </script>
-
 
 </head>
 <body>
