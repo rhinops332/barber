@@ -153,6 +153,16 @@
   </style>
 
   <script>
+  // שמירת הימים הפתוחים ב-localStorage
+  function saveOpenedDays() {
+    const opened = [];
+    document.querySelectorAll('.times-container.active').forEach(el => {
+      opened.push(el.id);
+    });
+    localStorage.setItem('openedDays', JSON.stringify(opened));
+  }
+
+  // פותח או סוגר קונטיינר של יום
   function toggleSection(id) {
     const el = document.getElementById(id);
     el.classList.toggle('active');
@@ -167,7 +177,7 @@
     localStorage.setItem('openedDays', JSON.stringify(opened));
   }
 
-  // פותח את כל הימים שנשמרו
+  // פותח את כל הימים שנשמרו ב-localStorage
   function restoreOpenedDays() {
     let opened = JSON.parse(localStorage.getItem('openedDays') || '[]');
     opened.forEach(id => {
@@ -176,7 +186,7 @@
     });
   }
 
-  // פונקציית עזר לעדכון override עם שמירת פתיחת ימים
+  // קריאה לשרת לעדכון השינויים החד-פעמיים
   async function updateOverrides(date, time, action, new_time = null) {
     const res = await fetch('/overrides', {
       method: 'POST',
@@ -186,11 +196,13 @@
     return await res.json();
   }
 
+  // הסרת שעה (הוספת להסרת שעת override)
   async function removeOverrides(date, time) {
     await updateOverrides(date, time, 'remove');
     reloadKeepingOpened();
   }
 
+  // הצגת/הסתרת פעולות עריכה ליד שעה
   function toggleActions(date, time) {
     const id = 'actions-' + date + '-' + time.replace(/:/g, '-');
     const el = document.getElementById(id);
@@ -200,6 +212,7 @@
     el.style.display = (el.style.display === 'block') ? 'none' : 'block';
   }
 
+  // הפיכת לחצן שעה למצב עריכה (input)
   function enableEdit(date, time) {
     const wrapperId = 'time-wrapper-' + date + '-' + time.replace(/:/g, '-');
     const wrapper = document.getElementById(wrapperId);
@@ -228,6 +241,7 @@
     wrapper.appendChild(cancelBtn);
   }
 
+  // הוספת שעה חדשה ליום
   async function addOverrides(date) {
     const input = document.getElementById('overrides-add-' + date);
     const time = input.value;
@@ -236,6 +250,7 @@
     reloadKeepingOpened();
   }
 
+  // שחזור יום למצב השגרה
   async function restoreDay(date) {
     await fetch('/overrides', {
       method: 'POST',
@@ -245,32 +260,36 @@
     reloadKeepingOpened();
   }
 
+  // מחיקת כל השינויים של יום (מחיקת יום)
   async function deleteDay(date) {
-    await fetch('/overrides', {
+    saveOpenedDays();
+    const res = await fetch('/overrides', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'delete_day', date })
     });
-    reloadKeepingOpened();
+
+    const data = await res.json();
+    console.log('Delete day response:', data);
+
+    if (res.ok) {
+      location.reload();
+    } else {
+      alert('שגיאה במחיקת היום');
+    }
   }
 
-  // פונקציה לרענון העמוד ושמירת מצב פתיחת הימים
+  // ריענון הדף ושמירת הימים הפתוחים
   function reloadKeepingOpened() {
-    // שמירת רשימת ימים פתוחים לפני ריענון
-    const opened = [];
-    document.querySelectorAll('.times-container.active').forEach(el => {
-      opened.push(el.id);
-    });
-    localStorage.setItem('openedDays', JSON.stringify(opened));
-
+    saveOpenedDays();
     location.reload();
   }
 
-  // כשהעמוד נטען - משחזר את הימים שפתוחים
+  // כשנטען הדף - משחזר את הימים שפתוחים
   window.onload = () => {
     restoreOpenedDays();
   };
-</script>
+  </script>
 
 </head>
 <body>
