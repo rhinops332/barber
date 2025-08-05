@@ -1,540 +1,267 @@
-import os
-import json
-from datetime import datetime, timedelta
-from flask import Flask, request, jsonify, render_template as original_render_template, redirect, session, g
-import smtplib
-from email.message import EmailMessage
-
-app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "default_secret")
-
-# קבצים
-WEEKLY_SCHEDULE_FILE = "weekly_schedule.json"
-OVERRIDES_FILE = "overrides.json"
-BOT_KNOWLEDGE_FILE = "bot_knowledge.txt"
-APPOINTMENTS_FILE = "appointments.json"
-ONE_TIME_FILE = "one_time_changes.json"   
-
-# שירותים ומחירים
-services_prices = {
-    "Men's Haircut": 80,
-    "Women's Haircut": 120,
-    "Blow Dry": 70,
-    "Color": 250
-}
-
-# --- פונקציות עזר ---
-
-def load_json(filename):
-    if not os.path.exists(filename):
-        return {}
-    with open(filename, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def save_json(filename, data):
-    with open(filename, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-
-def load_text(filename):
-    if not os.path.exists(filename):
-        return ""
-    with open(filename, "r", encoding="utf-8") as f:
-        return f.read()
-
-def save_text(filename, content):
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write(content.strip())
-
-def load_appointments():
-    return load_json(APPOINTMENTS_FILE)
-
-def save_appointments(data):
-    save_json(APPOINTMENTS_FILE, data)
-
-# פונקציות ל-one-time changes:
-def load_one_time_changes():
-    return load_json(ONE_TIME_FILE)
-
-def save_one_time_changes(data):
-    save_json(ONE_TIME_FILE, data)
-
-# --- יצירת רשימת שעות שבועית עם שינויים ---
-
-def generate_week_slots():
-    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
-    overrides = load_json(OVERRIDES_FILE)
-    today = datetime.today()
-    week_slots = {}
-
-    heb_days = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
-
-    for i in range(7):
-        current_date = today + timedelta(days=i)
-        date_str = current_date.strftime("%Y-%m-%d")
-        weekday = current_date.weekday()
-        day_name = heb_days[weekday]
-
-        day_key = str(weekday)
-        scheduled_times = weekly_schedule.get(day_key, [])
-
-        override = overrides.get(date_str, {"add": [], "remove": []})
-        add_times = override.get("add", [])
-        remove_times = override.get("remove", [])
-
-        if remove_times == ["__all__"]:
-            all_final = []
-        else:
-            # תיקון: להסיר את הזמנים שנמצאים ב-remove_times
-            all_final = sorted(set(scheduled_times + add_times) - set(remove_times))
-
-        final_times = []
-        for t in all_final:
-            if remove_times == ["__all__"] or t in remove_times:
-                final_times.append({"time": t, "available": False})
-            else:
-                final_times.append({"time": t, "available": True})
-
-        week_slots[date_str] = {
-            "day_name": day_name,
-            "times": final_times
-        }
-
-    return week_slots
-
-
-def is_slot_available(date, time):
-    week_slots = generate_week_slots()
-    day_info = week_slots.get(date)
-    if not day_info:
-        return False
-    for t in day_info["times"]:
-        if t["time"] == time and t.get("available", True):
-            return True
-    return False
-
-# --- לפני כל בקשה - העברת session ל-g ---
-
-@app.before_request
-def before_request():
-    g.username = session.get('username')
-    g.is_admin = session.get('is_admin')
-
-# --- החלפת render_template ---
-
-def render_template(template_name_or_list, **context):
-    context['session'] = {
-        'username': g.get('username'),
-        'is_admin': g.get('is_admin')
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HairBoss - שינויים חד־פעמיים</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1000px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #eef2f7;
+      color: #222;
+      direction: rtl;
     }
-    return original_render_template(template_name_or_list, **context)
-
-# --- ניהול התחברות ---
-
-@app.route("/login", methods=['GET', 'POST'])
-def login():
-    error = None
-    admin_user = os.environ.get('ADMIN_USERNAME')
-    admin_password = os.environ.get('ADMIN_PASSWORD') or "1234"
-
-    if request.method == 'POST':
-        username = request.form['username'].strip()
-        password = request.form.get('password', '')
-
-        if not username:
-            error = "יש להזין שם משתמש"
-            return render_template('login.html', error=error, admin_user=admin_user)
-
-        if username == admin_user:
-            if password == admin_password:
-                session['username'] = username
-                session['is_admin'] = True
-                return redirect('/main_admin')
-            else:
-                error = "סיסמה שגויה"
-                return render_template('login.html', error=error, admin_user=admin_user)
-
-        # משתמש רגיל - אין צורך בסיסמה
-        session['username'] = username
-        session['is_admin'] = False
-        return redirect('/')
-
-    return render_template('login.html', error=error, admin_user=admin_user)
-
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect("/")
-
-# --- דף ניהול ראשי ---
-
-@app.route("/main_admin")
-def main_admin():
-    if not session.get("is_admin"):
-        return redirect("/login")
-    return render_template("main_admin.html")
-
-@app.route("/admin_routine")
-def admin_routine():
-    if not session.get("is_admin"):
-        return redirect("/login")
-
-    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
-
-    return render_template("admin_routine.html", weekly_schedule=weekly_schedule)
-
-                          
-@app.route("/admin_overrides")
-def admin_overrides():
-    overrides = load_json(OVERRIDES_FILE)
-    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
-
-    # נבנה את רשימת התאריכים לשבוע הקרוב
-    today = datetime.today()
-    week_dates = []
-    date_map = {}  # מיפוי תאריך => שם היום (לשימוש ב-HTML)
-    for i in range(7):
-        date = today + timedelta(days=i)
-        day_key = str(date.weekday())  # 0 = Monday
-        date_str = date.strftime("%Y-%m-%d")
-        week_dates.append(date_str)
-        hebrew_day_name = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"][date.weekday()]
-        date_map[date_str] = f"{date.strftime('%-d.%m')} ({hebrew_day_name})"
-
-    return render_template("admin_overrides.html",
-                           overrides=overrides,
-                           base_schedule=weekly_schedule,
-                           week_dates=week_dates,
-                           date_map=date_map)
-                           
-
-@app.route("/appointments")
-def admin_appointments():
-    if not session.get("is_admin"):
-        return redirect("/login")
-    appointments = load_appointments()
-    return render_template("admin_appointments.html", appointments=appointments)
-
-# --- ניהול שגרה שבועית ---
-
-@app.route("/weekly_schedule", methods=["POST"])
-def update_weekly_schedule():
-    if not session.get("is_admin"):
-        return jsonify({"error": "Unauthorized"}), 403
-
-    data = request.get_json()
-    action = data.get("action")
-    day_key = data.get("day_key")
-    time = data.get("time")
-    new_time = data.get("new_time")
-
-    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
-
-    if day_key not in [str(i) for i in range(7)]:
-        return jsonify({"error": "Invalid day key"}), 400
-
-    # קודם לטפל ב-enable_day ו-disable_day
-    if action == "enable_day":
-        if day_key not in weekly_schedule:
-            weekly_schedule[day_key] = []
-        # אם יש ימים כבויים, אפשר להפעיל (להחזיר רשימת שעות ריקה היא מסמלת הפעלה)
-        # אפשר גם לשמור מראש שעות לפי הצורך, כרגע פשוט שומר ריק
-        save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
-        return jsonify({"success": True})
-
-    if action == "disable_day":
-        weekly_schedule[day_key] = []
-        save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
-        return jsonify({"success": True})
-
-    # אם לא enable/disable, נמשיך לפעולות עם זמן
-    day_times = weekly_schedule.get(day_key, [])
-
-    if action == "add" and time:
-        if time not in day_times:
-            day_times.append(time)
-            day_times.sort()
-            weekly_schedule[day_key] = day_times
-    elif action == "remove" and time:
-        if time in day_times:
-            day_times.remove(time)
-            weekly_schedule[day_key] = day_times
-    elif action == "edit" and time and new_time:
-        if time in day_times:
-            day_times.remove(time)
-            if new_time not in day_times:
-                day_times.append(new_time)
-                day_times.sort()
-            weekly_schedule[day_key] = day_times
-    else:
-        return jsonify({"error": "Invalid action or missing time"}), 400
-
-    save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
-    return jsonify({"message": "Weekly schedule updated", "weekly_schedule": weekly_schedule})
-
-@app.route("/weekly_toggle_day", methods=["POST"])
-def toggle_weekly_day():
-    if not session.get("is_admin"):
-        return jsonify({"error": "Unauthorized"}), 403
-
-    data = request.get_json()
-    day_key = data.get("day_key")
-    enabled = data.get("enabled")
-
-    if day_key not in [str(i) for i in range(7)]:
-        return jsonify({"error": "Invalid day key"}), 400
-
-    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
-    weekly_schedule[day_key] = [] if not enabled else weekly_schedule.get(day_key, [])
-    save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
-
-    return jsonify({"message": "Day updated", "weekly_schedule": weekly_schedule})
-
-
-# --- ניהול שינויים חד פעמיים (overrides) ---
-
-@app.route("/overrides", methods=["POST"])
-def update_overrides():
-    if not session.get("is_admin"):
-        return jsonify({"error": "Unauthorized"}), 403
-
-    data = request.get_json()
-    action = data.get("action")
-    date = data.get("date")
-    time = data.get("time")
-
-    overrides = load_json(OVERRIDES_FILE)
-    day_override = overrides.get(date, {"add": [], "remove": []})
-
-    if action == "add":
-        if time and time not in day_override["add"]:
-            day_override["add"].append(time)
-            if time in day_override["remove"]:
-                day_override["remove"].remove(time)
-    elif action == "remove":
-        if time and time not in day_override["remove"]:
-            day_override["remove"].append(time)
-            if time in day_override["add"]:
-                day_override["add"].remove(time)
-    elif action == "clear":
-        overrides.pop(date, None)
-        save_json(OVERRIDES_FILE, overrides)
-        return jsonify({"message": f"Overrides cleared for {date}"})
-
-    else:
-        return jsonify({"error": "Invalid action"}), 400
-
-    overrides[date] = day_override
-    save_json(OVERRIDES_FILE, overrides)
-    return jsonify({"message": "Overrides updated", "overrides": overrides})
-
-@app.route("/overrides_toggle_day", methods=["POST"])
-def toggle_override_day():
-    if not session.get("is_admin"):
-        return jsonify({"error": "Unauthorized"}), 403
-
-    data = request.get_json()
-    date = data.get("date")
-    enabled = data.get("enabled")
-
-    overrides = load_json(OVERRIDES_FILE)
-
-    if not enabled:
-        overrides[date] = {"add": [], "remove": ["__all__"]}
-    else:
-        if date in overrides and overrides[date].get("remove") == ["__all__"]:
-            overrides.pop(date)
-
-    save_json(OVERRIDES_FILE, overrides)
-    return jsonify({"message": "Day override toggled", "overrides": overrides})
-
-@app.route('/admin/one-time/toggle_day', methods=['POST'])
-def toggle_day():
-    data = request.json
-    date = data['date']
-    one_time = load_one_time_changes()
-    if date not in one_time:
-        return jsonify({'error': 'Date not found'}), 404
-
-    # Toggle all slots
-    all_disabled = all(not slot['available'] for slot in one_time[date])
-    for slot in one_time[date]:
-        slot['available'] = not all_disabled
-
-    save_one_time_changes(one_time)
-    return jsonify({'message': 'Day toggled successfully'})
-
-@app.route('/admin/one-time/delete', methods=['POST'])
-def delete_slot():
-    data = request.json
-    date, time = data['date'], data['time']
-    one_time = load_one_time_changes()
-    if date in one_time:
-        one_time[date] = [slot for slot in one_time[date] if slot['time'] != time]
-        save_one_time_changes(one_time)
-    return jsonify({'message': 'Slot deleted'})
-
-@app.route('/admin/one-time/edit', methods=['POST'])
-def edit_slot():
-    data = request.json
-    date, old_time, new_time = data['date'], data['old_time'], data['new_time']
-    one_time = load_one_time_changes()
-    for slot in one_time.get(date, []):
-        if slot['time'] == old_time:
-            slot['time'] = new_time
-            break
-    save_one_time_changes(one_time)
-    return jsonify({'message': 'Slot edited'})
-
-@app.route('/admin/one-time/toggle_slot', methods=['POST'])
-def toggle_slot():
-    data = request.json
-    date, time = data['date'], data['time']
-    one_time = load_one_time_changes()
-    for slot in one_time.get(date, []):
-        if slot['time'] == time:
-            slot['available'] = not slot['available']
-            break
-    save_one_time_changes(one_time)
-    return jsonify({'message': 'Slot toggled'})
-
-@app.route('/admin/one-time/add', methods=['POST'])
-def add_slot():
-    data = request.json
-    date, time = data['date'], data['time']
-    one_time = load_one_time_changes()
-    one_time.setdefault(date, []).append({'time': time, 'available': True})
-    save_one_time_changes(one_time)
-    return jsonify({'message': 'Slot added'})
-
-# --- ניהול טקסט ידע של הבוט ---
-
-@app.route("/bot_knowledge", methods=["GET", "POST"])
-def bot_knowledge():
-    if not session.get("is_admin"):
-        return redirect("/login")
-
-    if request.method == "POST":
-        content = request.form.get("content", "")
-        save_text(BOT_KNOWLEDGE_FILE, content)
-        return redirect("/main_admin")
-
-    content = load_text(BOT_KNOWLEDGE_FILE)
-    return render_template("bot_knowledge.html", content=content)
-
-# --- ניהול הזמנות ---
-
-@app.route("/book", methods=["POST"])
-def book_appointment():
-    data = request.get_json()
-    name = data.get("name", "").strip()
-    phone = data.get("phone", "").strip()
-    date = data.get("date", "").strip()
-    time = data.get("time", "").strip()
-    service = data.get("service", "").strip()
-
-    if not all([name, phone, date, time, service]):
-        return jsonify({"error": "Missing fields"}), 400
-
-    if service not in services_prices:
-        return jsonify({"error": "Unknown service"}), 400
-
-    if not is_slot_available(date, time):
-        return jsonify({"error": "This time slot is not available"}), 400
-
-    appointments = load_appointments()
-    date_appointments = appointments.get(date, [])
-
-    # בדיקה אם השעה תפוסה
-    for appt in date_appointments:
-        if appt["time"] == time:
-            return jsonify({"error": "This time slot is already booked"}), 400
-
-    appointment = {
-        "name": name,
-        "phone": phone,
-        "time": time,
-        "service": service,
-        "price": services_prices[service]
+    h1, h2 { text-align: center; }
+    .section {
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #ccc;
+      margin-bottom: 30px;
     }
-    date_appointments.append(appointment)
-    appointments[date] = date_appointments
-    save_appointments(appointments)
+    .day-container {
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      padding: 10px;
+    }
+    .day-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .day-header span {
+      font-weight: bold;
+      font-size: 1.1em;
+    }
+    .times-container {
+      margin-top: 10px;
+      display: none;
+    }
+    .times-container.active {
+      display: block;
+    }
+    .time-wrapper {
+      display: inline-block;
+      position: relative;
+      margin: 5px;
+    }
+    .time-btn {
+      padding: 5px 30px 5px 10px;
+      border-radius: 5px;
+      background: #3498db;
+      color: white;
+      cursor: pointer;
+      border: none;
+      font-size: 1em;
+      position: relative;
+      user-select: none;
+    }
+    .time-btn.disabled {
+      background: #aaa;
+      text-decoration: line-through;
+    }
+    .time-btn.edited {
+      background: #2980b9;
+    }
+    .time-btn.added {
+      background: #f1c40f;
+      color: black;
+    }
+    .time-btn .close-icon {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-weight: bold;
+      font-size: 1.1em;
+      cursor: pointer;
+      padding-left: 5px;
+    }
+    .actions-container {
+      display: none;
+      position: absolute;
+      top: 110%;
+      left: 0;
+      background: #2980b9;
+      border-radius: 5px;
+      padding: 5px;
+      white-space: nowrap;
+      z-index: 10;
+    }
+    .actions-container button {
+      background: transparent;
+      border: none;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      margin-left: 10px;
+      font-size: 0.9em;
+    }
+    .add-time-input { margin-top: 10px; }
+    input[type="time"] { padding: 4px; }
+    button.add-btn {
+      background: #2ecc71;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button.restore-btn {
+      background: #e74c3c;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+    .top-nav {
+      overflow: hidden;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 15px;
+      justify-content: flex-start;
+    }
+    .top-nav a {
+      text-decoration: none;
+      color: #2980b9;
+      font-weight: bold;
+    }
+    .logout {
+      margin-left: auto;
+      color: red;
+    }
+  </style>
 
-    try:
-        send_email(name, phone, date, time, service, services_prices[service])
-    except Exception as e:
-        print("Error sending email:", e)
+  <script>
+    function toggleSection(id) {
+      document.getElementById(id).classList.toggle('active');
+    }
 
-    return jsonify({"message": f"Appointment booked for {date} at {time} for {service}."})
+    async function updateOverride(date, time, action, new_time = null) {
+      const res = await fetch('/override', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date, time, action, new_time })
+      });
+      return await res.json();
+    }
 
-# --- שליחת אימייל ---
+    async function removeOverride(date, time) {
+      await updateOverride(date, time, 'disable');
+      location.reload();
+    }
 
-def send_email(name, phone, date, time, service, price):
-    msg = EmailMessage()
-    msg.set_content(f"""
-New appointment booked:
+    function toggleActions(date, time) {
+      const id = 'actions-' + date + '-' + time.replace(/:/g, '-');
+      const el = document.getElementById(id);
+      document.querySelectorAll('.actions-container').forEach(c => {
+        if (c !== el) c.style.display = 'none';
+      });
+      el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+    }
 
-Name: {name}
-Phone: {phone}
-Date: {date}
-Time: {time}
-Service: {service}
-Price: {price}₪
-""")
-    msg['Subject'] = f'New Appointment - {name}'
-    msg['From'] = 'nextwaveaiandweb@gmail.com'  # שנה למייל שלך
-    msg['To'] = 'nextwaveaiandweb@gmail.com'    # שנה למייל שלך
+    function enableEdit(date, time) {
+      const wrapperId = 'time-wrapper-' + date + '-' + time.replace(/:/g, '-');
+      const wrapper = document.getElementById(wrapperId);
+      wrapper.innerHTML = '';
 
-    try:
-        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
-        EMAIL_USER = os.environ.get("EMAIL_USER")
-        EMAIL_PASS = os.environ.get("EMAIL_PASS")
+      const input = document.createElement('input');
+      input.type = 'time';
+      input.value = time;
 
-        server.login(EMAIL_USER, EMAIL_PASS)
-        server.send_message(msg)
-        server.quit()
-        print("Email sent successfully")
-    except Exception as e:
-        print("Failed to send email:", e)
+      const saveBtn = document.createElement('button');
+      saveBtn.textContent = '✓';
+      saveBtn.style.marginLeft = '5px';
+      saveBtn.onclick = async () => {
+        const newTime = input.value;
+        await updateOverride(date, time, 'edit', newTime);
+        location.reload();
+      };
 
-# --- דף הצגת תורים (מנהל בלבד) ---
+      const cancelBtn = document.createElement('button');
+      cancelBtn.textContent = '✖';
+      cancelBtn.style.marginLeft = '5px';
+      cancelBtn.onclick = () => location.reload();
 
-@app.route("/availability")
-def availability():
-    week_slots = generate_week_slots()
-    return jsonify(week_slots)  # מחזיר מפתחות כמו "2025-08-01"
+      wrapper.appendChild(input);
+      wrapper.appendChild(saveBtn);
+      wrapper.appendChild(cancelBtn);
+    }
 
-# --- דף הבית ---
+    async function addOverride(date) {
+      const input = document.getElementById('override-add-' + date);
+      const time = input.value;
+      if (!time) return alert('נא לבחור שעה');
+      await updateOverride(date, time, 'add');
+      location.reload();
+    }
 
-@app.route("/")
-def index():
-    week_slots = generate_week_slots()
-    return render_template("index.html", week_slots=week_slots, services=services_prices)
+    async function restoreDay(date) {
+      await fetch('/override', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reset_day', date })
+      });
+      location.reload();
+    }
+  </script>
+</head>
+<body>
 
+<div class="top-nav">
+  <a href="/main_admin">🔧 מנהל ראשי</a>
+  <a href="/" target="_blank">🏠 עמוד ההזמנות</a>
+  <a href="/logout" class="logout">🚪 התנתק</a>
+</div>
 
+<h1>HairBoss - שינויים חד־פעמיים</h1>
 
-# --- API - שאלות לבוט ---
+<div class="section">
+  <h2>לפי ימים</h2>
 
-@app.route("/ask", methods=["POST"])
-def ask_bot():
-    data = request.get_json()
-    question = data.get("message", "").strip()
+  {% for date in week_dates %}
+    <div class="day-container">
+      <div class="day-header" onclick="toggleSection('override-times-{{date}}')">
+        <span>{{ date_map[date] }}</span>
+        <button class="restore-btn" onclick="event.stopPropagation(); restoreDay('{{date}}')">🔄 שחזר יום</button>
+      </div>
 
-    knowledge_text = load_text(BOT_KNOWLEDGE_FILE)
+      <div class="times-container active" id="override-times-{{date}}">
+        {% set day_schedule = base_schedule[date[-1:] if date[-1:] in base_schedule else date[-2:]] %}
+        {% for time in day_schedule %}
+          {% set status = overrides.get(date, {}).get(time) %}
+          <div class="time-wrapper" id="time-wrapper-{{date}}-{{time|replace(':','-')}}">
+            <button class="time-btn
+              {% if status == 'disabled' %}disabled
+              {% elif status == 'edited' %}edited
+              {% elif status == 'added' %}added
+              {% endif %}"
+              onclick="toggleActions('{{date}}', '{{time}}')">
+              {{ time }}
+              <span class="close-icon" onclick="event.stopPropagation(); removeOverride('{{date}}', '{{time}}')">✖️</span>
+            </button>
+            <div class="actions-container" id="actions-{{date}}-{{time|replace(':','-')}}">
+              <button onclick="event.stopPropagation(); enableEdit('{{date}}', '{{time}}')">✏️ עריכה</button>
+            </div>
+          </div>
+        {% endfor %}
 
-    if not question:
-        answer = "אנא כתוב שאלה."
-    elif "שעות" in question or "תורים" in question:
-        answer = "השעות הזמינות הן לפי השגרה השבועית, אפשר לראות בדף ההזמנות."
-    elif "מחיר" in question:
-        answer = "המחירים שונים לפי השירות, למשל תספורת גברים 80 ש\"ח."
-    else:
-        answer = "מצטער, לא הבנתי את השאלה. נסה לשאול משהו אחר."
+        <div class="add-time-input">
+          <input type="time" id="override-add-{{date}}">
+          <button class="add-btn" onclick="addOverride('{{date}}')">➕ הוסף שעה</button>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
 
-    return jsonify({"answer": answer})
-
-# --- הפעלת השרת ---
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 3000))
-    app.run(host="0.0.0.0", port=port)
+</body>
+</html>
