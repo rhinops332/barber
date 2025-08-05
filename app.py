@@ -185,7 +185,7 @@ def admin_routine():
                           
 @app.route("/admin_overrides")
 def admin_overrides():
-    if not is_admin():
+    if not session.get("is_admin"):
         return redirect("/login")
 
     weekly_schedule = load_weekly_schedule()
