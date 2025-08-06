@@ -94,7 +94,7 @@ def generate_week_slots(with_sources=False):
                 elif t in add_times and t not in scheduled_times:
                     source = "added"    # צהוב
                 elif t in scheduled_times and (t in remove_times or is_disabled_day):
-                    source = "removed"  # אפור
+                    source = "disabled"  # אפור
                 else:
                     source = "base"     # ירוק
 
