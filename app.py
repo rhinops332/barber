@@ -60,7 +60,7 @@ def save_one_time_changes(data):
 
 # --- יצירת רשימת שעות שבועית עם שינויים ---
 
-def generate_week_slots():
+def generate_week_slots(with_sources=False):
     weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
     overrides = load_json(OVERRIDES_FILE)
     today = datetime.today()
@@ -76,37 +76,36 @@ def generate_week_slots():
 
         day_key = str(weekday)
         scheduled_times = weekly_schedule.get(day_key, [])
-
         override = overrides.get(date_str, {"add": [], "remove": []})
         add_times = override.get("add", [])
         remove_times = override.get("remove", [])
 
         is_disabled_day = remove_times == ["__all__"]
-        all_times = sorted(set(scheduled_times + add_times))
+        all_times = sorted(set(scheduled_times + add_times + remove_times))
 
         final_times = []
         for t in all_times:
-            if is_disabled_day:
-                available = False
-            elif t in remove_times:
-                available = False
-            else:
-                available = True
+            available = not (is_disabled_day or t in remove_times)
 
-            if t in scheduled_times and t in add_times:
-                source = "edited"
-            elif t in add_times and t not in scheduled_times:
-                source = "added"
-            elif t in scheduled_times and (t in remove_times or is_disabled_day):
-                source = "removed"
-            else:
-                source = "base"
+            if with_sources:
+                # ניתוח מקור השעה לצבעים
+                if t in scheduled_times and t in add_times:
+                    source = "edited"   # כחול
+                elif t in add_times and t not in scheduled_times:
+                    source = "added"    # צהוב
+                elif t in scheduled_times and (t in remove_times or is_disabled_day):
+                    source = "removed"  # אפור
+                else:
+                    source = "base"     # ירוק
 
-            final_times.append({
-                "time": t,
-                "available": available,
-                "source": source
-            })
+                final_times.append({
+                    "time": t,
+                    "available": available,
+                    "source": source
+                })
+            else:
+                if available:
+                    final_times.append({"time": t, "available": True})
 
         week_slots[date_str] = {
             "day_name": day_name,
@@ -218,8 +217,7 @@ def admin_overrides():
         day_name = hebrew_day_names[d.weekday()]
         date_map[d_str] = f"{d.strftime('%-d.%m')} ({day_name})"
 
-    # יוצר את הרשימה המשולבת של תאריכים ושעות עם זמינות
-    week_slots = generate_week_slots()
+    week_slots = generate_week_slots(with_sources=True)
 
     return render_template("admin_overrides.html",
                            overrides=overrides,
