@@ -81,18 +81,32 @@ def generate_week_slots():
         add_times = override.get("add", [])
         remove_times = override.get("remove", [])
 
-        if remove_times == ["__all__"]:
-            all_final = []
-        else:
-            # תיקון: להסיר את הזמנים שנמצאים ב-remove_times
-            all_final = sorted(set(scheduled_times + add_times) - set(remove_times))
+        is_disabled_day = remove_times == ["__all__"]
+        all_times = sorted(set(scheduled_times + add_times))
 
         final_times = []
-        for t in all_final:
-            if remove_times == ["__all__"] or t in remove_times:
-                final_times.append({"time": t, "available": False})
+        for t in all_times:
+            if is_disabled_day:
+                available = False
+            elif t in remove_times:
+                available = False
             else:
-                final_times.append({"time": t, "available": True})
+                available = True
+
+            if t in scheduled_times and t in add_times:
+                source = "edited"
+            elif t in add_times and t not in scheduled_times:
+                source = "added"
+            elif t in scheduled_times and (t in remove_times or is_disabled_day):
+                source = "removed"
+            else:
+                source = "base"
+
+            final_times.append({
+                "time": t,
+                "available": available,
+                "source": source
+            })
 
         week_slots[date_str] = {
             "day_name": day_name,
