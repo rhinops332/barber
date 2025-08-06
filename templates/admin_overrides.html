@@ -335,7 +335,7 @@
           {% set time = slot.time %}
           <div class="time-wrapper" id="time-wrapper-{{date}}-{{time|replace(':','-')}}">
             <button class="time-btn
-              {% if slot.source == 'disabled' %}disabled
+              {% if slot.source == 'removed' %}disabled
               {% elif slot.source == 'edited' %}edited
               {% elif slot.source == 'added' %}added
               {% else %}base{% endif %}"
