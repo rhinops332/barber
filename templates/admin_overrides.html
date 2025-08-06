@@ -43,7 +43,7 @@
     }
     .times-container {
       margin-top: 10px;
-      display: none;  /* סגור בהתחלה */
+      display: none;
     }
     .times-container.active {
       display: block;
@@ -56,7 +56,6 @@
     .time-btn {
       padding: 5px 30px 5px 10px;
       border-radius: 5px;
-      background: #3498db;
       color: white;
       cursor: pointer;
       border: none;
@@ -64,12 +63,15 @@
       position: relative;
       user-select: none;
     }
+    .time-btn.base {
+      background: #2ecc71; /* ירוק */
+    }
     .time-btn.disabled {
       background: #aaa;
       text-decoration: line-through;
     }
     .time-btn.edited {
-      background: #2980b9;
+      background: #2980b9; /* כחול */
     }
     .time-btn.added {
       background: #f1c40f;
@@ -152,174 +154,160 @@
     }
   </style>
 
- <script>
-  // שמירת הימים הפתוחים ב-localStorage
-  function saveOpenedDays() {
-    const opened = [];
-    document.querySelectorAll('.times-container.active').forEach(el => {
-      opened.push(el.id);
-    });
-    localStorage.setItem('openedDays', JSON.stringify(opened));
-  }
-
-  // פותח או סוגר קונטיינר של יום
-  function toggleSection(id) {
-    const el = document.getElementById(id);
-    el.classList.toggle('active');
-
-    let opened = JSON.parse(localStorage.getItem('openedDays') || '[]');
-    if (el.classList.contains('active')) {
-      if (!opened.includes(id)) opened.push(id);
-    } else {
-      opened = opened.filter(x => x !== id);
+  <script>
+    function saveOpenedDays() {
+      const opened = [];
+      document.querySelectorAll('.times-container.active').forEach(el => {
+        opened.push(el.id);
+      });
+      localStorage.setItem('openedDays', JSON.stringify(opened));
     }
-    localStorage.setItem('openedDays', JSON.stringify(opened));
-  }
 
-  // פותח את כל הימים שנשמרו ב-localStorage
-  function restoreOpenedDays() {
-    let opened = JSON.parse(localStorage.getItem('openedDays') || '[]');
-    opened.forEach(id => {
+    function toggleSection(id) {
       const el = document.getElementById(id);
-      if (el) el.classList.add('active');
-    });
-  }
+      el.classList.toggle('active');
+      let opened = JSON.parse(localStorage.getItem('openedDays') || '[]');
+      if (el.classList.contains('active')) {
+        if (!opened.includes(id)) opened.push(id);
+      } else {
+        opened = opened.filter(x => x !== id);
+      }
+      localStorage.setItem('openedDays', JSON.stringify(opened));
+    }
 
-  // שליחת בקשה לשרת לשינוי override
-  async function updateOverrides(date, time, action, new_time = null) {
-    const res = await fetch('/overrides', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date, time, action, new_time })
-    });
-    return await res.json();
-  }
+    function restoreOpenedDays() {
+      let opened = JSON.parse(localStorage.getItem('openedDays') || '[]');
+      opened.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('active');
+      });
+    }
 
-  // הסרת שעה אחת
-  async function removeOverrides(date, time) {
-    await updateOverrides(date, time, 'remove');
-    reloadKeepingOpened();
-  }
+    async function updateOverrides(date, time, action, new_time = null) {
+      const res = await fetch('/overrides', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date, time, action, new_time })
+      });
+      return await res.json();
+    }
 
-  // הצגת תפריט פעולה ליד שעה
-  function toggleActions(date, time) {
-    const id = 'actions-' + date + '-' + time.replace(/:/g, '-');
-    const el = document.getElementById(id);
-    document.querySelectorAll('.actions-container').forEach(c => {
-      if (c !== el) c.style.display = 'none';
-    });
-    el.style.display = (el.style.display === 'block') ? 'none' : 'block';
-  }
-
-  // אפשרות עריכת שעה
-  function enableEdit(date, time) {
-    const wrapperId = 'time-wrapper-' + date + '-' + time.replace(/:/g, '-');
-    const wrapper = document.getElementById(wrapperId);
-    wrapper.innerHTML = '';
-
-    const input = document.createElement('input');
-    input.type = 'time';
-    input.value = time;
-
-    const saveBtn = document.createElement('button');
-    saveBtn.textContent = '✓';
-    saveBtn.style.marginLeft = '5px';
-    saveBtn.onclick = async () => {
-      const newTime = input.value;
-      await updateOverrides(date, time, 'edit', newTime);
+    async function removeOverrides(date, time) {
+      await updateOverrides(date, time, 'remove');
       reloadKeepingOpened();
+    }
+
+    function toggleActions(date, time) {
+      const id = 'actions-' + date + '-' + time.replace(/:/g, '-');
+      const el = document.getElementById(id);
+      document.querySelectorAll('.actions-container').forEach(c => {
+        if (c !== el) c.style.display = 'none';
+      });
+      el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+    }
+
+    function enableEdit(date, time) {
+      const wrapperId = 'time-wrapper-' + date + '-' + time.replace(/:/g, '-');
+      const wrapper = document.getElementById(wrapperId);
+      wrapper.innerHTML = '';
+
+      const input = document.createElement('input');
+      input.type = 'time';
+      input.value = time;
+
+      const saveBtn = document.createElement('button');
+      saveBtn.textContent = '✓';
+      saveBtn.style.marginLeft = '5px';
+      saveBtn.onclick = async () => {
+        const newTime = input.value;
+        await updateOverrides(date, time, 'edit', newTime);
+        reloadKeepingOpened();
+      };
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.textContent = '✖';
+      cancelBtn.style.marginLeft = '5px';
+      cancelBtn.onclick = () => reloadKeepingOpened();
+
+      wrapper.appendChild(input);
+      wrapper.appendChild(saveBtn);
+      wrapper.appendChild(cancelBtn);
+    }
+
+    async function addOverrides(date) {
+      const input = document.getElementById('overrides-add-' + date);
+      const time = input.value;
+      if (!time) return alert('נא לבחור שעה');
+      await updateOverrides(date, time, 'add');
+      reloadKeepingOpened();
+    }
+
+    async function restoreDay(date) {
+      await fetch('/overrides', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'clear', date })
+      });
+      reloadKeepingOpened();
+    }
+
+    async function disableDay(date) {
+      saveOpenedDays();
+      const res = await fetch('/overrides', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'disable_day', date })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        reloadKeepingOpened();
+      } else {
+        alert('שגיאה בכיבוי היום');
+      }
+    }
+
+    function reloadKeepingOpened() {
+      saveOpenedDays();
+      location.reload();
+    }
+
+    function handleDeleteDayClick(event, date) {
+      event.preventDefault();
+      event.stopPropagation();
+      deleteDay(date);
+    }
+
+    async function deleteDay(date) {
+      const wrappers = document.querySelectorAll(`#overrides-times-${date} .time-wrapper`);
+      const times = Array.from(wrappers).map(wrapper => {
+        const parts = wrapper.id.split('-');
+        const hh = parts[parts.length - 2];
+        const mm = parts[parts.length - 1];
+        return hh + ':' + mm;
+      });
+
+      const res = await fetch('/overrides', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ date, times, action: 'remove_many' })
+      });
+
+      if (res.ok) {
+        reloadKeepingOpened();
+      } else {
+        alert('שגיאה במחיקת היום');
+      }
+    }
+
+    async function revertOverride(date, time) {
+      await updateOverrides(date, time, 'revert');
+      reloadKeepingOpened();
+    }
+
+    window.onload = () => {
+      restoreOpenedDays();
     };
-
-    const cancelBtn = document.createElement('button');
-    cancelBtn.textContent = '✖';
-    cancelBtn.style.marginLeft = '5px';
-    cancelBtn.onclick = () => reloadKeepingOpened();
-
-    wrapper.appendChild(input);
-    wrapper.appendChild(saveBtn);
-    wrapper.appendChild(cancelBtn);
-  }
-
-  // הוספת שעה
-  async function addOverrides(date) {
-    const input = document.getElementById('overrides-add-' + date);
-    const time = input.value;
-    if (!time) return alert('נא לבחור שעה');
-    await updateOverrides(date, time, 'add');
-    reloadKeepingOpened();
-  }
-
-  // שחזור יום (שווה ל־clear)
-  async function restoreDay(date) {
-    await fetch('/overrides', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'clear', date })
-    });
-    reloadKeepingOpened();
-  }
-
-  // כיבוי כל השעות ביום (במקום למחוק את היום)
-  async function disableDay(date) {
-    saveOpenedDays();
-    const res = await fetch('/overrides', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'disable_day', date })
-    });
-
-    const data = await res.json();
-    console.log('Disable day response:', data);
-
-    if (res.ok) {
-      reloadKeepingOpened();
-    } else {
-      alert('שגיאה בכיבוי היום');
-    }
-  }
-
-  // ריענון הדף תוך שמירת מצב ימים פתוחים
-  function reloadKeepingOpened() {
-    saveOpenedDays();
-    location.reload();
-  }
-
-  // טיפול בלחיצה על כפתור "מחק יום"
-  function handleDeleteDayClick(event, date) {
-    event.preventDefault();
-    event.stopPropagation();
-    deleteDay(date);
-  }
-
-  // מחיקת כל השעות ביום בבקשה אחת לשרת
-  async function deleteDay(date) {
-    const wrappers = document.querySelectorAll(`#overrides-times-${date} .time-wrapper`);
-    const times = Array.from(wrappers).map(wrapper => {
-      const parts = wrapper.id.split('-');
-      const hh = parts[parts.length - 2];
-      const mm = parts[parts.length - 1];
-      return hh + ':' + mm;
-    });
-
-    const res = await fetch('/overrides', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ date, times, action: 'remove_many' })
-    });
-
-    if (res.ok) {
-      reloadKeepingOpened();
-    } else {
-      alert('שגיאה במחיקת היום');
-    }
-  }
-
-  // כאשר העמוד נטען - משחזר ימים פתוחים
-  window.onload = () => {
-    restoreOpenedDays();
-  };
-</script>
-
+  </script>
 </head>
 <body>
 
@@ -347,13 +335,19 @@
           {% set time = slot.time %}
           <div class="time-wrapper" id="time-wrapper-{{date}}-{{time|replace(':','-')}}">
             <button class="time-btn
-              {% if not slot.available %}disabled{% endif %}"
+              {% if slot.source == 'disabled' %}disabled
+              {% elif slot.source == 'edited' %}edited
+              {% elif slot.source == 'added' %}added
+              {% else %}base{% endif %}"
               onclick="toggleActions('{{date}}', '{{time}}')">
               {{ time }}
               <span class="close-icon" onclick="event.stopPropagation(); removeOverrides('{{date}}', '{{time}}')">✖️</span>
             </button>
             <div class="actions-container" id="actions-{{date}}-{{time|replace(':','-')}}">
               <button onclick="event.stopPropagation(); enableEdit('{{date}}', '{{time}}')">✏️ עריכה</button>
+              {% if slot.source in ['disabled', 'edited', 'added'] %}
+                <button onclick="event.stopPropagation(); revertOverride('{{date}}', '{{time}}')">↩️ החזר</button>
+              {% endif %}
             </div>
           </div>
         {% endfor %}
