@@ -575,18 +575,50 @@ def ask_bot():
     data = request.get_json()
     question = data.get("message", "").strip()
 
+    if not question:
+        return jsonify({"answer": "אנא כתוב שאלה."})
+
+    # טען את הידע הנוסף של הבוט מהקובץ
     knowledge_text = load_text(BOT_KNOWLEDGE_FILE)
 
-    if not question:
-        answer = "אנא כתוב שאלה."
-    elif "שעות" in question or "תורים" in question:
-        answer = "השעות הזמינות הן לפי השגרה השבועית, אפשר לראות בדף ההזמנות."
-    elif "מחיר" in question:
-        answer = "המחירים שונים לפי השירות, למשל תספורת גברים 80 ש\"ח."
-    else:
-        answer = "מצטער, לא הבנתי את השאלה. נסה לשאול משהו אחר."
+    # הכנת ההיסטוריה של השיחה
+    messages = [
+        {"role": "system", "content": "You are a helpful assistant for a hair salon booking system."},
+        {"role": "system", "content": f"Additional info: {knowledge_text}"},
+        {"role": "user", "content": question}
+    ]
 
-    return jsonify({"answer": answer})
+    GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
+    if not GITHUB_TOKEN:
+        return jsonify({"error": "Missing GitHub API token"}), 500
+
+    headers = {
+        "Authorization": f"Bearer {GITHUB_TOKEN}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "model": "openai/gpt-4.1",
+        "messages": messages,
+        "temperature": 0.7,
+        "max_tokens": 200
+    }
+
+    try:
+        response = requests.post(
+            "https://models.github.ai/inference/v1/chat/completions",
+            headers=headers,
+            json=payload
+        )
+        response.raise_for_status()
+        output = response.json()
+        answer = output["choices"][0]["message"]["content"].strip()
+        return jsonify({"answer": answer})
+    except Exception as e:
+        print("Error calling GitHub AI API:", e)
+        # fallback לתשובה פשוטה במקרה של שגיאה
+        fallback_answer = "מצטער, לא הצלחתי לעבד את השאלה כרגע."
+        return jsonify({"answer": fallback_answer})
 
 # --- הפעלת השרת ---
 
