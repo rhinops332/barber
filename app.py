@@ -1,4 +1,5 @@
 import os
+import requests
 import json
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, render_template as original_render_template, redirect, session, g
