@@ -526,6 +526,12 @@ def book_appointment():
 # --- שליחת אימייל ---
 
 def send_email(name, phone, date, time, service, price):
+    EMAIL_USER = os.environ.get("EMAIL_USER")
+    EMAIL_PASS = os.environ.get("EMAIL_PASS")
+    if not EMAIL_USER or not EMAIL_PASS:
+        print("Missing EMAIL_USER or EMAIL_PASS environment variables")
+        return
+
     msg = EmailMessage()
     msg.set_content(f"""
 New appointment booked:
@@ -538,14 +544,11 @@ Service: {service}
 Price: {price}₪
 """)
     msg['Subject'] = f'New Appointment - {name}'
-    msg['From'] = 'nextwaveaiandweb@gmail.com'  # שנה למייל שלך
-    msg['To'] = 'nextwaveaiandweb@gmail.com'    # שנה למייל שלך
+    msg['From'] = EMAIL_USER
+    msg['To'] = EMAIL_USER
 
     try:
         server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
-        EMAIL_USER = os.environ.get("EMAIL_USER")
-        EMAIL_PASS = os.environ.get("EMAIL_PASS")
-
         server.login(EMAIL_USER, EMAIL_PASS)
         server.send_message(msg)
         server.quit()
