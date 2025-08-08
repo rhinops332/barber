@@ -77,27 +77,36 @@ def generate_week_slots(with_sources=False):
 
         day_key = str(weekday)
         scheduled_times = weekly_schedule.get(day_key, [])
-        override = overrides.get(date_str, {"add": [], "remove": []})
+        override = overrides.get(date_str, {"add": [], "remove": [], "edit": []})
         add_times = override.get("add", [])
         remove_times = override.get("remove", [])
+        edits = override.get("edit", [])
 
         is_disabled_day = remove_times == ["__all__"]
-        all_times = sorted(set(scheduled_times + add_times + remove_times))
+        # כל הזמנים שיש לנו
+        all_times = sorted(set(scheduled_times + add_times + remove_times + [edit['to'] for edit in edits]))
 
         final_times = []
+
         for t in all_times:
             available = not (is_disabled_day or t in remove_times)
 
             if with_sources:
-                # ניתוח מקור השעה לצבעים
-                if t in scheduled_times and t in add_times:
-                    source = "edited"   # כחול
+                # בדיקת האם השעה היא תוצאה של עריכה (edit)
+                is_edited = False
+                for edit in edits:
+                    if t == edit['to']:
+                        is_edited = True
+                        break
+
+                if is_edited:
+                    source = "edited"  # כחול
                 elif t in add_times and t not in scheduled_times:
-                    source = "added"    # צהוב
+                    source = "added"   # צהוב
                 elif t in scheduled_times and (t in remove_times or is_disabled_day):
-                    source = "disabled"  # אפור
+                    source = "disabled" # אפור
                 else:
-                    source = "base"     # ירוק
+                    source = "base"    # ירוק
 
                 final_times.append({
                     "time": t,
