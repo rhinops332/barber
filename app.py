@@ -390,24 +390,24 @@ def update_overrides():
         if "edit" not in overrides[date]:
             overrides[date]["edit"] = []
 
-        # הסר עריכה קודמת לאותה שעה אם קיימת
+        # הסרת עריכה קודמת לאותה שעה אם קיימת
         overrides[date]["edit"] = [
             item for item in overrides[date]["edit"] if item.get("from") != time
         ]
 
-        # הוסף עריכה חדשה
+        # הוספת עריכה חדשה
         overrides[date]["edit"].append({
             "from": time,
             "to": new_time
         })
 
-        # ודא שהשעה המקורית לא תוצג — הסר אותה
+        # ודא שהשעה המקורית לא תוצג — הוספה להסרות
         if "remove" not in overrides[date]:
             overrides[date]["remove"] = []
         if time not in overrides[date]["remove"]:
             overrides[date]["remove"].append(time)
 
-        # ודא שהשעה החדשה כן תופיע — הוסף אותה
+        # ודא שהשעה החדשה כן תוצג — הוספה להוספות
         if "add" not in overrides[date]:
             overrides[date]["add"] = []
         if new_time not in overrides[date]["add"]:
@@ -429,33 +429,32 @@ def update_overrides():
         save_json(OVERRIDES_FILE, overrides)
         return jsonify({"message": "Day disabled", "overrides": overrides})
 
-    
-     # ↩️ החזרת שעה בודדת למצב המקורי
-     elif action == "revert" and time:
-         if date in overrides:
-         # הסרה מרשימת הוספות
-         if "add" in overrides[date] and time in overrides[date]["add"]:
-             overrides[date]["add"].remove(time)
+    # ↩️ החזרת שעה בודדת למצב המקורי
+    elif action == "revert" and date and time:
+        if date in overrides:
+            # הסרה מרשימת הוספות
+            if "add" in overrides[date] and time in overrides[date]["add"]:
+                overrides[date]["add"].remove(time)
 
-         # הסרה מרשימת הסרות
-         if "remove" in overrides[date] and time in overrides[date]["remove"]:
-             overrides[date]["remove"].remove(time)
+            # הסרה מרשימת הסרות
+            if "remove" in overrides[date] and time in overrides[date]["remove"]:
+                overrides[date]["remove"].remove(time)
 
-         # הסרה מעריכות (אם השעה הייתה שעה מקורית שהשתנתה)
-         if "edit" in overrides[date]:
-             overrides[date]["edit"] = [
-                 e for e in overrides[date]["edit"]
-                 if e.get("to") != time and e.get("from") != time
-             ]
-             if not overrides[date]["edit"]:
-                 overrides[date].pop("edit", None)
+            # הסרה מעריכות
+            if "edit" in overrides[date]:
+                overrides[date]["edit"] = [
+                    e for e in overrides[date]["edit"]
+                    if e.get("to") != time and e.get("from") != time
+                ]
+                if not overrides[date]["edit"]:
+                    overrides[date].pop("edit", None)
 
-         # אם היום ריק משינויים – מחיקתו לגמרי
-         if not overrides[date].get("add") and not overrides[date].get("remove") and not overrides[date].get("edit"):
-             overrides.pop(date)
+            # אם אין יותר שינויים – מחיקת היום
+            if not overrides[date].get("add") and not overrides[date].get("remove") and not overrides[date].get("edit"):
+                overrides.pop(date)
 
-     save_json(OVERRIDES_FILE, overrides)
-     return jsonify({"message": "Time reverted", "overrides": overrides})
+        save_json(OVERRIDES_FILE, overrides)
+        return jsonify({"message": "Time reverted", "overrides": overrides})
 
     # ⛔ פעולה לא חוקית
     else:
