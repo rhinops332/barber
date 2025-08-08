@@ -280,7 +280,7 @@
     async function deleteDay(date) {
       const wrappers = document.querySelectorAll(`#overrides-times-${date} .time-wrapper`);
       const times = Array.from(wrappers).map(wrapper => {
-        const parts = wrapper.id.split('-');
+       const parts = wrapper.id.split('-').slice(-2);
         const hh = parts[parts.length - 2];
         const mm = parts[parts.length - 1];
         return hh + ':' + mm;
