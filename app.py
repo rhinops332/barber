@@ -365,24 +365,39 @@ def update_overrides():
         return jsonify({"message": "Time removed", "overrides": overrides})
 
     # ✏️ עריכת שעה – שינוי אמיתי במקום (ולא הסרה+הוספה)
-    elif action == "edit" and time and new_time:
-        if time == new_time:
-            return jsonify({"message": "No changes made"})
+   elif action == "edit" and time and new_time:
+    if time == new_time:
+        return jsonify({"message": "No changes made"})
 
-        if "edit" not in overrides[date]:
-            overrides[date]["edit"] = []
+    if "edit" not in overrides[date]:
+        overrides[date]["edit"] = []
 
-        overrides[date]["edit"] = [
-            item for item in overrides[date]["edit"] if item.get("from") != time
-        ]
+    # הסר עריכה קודמת לאותה שעה אם קיימת
+    overrides[date]["edit"] = [
+        item for item in overrides[date]["edit"] if item.get("from") != time
+    ]
 
-        overrides[date]["edit"].append({
-            "from": time,
-            "to": new_time
-        })
+    # הוסף עריכה חדשה
+    overrides[date]["edit"].append({
+        "from": time,
+        "to": new_time
+    })
 
-        save_json(OVERRIDES_FILE, overrides)
-        return jsonify({"message": "Time edited", "overrides": overrides})
+    # ודא שהשעה המקורית לא תוצג — הסר אותה
+    if "remove" not in overrides[date]:
+        overrides[date]["remove"] = []
+    if time not in overrides[date]["remove"]:
+        overrides[date]["remove"].append(time)
+
+    # ודא שהשעה החדשה כן תופיע — הוסף אותה
+    if "add" not in overrides[date]:
+        overrides[date]["add"] = []
+    if new_time not in overrides[date]["add"]:
+        overrides[date]["add"].append(new_time)
+
+    save_json(OVERRIDES_FILE, overrides)
+    return jsonify({"message": "Time edited", "overrides": overrides})
+
 
     # 🔄 שחזור כל השינויים של יום
     elif action == "clear" and date:
