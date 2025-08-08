@@ -432,30 +432,30 @@ def update_overrides():
     
      # ↩️ החזרת שעה בודדת למצב המקורי
      elif action == "revert" and time:
-        if date in overrides:
-        # הסרה מרשימת הוספות
-        if "add" in overrides[date] and time in overrides[date]["add"]:
-            overrides[date]["add"].remove(time)
+         if date in overrides:
+         # הסרה מרשימת הוספות
+         if "add" in overrides[date] and time in overrides[date]["add"]:
+             overrides[date]["add"].remove(time)
 
-        # הסרה מרשימת הסרות
-        if "remove" in overrides[date] and time in overrides[date]["remove"]:
-            overrides[date]["remove"].remove(time)
+         # הסרה מרשימת הסרות
+         if "remove" in overrides[date] and time in overrides[date]["remove"]:
+             overrides[date]["remove"].remove(time)
 
-        # הסרה מעריכות (אם השעה הייתה שעה מקורית שהשתנתה)
-        if "edit" in overrides[date]:
-            overrides[date]["edit"] = [
-                e for e in overrides[date]["edit"]
-                if e.get("to") != time and e.get("from") != time
-            ]
-            if not overrides[date]["edit"]:
-                overrides[date].pop("edit", None)
+         # הסרה מעריכות (אם השעה הייתה שעה מקורית שהשתנתה)
+         if "edit" in overrides[date]:
+             overrides[date]["edit"] = [
+                 e for e in overrides[date]["edit"]
+                 if e.get("to") != time and e.get("from") != time
+             ]
+             if not overrides[date]["edit"]:
+                 overrides[date].pop("edit", None)
 
-        # אם היום ריק משינויים – מחיקתו לגמרי
-        if not overrides[date].get("add") and not overrides[date].get("remove") and not overrides[date].get("edit"):
-            overrides.pop(date)
+         # אם היום ריק משינויים – מחיקתו לגמרי
+         if not overrides[date].get("add") and not overrides[date].get("remove") and not overrides[date].get("edit"):
+             overrides.pop(date)
 
-    save_json(OVERRIDES_FILE, overrides)
-    return jsonify({"message": "Time reverted", "overrides": overrides})
+     save_json(OVERRIDES_FILE, overrides)
+     return jsonify({"message": "Time reverted", "overrides": overrides})
 
     # ⛔ פעולה לא חוקית
     else:
