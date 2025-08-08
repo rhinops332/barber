@@ -346,33 +346,36 @@ def update_overrides():
 
     # ❌ הסרת שעה
     elif action == "remove" and time:
-    if time not in overrides[date]["remove"]:
-        overrides[date]["remove"].append(time)
-    if time in overrides[date]["add"]:
-        overrides[date]["add"].remove(time)
-    # הסר כל עריכה שמתחילה מ-time זה (כדי למחוק גם עריכות)
-    if "edit" in overrides[date]:
-        overrides[date]["edit"] = [e for e in overrides[date]["edit"] if e.get("from") != time and e.get("to") != time]
-        if not overrides[date]["edit"]:
-            overrides.pop("edit", None)
-    save_json(OVERRIDES_FILE, overrides)
-    return jsonify({"message": "Time removed", "overrides": overrides})
+        if "remove" not in overrides[date]:
+            overrides[date]["remove"] = []
+        if "add" not in overrides[date]:
+            overrides[date]["add"] = []
+        if time not in overrides[date]["remove"]:
+            overrides[date]["remove"].append(time)
+        if time in overrides[date]["add"]:
+            overrides[date]["add"].remove(time)
+        if "edit" in overrides[date]:
+            overrides[date]["edit"] = [
+                e for e in overrides[date]["edit"]
+                if e.get("from") != time and e.get("to") != time
+            ]
+            if not overrides[date]["edit"]:
+                overrides[date].pop("edit", None)
+        save_json(OVERRIDES_FILE, overrides)
+        return jsonify({"message": "Time removed", "overrides": overrides})
 
     # ✏️ עריכת שעה – שינוי אמיתי במקום (ולא הסרה+הוספה)
     elif action == "edit" and time and new_time:
         if time == new_time:
             return jsonify({"message": "No changes made"})
 
-        # נוודא שקיים מפתח 'edit'
         if "edit" not in overrides[date]:
             overrides[date]["edit"] = []
 
-        # ננקה עריכות קודמות של אותה שעה אם קיימות
         overrides[date]["edit"] = [
             item for item in overrides[date]["edit"] if item.get("from") != time
         ]
 
-        # נוסיף עריכה חדשה
         overrides[date]["edit"].append({
             "from": time,
             "to": new_time
