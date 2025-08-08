@@ -347,7 +347,7 @@
         {% if slot.source in ['base', 'edited'] %}
           <button onclick="event.stopPropagation(); enableEdit('{{date}}', '{{time}}')">✏️ עריכה</button>
         {% endif %}
-        {% if slot.source in ['disabled', 'edited', 'added'] %}
+        {% if slot.source in ['disabled'] %}
           <button onclick="event.stopPropagation(); revertOverride('{{date}}', '{{time}}')">↩️ החזר</button>
         {% endif %}
       </div>
