@@ -92,11 +92,28 @@ def generate_week_slots(with_sources=False):
         edits = override.get("edit", [])
         disabled_day = removed == ["__all__"]
 
-        # אל תכניס את removed לרשימת כל השעות, כי הן שעות שהוסרנו!
-        all_times = sorted(set(scheduled + added + [edit['to'] for edit in edits]))
+        # רשימת השעות החדשות (edited to)
+        edited_to_times = [edit['to'] for edit in edits]
+        # רשימת השעות המקוריות שנערכו (edited from)
+        edited_from_times = [edit['from'] for edit in edits]
+
+        # כל הזמנים יהיו מאיחוד של שעות השגרה, שעות הוספה והעריכות (החדשות)
+        all_times = sorted(set(scheduled + added + edited_to_times))
 
         final_times = []
         for t in all_times:
+            # זוהי שעה בעריכה - תתווסף עם source=edited
+            if t in edited_to_times:
+                if with_sources:
+                    final_times.append({"time": t, "available": True, "source": "edited"})
+                else:
+                    final_times.append({"time": t, "available": True})
+                continue
+
+            # דילוג על השעות המקוריות שנערכו (לא מציגים אותן)
+            if t in edited_from_times:
+                continue
+
             available = not (disabled_day or t in removed)
             if with_sources:
                 source = get_source(t, scheduled, added, removed, edits, disabled_day)
@@ -108,6 +125,7 @@ def generate_week_slots(with_sources=False):
         week_slots[date_str] = {"day_name": day_name, "times": final_times}
 
     return week_slots
+
 
 
 
