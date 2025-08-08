@@ -61,12 +61,21 @@ def save_one_time_changes(data):
 
 # --- יצירת רשימת שעות שבועית עם שינויים ---
 
+def get_source(t, scheduled, added, removed, edits, disabled_day):
+    for edit in edits:
+        if t == edit['to']:
+            return "edited"      # כחול - ערוך
+    if t in added and t not in scheduled:
+        return "added"          # צהוב - חדש
+    if t in scheduled and (t in removed or disabled_day):
+        return "disabled"       # אפור - מושבת
+    return "base"               # ירוק - בסיסי
+
 def generate_week_slots(with_sources=False):
     weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
     overrides = load_json(OVERRIDES_FILE)
     today = datetime.today()
     week_slots = {}
-
     heb_days = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
 
     for i in range(7):
@@ -76,53 +85,30 @@ def generate_week_slots(with_sources=False):
         day_name = heb_days[weekday]
 
         day_key = str(weekday)
-        scheduled_times = weekly_schedule.get(day_key, [])
+        scheduled = weekly_schedule.get(day_key, [])
         override = overrides.get(date_str, {"add": [], "remove": [], "edit": []})
-        add_times = override.get("add", [])
-        remove_times = override.get("remove", [])
+        added = override.get("add", [])
+        removed = override.get("remove", [])
         edits = override.get("edit", [])
+        disabled_day = removed == ["__all__"]
 
-        is_disabled_day = remove_times == ["__all__"]
-        # כל הזמנים שיש לנו
-        all_times = sorted(set(scheduled_times + add_times + remove_times + [edit['to'] for edit in edits]))
+        # אל תכניס את removed לרשימת כל השעות, כי הן שעות שהוסרנו!
+        all_times = sorted(set(scheduled + added + [edit['to'] for edit in edits]))
 
         final_times = []
-
         for t in all_times:
-            available = not (is_disabled_day or t in remove_times)
-
+            available = not (disabled_day or t in removed)
             if with_sources:
-                # בדיקת האם השעה היא תוצאה של עריכה (edit)
-                is_edited = False
-                for edit in edits:
-                    if t == edit['to']:
-                        is_edited = True
-                        break
-
-                if is_edited:
-                    source = "edited"  # כחול
-                elif t in add_times and t not in scheduled_times:
-                    source = "added"   # צהוב
-                elif t in scheduled_times and (t in remove_times or is_disabled_day):
-                    source = "disabled" # אפור
-                else:
-                    source = "base"    # ירוק
-
-                final_times.append({
-                    "time": t,
-                    "available": available,
-                    "source": source
-                })
+                source = get_source(t, scheduled, added, removed, edits, disabled_day)
+                final_times.append({"time": t, "available": available, "source": source})
             else:
                 if available:
                     final_times.append({"time": t, "available": True})
 
-        week_slots[date_str] = {
-            "day_name": day_name,
-            "times": final_times
-        }
+        week_slots[date_str] = {"day_name": day_name, "times": final_times}
 
     return week_slots
+
 
 
 def is_slot_available(date, time):
