@@ -330,27 +330,29 @@
         <button class="delete-day-btn" onclick="handleDeleteDayClick(event, '{{date}}')">🗑️ מחק יום</button>
       </div>
 
-      <div class="times-container" id="overrides-times-{{date}}">
-        {% for slot in week_slots[date].times %}
-          {% set time = slot.time %}
-          <div class="time-wrapper" id="time-wrapper-{{date}}-{{time|replace(':','-')}}">
-            <button class="time-btn
-              {% if slot.source == 'disabled' %}disabled
-              {% elif slot.source == 'edited' %}edited
-              {% elif slot.source == 'added' %}added
-              {% else %}base{% endif %}"
-              onclick="toggleActions('{{date}}', '{{time}}')">
-              {{ time }}
-              <span class="close-icon" onclick="event.stopPropagation(); removeOverrides('{{date}}', '{{time}}')">✖️</span>
-            </button>
-            <div class="actions-container" id="actions-{{date}}-{{time|replace(':','-')}}">
-              <button onclick="event.stopPropagation(); enableEdit('{{date}}', '{{time}}')">✏️ עריכה</button>
-              {% if slot.source in ['disabled', 'edited', 'added'] %}
-                <button onclick="event.stopPropagation(); revertOverride('{{date}}', '{{time}}')">↩️ החזר</button>
-              {% endif %}
-            </div>
-          </div>
-        {% endfor %}
+    <div class="times-container" id="overrides-times-{{date}}">
+  {% for slot in week_slots[date].times %}
+    {% set time = slot.time %}
+    <div class="time-wrapper" id="time-wrapper-{{date}}-{{time|replace(':','-')}}">
+      <button class="time-btn
+        {% if slot.source == 'disabled' %}disabled
+        {% elif slot.source == 'edited' %}edited
+        {% elif slot.source == 'added' %}added
+        {% else %}base{% endif %}"
+        onclick="toggleActions('{{date}}', '{{time}}')">
+        {{ time }}
+        <span class="close-icon" onclick="event.stopPropagation(); removeOverrides('{{date}}', '{{time}}')">✖️</span>
+      </button>
+      <div class="actions-container" id="actions-{{date}}-{{time|replace(':','-')}}">
+        {% if slot.source in ['base', 'edited'] %}
+          <button onclick="event.stopPropagation(); enableEdit('{{date}}', '{{time}}')">✏️ עריכה</button>
+        {% endif %}
+        {% if slot.source in ['disabled', 'edited', 'added'] %}
+          <button onclick="event.stopPropagation(); revertOverride('{{date}}', '{{time}}')">↩️ החזר</button>
+        {% endif %}
+      </div>
+    </div>
+  {% endfor %}
 
         <div class="add-time-input">
           <input type="time" id="overrides-add-{{date}}">
