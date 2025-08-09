@@ -39,6 +39,7 @@
   #availability {
     text-align: center;
     margin-bottom: 20px;
+   
   }
   .slot-btn {
     padding: 8px 14px;
@@ -48,7 +49,7 @@
     background: #2ecc71;
     color: white;
     cursor: pointer;
-    transition: transform 0.15s ease;
+    transition: 0.2s;
   }
   .slot-btn.unavailable {
     background: #bbb;
@@ -56,14 +57,6 @@
   }
   .slot-btn:hover:not(.unavailable) {
     background: #27ae60;
-  }
-  .slot-btn.selected {
-    /* פשוט אנימציה של הגדלה קלה */
-    animation: growBtn 0.2s forwards;
-  }
-  @keyframes growBtn {
-    from { transform: scale(1); }
-    to { transform: scale(1.1); }
   }
   #form-container {
     display: none;
@@ -97,24 +90,6 @@
     text-align: center;
     font-weight: bold;
     margin-bottom: 10px;
-  }
-  #booking-details {
-    margin-top: 20px;
-    background: #fff;
-    padding: 15px;
-    border-radius: 10px;
-    box-shadow: 0 0 8px #ccc;
-    max-width: 400px;
-    margin-left: auto;
-    margin-right: auto;
-    text-align: right;
-    direction: rtl;
-    font-size: 16px;
-    display: none;
-  }
-  #booking-details h3 {
-    margin-bottom: 10px;
-    color: #2980b9;
   }
   #botBtn {
     display: block;
@@ -223,12 +198,6 @@
   <div id="slots-container" style="text-align:center;"></div>
 </div>
 
-<div id="booking-details">
-  <h3>פרטי ההזמנה לשעה: <span id="selected-time"></span></h3>
-  <p><b>שם מלא:</b> <span id="detail-name"></span></p>
-  <p><b>מספר טלפון:</b> <span id="detail-phone"></span></p>
-  <p><b>שירות:</b> <span id="detail-service"></span></p>
-</div>
 
 <div id="form-container">
   <form id="bookingForm">
@@ -266,13 +235,13 @@ let allDates = [];
 let availabilityData = {};
 let chosenDate = '';
 let chosenTime = '';
-let selectedButton = null;  // לשמור את הכפתור שנבחר
 
 function formatHebrewDay(dateStr) {
   const date = new Date(dateStr);
   const days = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
   return days[date.getDay()];
 }
+
 
 async function loadAvailability() {
   const res = await fetch('/availability');
@@ -293,7 +262,7 @@ function createDayButtons() {
     wrapper.style.textAlign = 'center';
 
     const label = document.createElement('div');
-    label.textContent = formatHebrewDay(dateStr);
+    label.textContent = formatHebrewDay(dateStr); // שם היום (מעל הכפתור)
     label.style.fontSize = '14px';
     label.style.marginBottom = '4px';
 
@@ -301,13 +270,12 @@ function createDayButtons() {
     btn.textContent = new Date(dateStr).toLocaleDateString('he-IL', {
       day: '2-digit',
       month: '2-digit'
-    });
+    }); // תאריך בלבד על הכפתור
     btn.className = 'day-btn';
     btn.onclick = () => {
       showDayAvailability(dateStr);
       Array.from(document.getElementsByClassName('day-btn')).forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      clearBookingDetailsAndForm();
     };
 
     wrapper.appendChild(label);
@@ -319,21 +287,7 @@ function createDayButtons() {
   }
 }
 
-function clearBookingDetailsAndForm() {
-  document.getElementById('booking-details').style.display = 'none';
-  if(selectedButton) {
-    selectedButton.classList.remove('selected');
-    selectedButton = null;
-  }
-  document.getElementById('form-container').style.display = 'none';
-  document.getElementById('response').textContent = '';
-  chosenTime = '';
-  document.getElementById('date').value = '';
-  document.getElementById('time').value = '';
-}
-
 function showDayAvailability(date) {
-  chosenDate = date;
   const container = document.getElementById('slots-container');
   const dayName = formatHebrewDay(date);
   const formattedDate = new Date(date).toLocaleDateString('he-IL', {
@@ -355,47 +309,12 @@ function showDayAvailability(date) {
     btn.className = slot.available ? 'slot-btn available' : 'slot-btn unavailable';
     btn.disabled = !slot.available;
     btn.onclick = () => {
-      if (selectedButton) {
-        selectedButton.classList.remove('selected');
-      }
-      btn.classList.add('selected');
-      selectedButton = btn;
-
-      chosenTime = slot.time;
-      document.getElementById('date').value = chosenDate;
-      document.getElementById('time').value = chosenTime;
-
-      // הצג את פרטי ההזמנה למטה (אם יש)
-      showBookingDetails(chosenDate, chosenTime);
-
+      document.getElementById('date').value = date;
+      document.getElementById('time').value = slot.time;
       document.getElementById('form-container').style.display = 'block';
-      document.getElementById('response').textContent = '';
     };
     container.appendChild(btn);
   });
-}
-
-async function showBookingDetails(date, time) {
-  // תחפש את הפרטים בהזמנות שהגיעו מהשרת דרך /appointments?date=...
-  const res = await fetch(`/appointments?date=${date}`);
-  if (!res.ok) {
-    document.getElementById('booking-details').style.display = 'none';
-    return;
-  }
-  const data = await res.json();
-  const appointments = data[date] || [];
-
-  // חפש הזמנה תואמת שעה
-  const appt = appointments.find(a => a.time === time);
-  if (appt) {
-    document.getElementById('selected-time').textContent = time;
-    document.getElementById('detail-name').textContent = appt.name;
-    document.getElementById('detail-phone').textContent = appt.phone;
-    document.getElementById('detail-service').textContent = appt.service;
-    document.getElementById('booking-details').style.display = 'block';
-  } else {
-    document.getElementById('booking-details').style.display = 'none';
-  }
 }
 
 document.getElementById('bookingForm').onsubmit = async e => {
@@ -421,29 +340,12 @@ document.getElementById('bookingForm').onsubmit = async e => {
   if (data.message) {
     responseDiv.style.color = 'green';
     responseDiv.textContent = data.message;
-
-    // לאחר הזמנה מוצלחת טען שוב את הזמינות (כלומר מעדכן שהשעה תפוסה)  
-    await loadAvailability();
-
-    // הסתר את טופס ההזמנה
     document.getElementById('form-container').style.display = 'none';
-
-    // הצג את פרטי ההזמנה החדשה מתחת
-    showBookingDetails(date, time);
-
-    // סמן את הכפתור של השעה החדשה (כמו לחיצה)
-    const buttons = document.querySelectorAll('#slots-container button.slot-btn.available');
-    buttons.forEach(b => {
-      if (b.textContent === time) {
-        if (selectedButton) selectedButton.classList.remove('selected');
-        b.classList.add('selected');
-        selectedButton = b;
-      }
-    });
   } else {
     responseDiv.style.color = 'red';
     responseDiv.textContent = data.error;
   }
+  loadAvailability();
 };
 
 function toggleBotWindow() {
