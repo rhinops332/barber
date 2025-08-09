@@ -347,7 +347,7 @@
       </div>
 
     <div class="times-container" id="overrides-times-{{date}}">
-  {% for slot in week_slots[date].times %}
+  {% for slot in week_slots %}
     {% set time = slot.time %}
     <div class="time-wrapper" id="time-wrapper-{{date}}-{{time|replace(':','-')}}">
       <button class="time-btn
