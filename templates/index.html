@@ -294,7 +294,7 @@ function showDayAvailability(date) {
     day: '2-digit',
     month: '2-digit'
   });
-  document.getElementById('selected-date-title').textContent = `${dayName} - ${formattedDate}`;
+  document.getElementById('selected-date-title').textContent = ${dayName} - ${formattedDate};
 
   container.innerHTML = '';
   const slots = availabilityData[date]?.times || availabilityData[date] || [];
@@ -359,7 +359,7 @@ async function sendBotMessage() {
   if (!message) return;
 
   const messagesDiv = document.getElementById('bot-messages');
-  messagesDiv.innerHTML += `<div><b>You:</b> ${message}</div>`;
+  messagesDiv.innerHTML += <div><b>You:</b> ${message}</div>;
   input.value = '';
   const res = await fetch('/ask', {
     method: 'POST',
@@ -368,7 +368,7 @@ async function sendBotMessage() {
   });
   const data = await res.json();
   if (data.answer) {
-    messagesDiv.innerHTML += `<div><b>Bot:</b> ${data.answer}</div>`;
+    messagesDiv.innerHTML += <div><b>Bot:</b> ${data.answer}</div>;
   }
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
