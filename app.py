@@ -61,21 +61,15 @@ def save_one_time_changes(data):
 
 # --- יצירת רשימת שעות שבועית עם שינויים ---
 
-def get_source(t, scheduled, added, removed, edits, disabled_day, date_str):
-    bookings = load_json("bookings.json")
-    for b in bookings:
-        if b.get("date") == date_str and b.get("time") == t:
-            return "booked"       # אדום - הוזמן
-
+def get_source(t, scheduled, added, removed, edits, disabled_day):
     for edit in edits:
         if t == edit['to']:
             return "edited"      # כחול - ערוך
     if t in added and t not in scheduled:
-        return "added"           # צהוב - חדש
+        return "added"          # צהוב - חדש
     if t in scheduled and (t in removed or disabled_day):
-        return "disabled"        # אפור - מושבת
-    return "base"                # ירוק - בסיסי
-
+        return "disabled"       # אפור - מושבת
+    return "base"               # ירוק - בסיסי
 
 def generate_week_slots(with_sources=False):
     weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
@@ -108,6 +102,7 @@ def generate_week_slots(with_sources=False):
 
         final_times = []
         for t in all_times:
+            # זוהי שעה בעריכה - תתווסף עם source=edited
             if t in edited_to_times:
                 if with_sources:
                     final_times.append({"time": t, "available": True, "source": "edited"})
@@ -115,16 +110,13 @@ def generate_week_slots(with_sources=False):
                     final_times.append({"time": t, "available": True})
                 continue
 
+            # דילוג על השעות המקוריות שנערכו (לא מציגים אותן)
             if t in edited_from_times:
                 continue
 
             available = not (disabled_day or t in removed)
-
             if with_sources:
-                source = get_source(t, scheduled, added, removed, edits, disabled_day, date_str)
-                # אם זה הוזמן – לא זמין
-                if source == "booked":
-                    available = False
+                source = get_source(t, scheduled, added, removed, edits, disabled_day)
                 final_times.append({"time": t, "available": available, "source": source})
             else:
                 if available:
@@ -133,6 +125,8 @@ def generate_week_slots(with_sources=False):
         week_slots[date_str] = {"day_name": day_name, "times": final_times}
 
     return week_slots
+
+
 
 
 def is_slot_available(date, time):
@@ -144,27 +138,6 @@ def is_slot_available(date, time):
         if t["time"] == time and t.get("available", True):
             return True
     return False
-
-def get_overrides_with_bookings():
-    overrides = load_json(OVERRIDES_FILE)
-    appointments = load_json(APPOINTMENTS_FILE)
-
-    # ניצור עותק חדש כדי לא לשנות את המקור
-    result = {}
-
-    for date, changes in overrides.items():
-        result[date] = {
-            "add": [],
-            "remove": changes.get("remove", []),
-            "edit": changes.get("edit", [])
-        }
-
-        for time in changes.get("add", []):
-            booked = any(appt.get("date") == date and appt.get("time") == time for appt in appointments)
-            result[date]["add"].append({"time": time, "booked": booked})
-
-    return result
-
 
 # --- לפני כל בקשה - העברת session ל-g ---
 
@@ -241,9 +214,6 @@ def admin_routine():
 def admin_overrides():
     if not session.get("is_admin"):
         return redirect("/login")
-
-    overrides = get_overrides_with_bookings()
-    return render_template("admin_overrides.html", overrides=overrides)
 
     # טוען את השגרה השבועית והאובריידים ישירות מהקבצים
     weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
@@ -569,24 +539,6 @@ def add_slot():
     one_time.setdefault(date, []).append({'time': time, 'available': True})
     save_one_time_changes(one_time)
     return jsonify({'message': 'Slot added'})
-
-@app.route("/booking_details/<date>/<time>")
-def booking_details(date, time):
-    if not session.get("is_admin"):
-        return redirect("/login")
-
-    # טען את כל ההזמנות
-    appointments = load_json("appointments.json")
-
-    # מצא את ההזמנה לפי תאריך ושעה
-    booking = next((a for a in appointments if a["date"] == date and a["time"] == time), None)
-
-    if not booking:
-        return f"<h1>לא נמצאה הזמנה עבור {date} בשעה {time}</h1>", 404
-
-    # הצגת פרטי ההזמנה
-    return render_template("booking_details.html", booking=booking)
-
 
 # --- ניהול טקסט ידע של הבוט ---
 
