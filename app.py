@@ -594,12 +594,37 @@ def book_appointment():
     appointments[date] = date_appointments
     save_appointments(appointments)
 
+    # עדכון overrides לסימון שעה מוזמנת
+    overrides = load_json(OVERRIDES_FILE)
+    if date not in overrides:
+        overrides[date] = {"add": [], "remove": [], "edit": [], "booked": []}
+    elif "booked" not in overrides[date]:
+        overrides[date]["booked"] = []
+
+    # הוספת השעה להזמנות ב-overrides
+    overrides[date]["booked"].append({
+        "time": time,
+        "name": name,
+        "phone": phone,
+        "service": service
+    })
+    # אפשר להוסיף גם הסרה מהוספות או הסרות אם צריך
+    # אבל אם אתה רוצה שהשעה תיראה תפוסה, צריך לוודא שלא תופיע ב-available
+    # כדאי להוסיף ל-remove את השעה כדי שתהיה לא זמינה
+    if time not in overrides[date]["remove"]:
+        overrides[date]["remove"].append(time)
+    if time in overrides[date]["add"]:
+        overrides[date]["add"].remove(time)
+
+    save_json(OVERRIDES_FILE, overrides)
+
     try:
         send_email(name, phone, date, time, service, services_prices[service])
     except Exception as e:
         print("Error sending email:", e)
 
     return jsonify({"message": f"Appointment booked for {date} at {time} for {service}."})
+
 
 # --- שליחת אימייל ---
 
