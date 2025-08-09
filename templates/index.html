@@ -58,12 +58,13 @@
     background: #27ae60;
   }
   .slot-btn.selected {
-    /* פשוט אנימציה של הגדלה קלה */
-    animation: growBtn 0.2s forwards;
-  }
+  animation: growBtn 0.2s forwards;
+  border: 2px solid black;   
+  box-shadow: 0 0 8px rgba(0,0,0,0.4);  
+}
   @keyframes growBtn {
     from { transform: scale(1); }
-    to { transform: scale(1.1); }
+    to { transform: scale(1.2); }
   }
   #form-container {
     display: none;
@@ -229,6 +230,8 @@
   <p><b>מספר טלפון:</b> <span id="detail-phone"></span></p>
   <p><b>שירות:</b> <span id="detail-service"></span></p>
 </div>
+  
+<div id="selected-time-display" style="margin-top: 10px; font-weight: bold; font-size: 16px; color: #2980b9; min-height: 24px;"></div>
 
 <div id="form-container">
   <form id="bookingForm">
@@ -330,6 +333,7 @@ function clearBookingDetailsAndForm() {
   chosenTime = '';
   document.getElementById('date').value = '';
   document.getElementById('time').value = '';
+  document.getElementById('selected-time-display').textContent = '';
 }
 
 function showDayAvailability(date) {
@@ -365,7 +369,8 @@ function showDayAvailability(date) {
       document.getElementById('date').value = chosenDate;
       document.getElementById('time').value = chosenTime;
 
-      // הצג את פרטי ההזמנה למטה (אם יש)
+      document.getElementById('selected-time-display').textContent = `השעה שנבחרה: ${slot.time}`;
+
       showBookingDetails(chosenDate, chosenTime);
 
       document.getElementById('form-container').style.display = 'block';
