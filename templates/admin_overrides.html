@@ -77,11 +77,6 @@
       background: #f1c40f;
       color: black;
     }
-    /* הכפתור לשעה מוזמנת (אדום) */
-    .time-btn.booked {
-      background: #e74c3c;
-      color: white;
-    }
     .time-btn .close-icon {
       position: absolute;
       right: 8px;
@@ -283,7 +278,7 @@
     }
 
     async function deleteDay(date) {
-      const wrappers = document.querySelectorAll(`#overrides-times-${date} .time-wrapper`);
+      const wrappers = document.querySelectorAll(#overrides-times-${date} .time-wrapper);
       const times = Array.from(wrappers).map(wrapper => {
        const parts = wrapper.id.split('-').slice(-2);
         const hh = parts[parts.length - 2];
@@ -307,17 +302,6 @@
     async function revertOverride(date, time) {
       await updateOverrides(date, time, 'revert');
       reloadKeepingOpened();
-    }
-
-    // פונקציה להצגת פרטי ההזמנה של שעה מוזמנת
-    async function showBookingDetails(date, time) {
-      const res = await fetch(`/booking_details?date=${date}&time=${time}`);
-      if (!res.ok) {
-        alert('לא נמצאו פרטים להזמנה זו');
-        return;
-      }
-      const data = await res.json();
-      alert(`פרטי הזמנה:\nשם: ${data.name}\nטלפון: ${data.phone}\nשירות: ${data.service}\nמחיר: ${data.price}₪`);
     }
 
     window.onload = () => {
@@ -347,12 +331,11 @@
       </div>
 
     <div class="times-container" id="overrides-times-{{date}}">
-  {% for slot in week_slots %}
+  {% for slot in week_slots[date].times %}
     {% set time = slot.time %}
     <div class="time-wrapper" id="time-wrapper-{{date}}-{{time|replace(':','-')}}">
       <button class="time-btn
-        {% if slot.booked %}booked
-        {% elif slot.source == 'disabled' %}disabled
+        {% if slot.source == 'disabled' %}disabled
         {% elif slot.source == 'edited' %}edited
         {% elif slot.source == 'added' %}added
         {% else %}base{% endif %}"
@@ -361,15 +344,11 @@
         <span class="close-icon" onclick="event.stopPropagation(); removeOverrides('{{date}}', '{{time}}')">✖️</span>
       </button>
       <div class="actions-container" id="actions-{{date}}-{{time|replace(':','-')}}">
-        {% if slot.booked %}
-          <button onclick="event.stopPropagation(); showBookingDetails('{{date}}', '{{time}}')">📋 פרטים</button>
-        {% else %}
-          {% if slot.source in ['base', 'edited'] %}
-            <button onclick="event.stopPropagation(); enableEdit('{{date}}', '{{time}}')">✏️ עריכה</button>
-          {% endif %}
-          {% if slot.source in ['disabled'] %}
-            <button onclick="event.stopPropagation(); revertOverride('{{date}}', '{{time}}')">↩️ החזר</button>
-          {% endif %}
+        {% if slot.source in ['base', 'edited'] %}
+          <button onclick="event.stopPropagation(); enableEdit('{{date}}', '{{time}}')">✏️ עריכה</button>
+        {% endif %}
+        {% if slot.source in ['disabled'] %}
+          <button onclick="event.stopPropagation(); revertOverride('{{date}}', '{{time}}')">↩️ החזר</button>
         {% endif %}
       </div>
     </div>
