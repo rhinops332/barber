@@ -77,6 +77,11 @@
       background: #f1c40f;
       color: black;
     }
+    /* הכפתור לשעה מוזמנת (אדום) */
+    .time-btn.booked {
+      background: #e74c3c;
+      color: white;
+    }
     .time-btn .close-icon {
       position: absolute;
       right: 8px;
@@ -304,6 +309,17 @@
       reloadKeepingOpened();
     }
 
+    // פונקציה להצגת פרטי ההזמנה של שעה מוזמנת
+    async function showBookingDetails(date, time) {
+      const res = await fetch(`/booking_details?date=${date}&time=${time}`);
+      if (!res.ok) {
+        alert('לא נמצאו פרטים להזמנה זו');
+        return;
+      }
+      const data = await res.json();
+      alert(`פרטי הזמנה:\nשם: ${data.name}\nטלפון: ${data.phone}\nשירות: ${data.service}\nמחיר: ${data.price}₪`);
+    }
+
     window.onload = () => {
       restoreOpenedDays();
     };
@@ -335,7 +351,8 @@
     {% set time = slot.time %}
     <div class="time-wrapper" id="time-wrapper-{{date}}-{{time|replace(':','-')}}">
       <button class="time-btn
-        {% if slot.source == 'disabled' %}disabled
+        {% if slot.booked %}booked
+        {% elif slot.source == 'disabled' %}disabled
         {% elif slot.source == 'edited' %}edited
         {% elif slot.source == 'added' %}added
         {% else %}base{% endif %}"
@@ -344,11 +361,15 @@
         <span class="close-icon" onclick="event.stopPropagation(); removeOverrides('{{date}}', '{{time}}')">✖️</span>
       </button>
       <div class="actions-container" id="actions-{{date}}-{{time|replace(':','-')}}">
-        {% if slot.source in ['base', 'edited'] %}
-          <button onclick="event.stopPropagation(); enableEdit('{{date}}', '{{time}}')">✏️ עריכה</button>
-        {% endif %}
-        {% if slot.source in ['disabled'] %}
-          <button onclick="event.stopPropagation(); revertOverride('{{date}}', '{{time}}')">↩️ החזר</button>
+        {% if slot.booked %}
+          <button onclick="event.stopPropagation(); showBookingDetails('{{date}}', '{{time}}')">📋 פרטים</button>
+        {% else %}
+          {% if slot.source in ['base', 'edited'] %}
+            <button onclick="event.stopPropagation(); enableEdit('{{date}}', '{{time}}')">✏️ עריכה</button>
+          {% endif %}
+          {% if slot.source in ['disabled'] %}
+            <button onclick="event.stopPropagation(); revertOverride('{{date}}', '{{time}}')">↩️ החזר</button>
+          {% endif %}
         {% endif %}
       </div>
     </div>
