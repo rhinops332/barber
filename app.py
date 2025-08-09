@@ -61,10 +61,19 @@ def save_one_time_changes(data):
 
 # --- יצירת רשימת שעות שבועית עם שינויים ---
 
+def get_source(t, scheduled, added, removed, edits, disabled_day):
+    for edit in edits:
+        if t == edit['to']:
+            return "edited"      # כחול - ערוך
+    if t in added and t not in scheduled:
+        return "added"          # צהוב - חדש
+    if t in scheduled and (t in removed or disabled_day):
+        return "disabled"       # אפור - מושבת
+    return "base"               # ירוק - בסיסי
+
 def generate_week_slots(with_sources=False):
     weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
     overrides = load_json(OVERRIDES_FILE)
-    appointments = load_appointments()   # הוספנו כאן
     today = datetime.today()
     week_slots = {}
     heb_days = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
@@ -83,17 +92,17 @@ def generate_week_slots(with_sources=False):
         edits = override.get("edit", [])
         disabled_day = removed == ["__all__"]
 
+        # רשימת השעות החדשות (edited to)
         edited_to_times = [edit['to'] for edit in edits]
+        # רשימת השעות המקוריות שנערכו (edited from)
         edited_from_times = [edit['from'] for edit in edits]
 
+        # כל הזמנים יהיו מאיחוד של שעות השגרה, שעות הוספה והעריכות (החדשות)
         all_times = sorted(set(scheduled + added + edited_to_times))
-
-        # כאן יוצרים מילון של שעות מוזמנות בתאריך הנוכחי
-        date_appointments = appointments.get(date_str, [])
-        booked_times = {appt["time"]: appt for appt in date_appointments}
 
         final_times = []
         for t in all_times:
+            # זוהי שעה בעריכה - תתווסף עם source=edited
             if t in edited_to_times:
                 if with_sources:
                     final_times.append({"time": t, "available": True, "source": "edited"})
@@ -101,25 +110,13 @@ def generate_week_slots(with_sources=False):
                     final_times.append({"time": t, "available": True})
                 continue
 
+            # דילוג על השעות המקוריות שנערכו (לא מציגים אותן)
             if t in edited_from_times:
-                continue
-
-            # בודקים אם השעה מוזמנת - אם כן, סימון booked, זמין=False
-            if t in booked_times:
-                if with_sources:
-                    final_times.append({
-                        "time": t,
-                        "available": False,
-                        "source": "booked",
-                        "appointment": booked_times[t]   # פרטי הזמנה להצגה
-                    })
-                else:
-                    final_times.append({"time": t, "available": False})
                 continue
 
             available = not (disabled_day or t in removed)
             if with_sources:
-                source = get_source(t, scheduled, added, removed, edits, disabled_day, booked_times)
+                source = get_source(t, scheduled, added, removed, edits, disabled_day)
                 final_times.append({"time": t, "available": available, "source": source})
             else:
                 if available:
@@ -128,6 +125,8 @@ def generate_week_slots(with_sources=False):
         week_slots[date_str] = {"day_name": day_name, "times": final_times}
 
     return week_slots
+
+
 
 
 def is_slot_available(date, time):
