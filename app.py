@@ -659,12 +659,6 @@ def book_appointment():
     "cancel_endpoint": "/cancel_appointment"
 })
 
-
-
-import json
-
-APPOINTMENTS_FILE = 'appointments.json'  # השם של קובץ ההזמנות
-
 @app.route('/cancel_appointment', methods=['POST'])
 def cancel_appointment():
     data = request.get_json()
@@ -672,10 +666,7 @@ def cancel_appointment():
     time = data.get('time')
     name = data.get('name')
     phone = data.get('phone')
-
-    if not all([date, time, name, phone]):
-        return jsonify({'error': 'Missing data'}), 400
-
+    
     try:
         with open(APPOINTMENTS_FILE, 'r', encoding='utf-8') as f:
             appointments = json.load(f)
@@ -683,7 +674,8 @@ def cancel_appointment():
         appointments = {}
 
     day_appointments = appointments.get(date, [])
-    # מחפש את ההזמנה להתאים ולמחוק
+
+    # הסר את ההזמנה התואמת
     new_day_appointments = [
         appt for appt in day_appointments
         if not (appt['time'] == time and appt['name'] == name and appt['phone'] == phone)
@@ -696,6 +688,8 @@ def cancel_appointment():
 
     with open(APPOINTMENTS_FILE, 'w', encoding='utf-8') as f:
         json.dump(appointments, f, ensure_ascii=False, indent=2)
+
+    # במידה ואתה שומר סטטוס שעה במקום אחר (למשל schedule או overrides), תעדכן כאן שזו שעה זמינה
 
     return jsonify({'message': f'Appointment on {date} at {time} canceled successfully.'})
 
