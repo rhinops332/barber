@@ -380,6 +380,42 @@ function showDayAvailability(date) {
   });
 }
 
+function createCancelButton(date, time, name, phone) {
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = 'בטל תור';
+  cancelBtn.style.marginTop = '10px';
+  cancelBtn.style.padding = '8px 16px';
+  cancelBtn.style.backgroundColor = '#e74c3c';
+  cancelBtn.style.color = 'white';
+  cancelBtn.style.border = 'none';
+  cancelBtn.style.borderRadius = '6px';
+  cancelBtn.style.cursor = 'pointer';
+
+  cancelBtn.onclick = async () => {
+    if (!confirm('האם אתה בטוח שברצונך לבטל את התור?')) return;
+
+    const resCancel = await fetch('/cancel_appointment', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({date, time, name, phone})
+    });
+    const cancelData = await resCancel.json();
+
+    if (cancelData.message) {
+      alert(cancelData.message);
+      document.getElementById('response').textContent = '';
+      document.getElementById('form-container').style.display = 'none';
+      clearBookingDetailsAndForm();
+      await loadAvailability();
+    } else if (cancelData.error) {
+      alert('שגיאה בביטול התור: ' + cancelData.error);
+    }
+  };
+
+  return cancelBtn;
+}
+
+
 async function showBookingDetails(date, time) {
   // תחפש את הפרטים בהזמנות שהגיעו מהשרת דרך /appointments?date=...
   const res = await fetch(`/appointments?date=${date}`);
@@ -423,29 +459,37 @@ document.getElementById('bookingForm').onsubmit = async e => {
   });
   const data = await res.json();
   const responseDiv = document.getElementById('response');
-  if (data.message) {
-    responseDiv.style.color = 'green';
-    responseDiv.textContent = data.message;
+    if (data.message) {
+       responseDiv.style.color = 'green';
+       responseDiv.textContent = data.message;
 
-    // לאחר הזמנה מוצלחת טען שוב את הזמינות (כלומר מעדכן שהשעה תפוסה)  
-    await loadAvailability();
+  // הוסף כפתור ביטול מתחת להודעה
+  const cancelBtn = createCancelButton(date, time, name, phone);
+  responseDiv.appendChild(document.createElement('br'));
+  responseDiv.appendChild(cancelBtn);
 
-    // הסתר את טופס ההזמנה
-    document.getElementById('form-container').style.display = 'none';
+  // לאחר הזמנה מוצלחת טען שוב את הזמינות (כלומר מעדכן שהשעה תפוסה)  
+  await loadAvailability();
 
-    // הצג את פרטי ההזמנה החדשה מתחת
-    showBookingDetails(date, time);
+  // הסתר את טופס ההזמנה
+  document.getElementById('form-container').style.display = 'none';
 
-    // סמן את הכפתור של השעה החדשה (כמו לחיצה)
-    const buttons = document.querySelectorAll('#slots-container button.slot-btn.available');
-    buttons.forEach(b => {
-      if (b.textContent === time) {
-        if (selectedButton) selectedButton.classList.remove('selected');
-        b.classList.add('selected');
-        selectedButton = b;
-      }
-    });
-  } else {
+  // הצג את פרטי ההזמנה החדשה מתחת
+  showBookingDetails(date, time);
+
+  // סמן את הכפתור של השעה החדשה (כמו לחיצה)
+  const buttons = document.querySelectorAll('#slots-container button.slot-btn.available');
+  buttons.forEach(b => {
+    if (b.textContent === time) {
+      if (selectedButton) selectedButton.classList.remove('selected');
+      b.classList.add('selected');
+      selectedButton = b;
+    }
+  });
+}
+
+  
+  else {
     responseDiv.style.color = 'red';
     responseDiv.textContent = data.error;
   }
