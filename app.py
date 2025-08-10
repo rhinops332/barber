@@ -661,29 +661,43 @@ def book_appointment():
 
 
 
+import json
+
+APPOINTMENTS_FILE = 'appointments.json'  # השם של קובץ ההזמנות
+
 @app.route('/cancel_appointment', methods=['POST'])
 def cancel_appointment():
     data = request.get_json()
     date = data.get('date')
     time = data.get('time')
+    name = data.get('name')
+    phone = data.get('phone')
 
-    appointments = load_appointments()
-    bookings = load_json(BOOKINGS_FILE)
+    if not all([date, time, name, phone]):
+        return jsonify({'error': 'Missing data'}), 400
 
-    # מחיקה מתוך appointments
-    if date in appointments:
-        appointments[date] = [a for a in appointments[date] if a.get('time') != time]
-        save_appointments(appointments)
+    try:
+        with open(APPOINTMENTS_FILE, 'r', encoding='utf-8') as f:
+            appointments = json.load(f)
+    except FileNotFoundError:
+        appointments = {}
 
-    # מחיקה מתוך bookings
-    if date in bookings and time in bookings[date]:
-        bookings[date].remove(time)
-        if not bookings[date]:  # אם אין יותר שעות באותו יום
-            del bookings[date]
-        save_json(BOOKINGS_FILE, bookings)
+    day_appointments = appointments.get(date, [])
+    # מחפש את ההזמנה להתאים ולמחוק
+    new_day_appointments = [
+        appt for appt in day_appointments
+        if not (appt['time'] == time and appt['name'] == name and appt['phone'] == phone)
+    ]
 
-    # מחזיר תמיד הצלחה
-    return jsonify({"success": True, "message": "התור בוטל בהצלחה"})
+    if len(new_day_appointments) == len(day_appointments):
+        return jsonify({'error': 'Appointment not found'}), 404
+
+    appointments[date] = new_day_appointments
+
+    with open(APPOINTMENTS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(appointments, f, ensure_ascii=False, indent=2)
+
+    return jsonify({'message': f'Appointment on {date} at {time} canceled successfully.'})
 
 # --- שליחת אימייל ---
 
