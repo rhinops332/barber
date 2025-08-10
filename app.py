@@ -651,10 +651,14 @@ def book_appointment():
         print("Error sending email:", e)
 
     return jsonify({
-     "message": f"Appointment booked for {date} at {time} for {service}.",
-     "date": date,
-     "time": time
+    "message": f"Appointment booked for {date} at {time} for {service}.",
+    "date": date,
+    "time": time,
+    "service": service,
+    "can_cancel": True,
+    "cancel_endpoint": "/cancel_appointment"
 })
+
 
 
 @app.route('/cancel_appointment', methods=['POST'])
