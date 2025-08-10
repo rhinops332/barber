@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8" />
+  <title>פרטי ההזמנה</title>
+  <style>
+    body { font-family: Arial, sans-serif; direction: rtl; max-width: 600px; margin: 20px auto; }
+    h1 { text-align: center; }
+    .details { background: #f9f9f9; padding: 20px; border-radius: 10px; }
+    .detail-row { margin-bottom: 10px; }
+    .label { font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>פרטי ההזמנה</h1>
+  <div class="details">
+    <div class="detail-row"><span class="label">תאריך:</span> {{ appointment.date }}</div>
+    <div class="detail-row"><span class="label">שעה:</span> {{ appointment.time }}</div>
+    <div class="detail-row"><span class="label">שם:</span> {{ appointment.name }}</div>
+    <div class="detail-row"><span class="label">טלפון:</span> {{ appointment.phone }}</div>
+    <div class="detail-row"><span class="label">שירות:</span> {{ appointment.service }}</div>
+    <!-- הוסף עוד שדות לפי הצורך -->
+  </div>
+  <div style="text-align:center; margin-top: 20px;">
+    <a href="/admin_command">⬅️ חזרה לניהול</a>
+  </div>
+</body>
+</html>
