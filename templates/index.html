@@ -58,10 +58,10 @@
     background: #27ae60;
   }
   .slot-btn.selected {
-  animation: growBtn 0.2s forwards;
-  border: 2px solid black;   
-  box-shadow: 0 0 8px rgba(0,0,0,0.4);  
-}
+    animation: growBtn 0.2s forwards;
+    border: 2px solid black;   
+    box-shadow: 0 0 8px rgba(0,0,0,0.4);  
+  }
   @keyframes growBtn {
     from { transform: scale(1); }
     to { transform: scale(1.2); }
@@ -94,7 +94,7 @@
   form button:hover {
     background: #1f6391;
   }
-  #response {
+  #responseMessage {
     text-align: center;
     font-weight: bold;
     margin-bottom: 10px;
@@ -193,6 +193,19 @@
   #bot-input button:hover {
     background: #1e8449;
   }
+  .cancel-btn {
+    margin-top: 10px;
+    padding: 8px 14px;
+    background: #e74c3c;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  .cancel-btn:hover {
+    background: #c0392b;
+  }
 </style>
 </head>
 <body>
@@ -216,7 +229,7 @@
 <h1>HairBoss ✂️</h1>
 <h2>Book Your Appointment</h2>
 
-<div id="response"></div>
+<div id="responseMessage"></div>
 
 <div id="days-buttons"></div>
 <div id="availability">
@@ -329,11 +342,14 @@ function clearBookingDetailsAndForm() {
     selectedButton = null;
   }
   document.getElementById('form-container').style.display = 'none';
-  document.getElementById('response').textContent = '';
+  document.getElementById('responseMessage').textContent = '';
   chosenTime = '';
   document.getElementById('date').value = '';
   document.getElementById('time').value = '';
   document.getElementById('selected-time-display').textContent = '';
+  // הסרת כפתור ביטול במידה וקיים
+  const cancelBtn = document.getElementById('cancel-appointment-btn');
+  if (cancelBtn) cancelBtn.remove();
 }
 
 function showDayAvailability(date) {
@@ -374,14 +390,13 @@ function showDayAvailability(date) {
       showBookingDetails(chosenDate, chosenTime);
 
       document.getElementById('form-container').style.display = 'block';
-      document.getElementById('response').textContent = '';
+      document.getElementById('responseMessage').textContent = '';
     };
     container.appendChild(btn);
   });
 }
 
 async function showBookingDetails(date, time) {
-  // תחפש את הפרטים בהזמנות שהגיעו מהשרת דרך /appointments?date=...
   const res = await fetch(`/appointments?date=${date}`);
   if (!res.ok) {
     document.getElementById('booking-details').style.display = 'none';
@@ -390,7 +405,6 @@ async function showBookingDetails(date, time) {
   const data = await res.json();
   const appointments = data[date] || [];
 
-  // חפש הזמנה תואמת שעה
   const appt = appointments.find(a => a.time === time);
   if (appt) {
     document.getElementById('selected-time').textContent = time;
@@ -398,15 +412,43 @@ async function showBookingDetails(date, time) {
     document.getElementById('detail-phone').textContent = appt.phone;
     document.getElementById('detail-service').textContent = appt.service;
     document.getElementById('booking-details').style.display = 'block';
+
+    // הוספת כפתור ביטול הזמנה אם לא קיים
+    let cancelBtn = document.getElementById('cancel-appointment-btn');
+    if (!cancelBtn) {
+      cancelBtn = document.createElement('button');
+      cancelBtn.id = 'cancel-appointment-btn';
+      cancelBtn.className = 'cancel-btn';
+      cancelBtn.textContent = 'בטל תור זה';
+      cancelBtn.onclick = async () => {
+        if (!confirm('האם אתה בטוח שברצונך לבטל את התור?')) return;
+        const res = await fetch('/cancel_appointment', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({date: chosenDate, time: chosenTime})
+        });
+        const data = await res.json();
+        if (data.message) {
+          alert(data.message);
+          await loadAvailability();
+          clearBookingDetailsAndForm();
+        } else if (data.error) {
+          alert('שגיאה בביטול: ' + data.error);
+        }
+      };
+      document.getElementById('booking-details').appendChild(cancelBtn);
+    }
   } else {
     document.getElementById('booking-details').style.display = 'none';
+    const cancelBtn = document.getElementById('cancel-appointment-btn');
+    if (cancelBtn) cancelBtn.remove();
   }
 }
 
 document.getElementById('bookingForm').onsubmit = async e => {
   e.preventDefault();
-  const name = document.getElementById('name').value;
-  const phone = document.getElementById('phone').value;
+  const name = document.getElementById('name').value.trim();
+  const phone = document.getElementById('phone').value.trim();
   const service = document.getElementById('service').value;
   const date = document.getElementById('date').value;
   const time = document.getElementById('time').value;
@@ -422,30 +464,22 @@ document.getElementById('bookingForm').onsubmit = async e => {
     body: JSON.stringify({name, phone, date, time, service})
   });
   const data = await res.json();
-  const responseDiv = document.getElementById('response');
+  const responseDiv = document.getElementById('responseMessage');
   if (data.message) {
     responseDiv.style.color = 'green';
     responseDiv.textContent = data.message;
 
-    // לאחר הזמנה מוצלחת טען שוב את הזמינות (כלומר מעדכן שהשעה תפוסה)  
     await loadAvailability();
 
-    // הסתר את טופס ההזמנה
     document.getElementById('form-container').style.display = 'none';
 
-    // הצג את פרטי ההזמנה החדשה מתחת
     showBookingDetails(date, time);
 
-    // סמן את הכפתור של השעה החדשה (כמו לחיצה)
     const buttons = document.querySelectorAll('#slots-container button.slot-btn.available');
     buttons.forEach(b => {
-      if (b.textContent === time) {
-        if (selectedButton) selectedButton.classList.remove('selected');
-        b.classList.add('selected');
-        selectedButton = b;
-      }
+      if (b.textContent === time) b.disabled = true;
     });
-  } else {
+  } else if (data.error) {
     responseDiv.style.color = 'red';
     responseDiv.textContent = data.error;
   }
@@ -456,38 +490,41 @@ function toggleBotWindow() {
   bot.style.display = bot.style.display === 'block' ? 'none' : 'block';
 }
 
-async function sendBotMessage() {
-  const input = document.getElementById('bot-user-input');
-  const message = input.value.trim();
-  if (!message) return;
-
-  const messagesDiv = document.getElementById('bot-messages');
-  messagesDiv.innerHTML += `<div><b>You:</b> ${message}</div>`;
-  input.value = '';
-  const res = await fetch('/ask', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({message})
-  });
-  const data = await res.json();
-  if (data.answer) {
-    messagesDiv.innerHTML += `<div><b>Bot:</b> ${data.answer}</div>`;
-  }
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
-}
-
 function resizeBot() {
   const bot = document.getElementById('bot-window');
-  if (bot.style.width === '520px') {
-    bot.style.width = '320px';
-    bot.style.height = '400px';
+  if (bot.style.height === '400px') {
+    bot.style.height = '600px';
   } else {
-    bot.style.width = '520px';
-    bot.style.height = '520px';
+    bot.style.height = '400px';
   }
 }
 
-loadAvailability();
+// פונקציות בוט - תוסיף פה לפי הצורך שלך
+function sendBotMessage() {
+  const input = document.getElementById('bot-user-input');
+  if (!input.value.trim()) return;
+
+  const messages = document.getElementById('bot-messages');
+  const userMsg = document.createElement('div');
+  userMsg.textContent = `You: ${input.value}`;
+  userMsg.style.fontWeight = 'bold';
+  messages.appendChild(userMsg);
+  messages.scrollTop = messages.scrollHeight;
+
+  // לדמות תשובה אוטומטית
+  setTimeout(() => {
+    const botMsg = document.createElement('div');
+    botMsg.textContent = `Bot: Sorry, I am not configured yet.`;
+    messages.appendChild(botMsg);
+    messages.scrollTop = messages.scrollHeight;
+  }, 1000);
+
+  input.value = '';
+}
+
+window.onload = () => {
+  loadAvailability();
+};
 </script>
 
 </body>
