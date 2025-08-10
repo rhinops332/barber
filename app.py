@@ -666,21 +666,20 @@ def cancel_appointment():
     appointments = load_appointments()
     bookings = load_json(BOOKINGS_FILE)
 
+    # מחיקה מתוך appointments
     if date in appointments:
-        original_len = len(appointments[date])
         appointments[date] = [a for a in appointments[date] if a.get('time') != time]
+        save_appointments(appointments)
 
-        if len(appointments[date]) < original_len:
-            save_appointments(appointments)
-            # הסרת השעה מרשימת ההזמנות
-            if date in bookings and time in bookings[date]:
-                bookings[date].remove(time)
-                save_json(BOOKINGS_FILE, bookings)
-            return jsonify({"success": True, "message": "התור בוטל בהצלחה"})
-    
-    return jsonify({"success": False, "message": "התור לא נמצא"})
+    # מחיקה מתוך bookings
+    if date in bookings and time in bookings[date]:
+        bookings[date].remove(time)
+        if not bookings[date]:  # אם אין יותר שעות באותו יום
+            del bookings[date]
+        save_json(BOOKINGS_FILE, bookings)
 
-
+    # מחזיר תמיד הצלחה
+    return jsonify({"success": True, "message": "התור בוטל בהצלחה"})
 
 # --- שליחת אימייל ---
 
