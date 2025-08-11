@@ -58,10 +58,10 @@
     background: #27ae60;
   }
   .slot-btn.selected {
-  animation: growBtn 0.2s forwards;
-  border: 2px solid black;   
-  box-shadow: 0 0 8px rgba(0,0,0,0.4);  
-}
+    animation: growBtn 0.2s forwards;
+    border: 2px solid black;   
+    box-shadow: 0 0 8px rgba(0,0,0,0.4);  
+  }
   @keyframes growBtn {
     from { transform: scale(1); }
     to { transform: scale(1.2); }
@@ -117,81 +117,43 @@
     margin-bottom: 10px;
     color: #2980b9;
   }
-  #botBtn {
-    display: block;
-    margin: 20px auto 0;
-    padding: 12px;
-    background: #27ae60;
-    color: white;
-    border: none;
-    border-radius: 10px;
-    font-weight: bold;
-    cursor: pointer;
-    width: 260px;
-  }
-  #bot-window {
+  #cancel-confirmation {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
+    top: 50%;
+    left: 50%;
     width: 320px;
-    height: 400px;
+    transform: translate(-50%, -50%);
     background: white;
-    border: 1px solid #ccc;
-    border-radius: 10px;
-    box-shadow: 0 0 14px rgba(0,0,0,0.18);
-    padding: 10px;
-    box-sizing: border-box;
+    border-radius: 12px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.25);
+    padding: 20px;
+    z-index: 9999;
     display: none;
-    resize: both;
-    font-size: 14px;
-  }
-  #bot-header {
-    position: relative;
     text-align: center;
-    border-bottom: 1px solid #eee;
-    margin-bottom: 8px;
-    padding-bottom: 6px;
+    font-size: 16px;
   }
-  #bot-expand {
-    position: absolute;
-    left: 8px;
-    top: 8px;
-    background: none;
+  #cancel-confirmation button {
+    margin: 10px 10px 0 10px;
+    padding: 10px 16px;
     border: none;
-    font-size: 20px;
-    cursor: pointer;
-    color: #555;
-  }
-  #bot-messages {
-    height: 290px;
-    overflow-y: auto;
-    border: 1px solid #ddd;
-    padding: 8px;
-    background: #fafafa;
-    border-radius: 6px;
-    margin-bottom: 10px;
-  }
-  #bot-input {
-    display: flex;
-    gap: 8px;
-  }
-  #bot-input input {
-    flex-grow: 1;
-    padding: 8px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-  }
-  #bot-input button {
-    background: #27ae60;
-    border: none;
-    border-radius: 6px;
-    padding: 8px 14px;
-    color: white;
+    border-radius: 8px;
     font-weight: bold;
     cursor: pointer;
   }
-  #bot-input button:hover {
-    background: #1e8449;
+  #cancel-confirmation .confirm-btn {
+    background-color: #e74c3c;
+    color: white;
+  }
+  #cancel-confirmation .cancel-btn {
+    background-color: #ccc;
+    color: #333;
+  }
+  #overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.3);
+    z-index: 9998;
+    display: none;
   }
 </style>
 </head>
@@ -250,18 +212,12 @@
   </form>
 </div>
 
-<button id="botBtn" onclick="toggleBotWindow()">Need Help? Ask Our AI Bot</button>
-
-<div id="bot-window">
-  <div id="bot-header">
-    <button id="bot-expand" onclick="resizeBot()">↕</button>
-    <h3>Ask our AI Bot</h3>
-  </div>
-  <div id="bot-messages"></div>
-  <div id="bot-input">
-    <input type="text" id="bot-user-input" placeholder="Type your question..." />
-    <button onclick="sendBotMessage()">Send</button>
-  </div>
+<!-- החלונית לאישור ביטול תור בתוך הדף -->
+<div id="overlay"></div>
+<div id="cancel-confirmation">
+  <p>בטוח שברצונך לבטל את התור?</p>
+  <button class="confirm-btn">כן, בטל תור</button>
+  <button class="cancel-btn">לא, חזור</button>
 </div>
 
 <script>
@@ -269,7 +225,7 @@ let allDates = [];
 let availabilityData = {};
 let chosenDate = '';
 let chosenTime = '';
-let selectedButton = null;  // לשמור את הכפתור שנבחר
+let selectedButton = null;
 
 function formatHebrewDay(dateStr) {
   const date = new Date(dateStr);
@@ -380,70 +336,34 @@ function showDayAvailability(date) {
   });
 }
 
-function createCancelButton(date, time, name, phone) {
-  const cancelBtn = document.createElement('button');
-  cancelBtn.textContent = 'בטל תור';
-  cancelBtn.style.marginTop = '10px';
-  cancelBtn.style.padding = '8px 16px';
-  cancelBtn.style.backgroundColor = '#e74c3c';
-  cancelBtn.style.color = 'white';
-  cancelBtn.style.border = 'none';
-  cancelBtn.style.borderRadius = '6px';
-  cancelBtn.style.cursor = 'pointer';
-
-  cancelBtn.onclick = async () => {
-    // ללא popup אישור, פשוט מבצע ביטול מיידי
-    const resCancel = await fetch('/cancel_appointment', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({date, time, name, phone})
-    });
-    const cancelData = await resCancel.json();
-
-    if (cancelData.message) {
-      // עדכון UI בלי להראות alert, פשוט משנה טקסט ומסיר טופס
-      document.getElementById('response').style.color = 'green';
-      document.getElementById('response').textContent = cancelData.message;
-
-      document.getElementById('form-container').style.display = 'none';
-      clearBookingDetailsAndForm();
-      await loadAvailability();
-    } else if (cancelData.error) {
-      document.getElementById('response').style.color = 'red';
-      document.getElementById('response').textContent = 'שגיאה בביטול התור: ' + cancelData.error;
+function showBookingDetails(date, time) {
+  // הבאת פרטי הזמנה מהשרת להצגה
+  fetch(`/appointments?date=${date}`).then(res => {
+    if (!res.ok) {
+      document.getElementById('booking-details').style.display = 'none';
+      return;
     }
-  };
-
-  return cancelBtn;
-}
-
-async function showBookingDetails(date, time) {
-  // תחפש את הפרטים בהזמנות שהגיעו מהשרת דרך /appointments?date=...
-  const res = await fetch(`/appointments?date=${date}`);
-  if (!res.ok) {
-    document.getElementById('booking-details').style.display = 'none';
-    return;
-  }
-  const data = await res.json();
-  const appointments = data[date] || [];
-
-  // חפש הזמנה תואמת שעה
-  const appt = appointments.find(a => a.time === time);
-  if (appt) {
-    document.getElementById('selected-time').textContent = time;
-    document.getElementById('detail-name').textContent = appt.name;
-    document.getElementById('detail-phone').textContent = appt.phone;
-    document.getElementById('detail-service').textContent = appt.service;
-    document.getElementById('booking-details').style.display = 'block';
-  } else {
-    document.getElementById('booking-details').style.display = 'none';
-  }
+    return res.json();
+  }).then(data => {
+    if (!data) return;
+    const appointments = data[date] || [];
+    const appt = appointments.find(a => a.time === time);
+    if (appt) {
+      document.getElementById('selected-time').textContent = time;
+      document.getElementById('detail-name').textContent = appt.name;
+      document.getElementById('detail-phone').textContent = appt.phone;
+      document.getElementById('detail-service').textContent = appt.service;
+      document.getElementById('booking-details').style.display = 'block';
+    } else {
+      document.getElementById('booking-details').style.display = 'none';
+    }
+  });
 }
 
 document.getElementById('bookingForm').onsubmit = async e => {
   e.preventDefault();
-  const name = document.getElementById('name').value;
-  const phone = document.getElementById('phone').value;
+  const name = document.getElementById('name').value.trim();
+  const phone = document.getElementById('phone').value.trim();
   const service = document.getElementById('service').value;
   const date = document.getElementById('date').value;
   const time = document.getElementById('time').value;
@@ -460,77 +380,100 @@ document.getElementById('bookingForm').onsubmit = async e => {
   });
   const data = await res.json();
   const responseDiv = document.getElementById('response');
-    if (data.message) {
-      const responseDiv = document.getElementById('response');
-      responseDiv.style.color = 'green';
-      responseDiv.textContent = data.message;
+  if (data.message) {
+    responseDiv.style.color = 'green';
+    responseDiv.textContent = data.message;
 
-      // הוסף כפתור ביטול מתחת להודעה
-      const cancelBtn = createCancelButton(date, time, name, phone);
-      responseDiv.appendChild(document.createElement('br'));
-      responseDiv.appendChild(cancelBtn);
+    // צור כפתור ביטול חדש עם חלונית אישור
+    const cancelBtn = createCancelButton(date, time, name, phone);
+    responseDiv.appendChild(document.createElement('br'));
+    responseDiv.appendChild(cancelBtn);
 
-      // רענן זמינות מיידית
-      await loadAvailability();
+    await loadAvailability();
 
-      // הסתר את טופס ההזמנה
-      document.getElementById('form-container').style.display = 'none';
+    document.getElementById('form-container').style.display = 'none';
 
-      // הצג פרטי הזמנה מתחת
-      showBookingDetails(date, time);
+    showBookingDetails(date, time);
 
-      // סמן את הכפתור של השעה שנבחרה
-      const buttons = document.querySelectorAll('#slots-container button.slot-btn.available');
-      buttons.forEach(b => {
-        if (b.textContent === time) {
-          if (selectedButton) selectedButton.classList.remove('selected');
-          b.classList.add('selected');
-          selectedButton = b;
-        }
-      });
-    }
-
-  
-  else {
+    // סמן את הכפתור של השעה שנבחרה
+    const buttons = document.querySelectorAll('#slots-container button.slot-btn.available');
+    buttons.forEach(b => {
+      if (b.textContent === time) {
+        if (selectedButton) selectedButton.classList.remove('selected');
+        b.classList.add('selected');
+        selectedButton = b;
+      }
+    });
+  } else {
     responseDiv.style.color = 'red';
     responseDiv.textContent = data.error;
   }
 };
 
-function toggleBotWindow() {
-  const bot = document.getElementById('bot-window');
-  bot.style.display = bot.style.display === 'block' ? 'none' : 'block';
+// יצירת כפתור ביטול תור עם פתיחת החלונית אישור ביטול בתוך הדף
+function createCancelButton(date, time, name, phone) {
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = 'בטל תור';
+  cancelBtn.style.marginTop = '10px';
+  cancelBtn.style.padding = '8px 16px';
+  cancelBtn.style.backgroundColor = '#e74c3c';
+  cancelBtn.style.color = 'white';
+  cancelBtn.style.border = 'none';
+  cancelBtn.style.borderRadius = '6px';
+  cancelBtn.style.cursor = 'pointer';
+
+  cancelBtn.onclick = () => {
+    openCancelConfirmation(date, time, name, phone);
+  };
+
+  return cancelBtn;
 }
 
-async function sendBotMessage() {
-  const input = document.getElementById('bot-user-input');
-  const message = input.value.trim();
-  if (!message) return;
+// חלונית אישור ביטול (בתוך הדף, לא פופאפ) עם כפתורי כן/לא
+function openCancelConfirmation(date, time, name, phone) {
+  const overlay = document.getElementById('overlay');
+  const modal = document.getElementById('cancel-confirmation');
+  overlay.style.display = 'block';
+  modal.style.display = 'block';
 
-  const messagesDiv = document.getElementById('bot-messages');
-  messagesDiv.innerHTML += `<div><b>You:</b> ${message}</div>`;
-  input.value = '';
-  const res = await fetch('/ask', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({message})
-  });
-  const data = await res.json();
-  if (data.answer) {
-    messagesDiv.innerHTML += `<div><b>Bot:</b> ${data.answer}</div>`;
-  }
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  // נקרא כפתורים
+  const yesBtn = modal.querySelector('.confirm-btn');
+  const noBtn = modal.querySelector('.cancel-btn');
+
+  // הסר מאזינים קודמים למניעת כפילויות
+  yesBtn.onclick = null;
+  noBtn.onclick = null;
+
+  yesBtn.onclick = async () => {
+    // שלח בקשה לביטול תור לשרת
+    const resCancel = await fetch('/cancel_appointment', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({date, time, name, phone})
+    });
+    const cancelData = await resCancel.json();
+
+    if (cancelData.message) {
+      document.getElementById('response').style.color = 'green';
+      document.getElementById('response').textContent = cancelData.message;
+
+      clearBookingDetailsAndForm();
+      await loadAvailability();
+    } else if (cancelData.error) {
+      document.getElementById('response').style.color = 'red';
+      document.getElementById('response').textContent = 'שגיאה בביטול התור: ' + cancelData.error;
+    }
+    closeCancelConfirmation();
+  };
+
+  noBtn.onclick = () => {
+    closeCancelConfirmation();
+  };
 }
 
-function resizeBot() {
-  const bot = document.getElementById('bot-window');
-  if (bot.style.width === '520px') {
-    bot.style.width = '320px';
-    bot.style.height = '400px';
-  } else {
-    bot.style.width = '520px';
-    bot.style.height = '520px';
-  }
+function closeCancelConfirmation() {
+  document.getElementById('overlay').style.display = 'none';
+  document.getElementById('cancel-confirmation').style.display = 'none';
 }
 
 loadAvailability();
