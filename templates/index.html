@@ -58,10 +58,10 @@
     background: #27ae60;
   }
   .slot-btn.selected {
-  animation: growBtn 0.2s forwards;
-  border: 2px solid black;   
-  box-shadow: 0 0 8px rgba(0,0,0,0.4);  
-}
+    animation: growBtn 0.2s forwards;
+    border: 2px solid black;   
+    box-shadow: 0 0 8px rgba(0,0,0,0.4);  
+  }
   @keyframes growBtn {
     from { transform: scale(1); }
     to { transform: scale(1.2); }
@@ -144,6 +144,7 @@
     display: none;
     resize: both;
     font-size: 14px;
+    z-index: 10000;
   }
   #bot-header {
     position: relative;
@@ -155,6 +156,16 @@
   #bot-expand {
     position: absolute;
     left: 8px;
+    top: 8px;
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #555;
+  }
+  #bot-close {
+    position: absolute;
+    right: 8px;
     top: 8px;
     background: none;
     border: none;
@@ -192,6 +203,46 @@
   }
   #bot-input button:hover {
     background: #1e8449;
+  }
+
+  /* חלונית אישור ביטול תור */
+  #overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.3);
+    z-index: 9999;
+    display: none;
+  }
+  #cancel-confirmation {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 320px;
+    transform: translate(-50%, -50%);
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.25);
+    padding: 20px;
+    z-index: 10000;
+    display: none;
+    text-align: center;
+    font-size: 16px;
+  }
+  #cancel-confirmation button {
+    margin: 10px 10px 0 10px;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  #cancel-confirmation .confirm-btn {
+    background-color: #e74c3c;
+    color: white;
+  }
+  #cancel-confirmation .cancel-btn {
+    background-color: #ccc;
+    color: #333;
   }
 </style>
 </head>
@@ -256,12 +307,21 @@
   <div id="bot-header">
     <button id="bot-expand" onclick="resizeBot()">↕</button>
     <h3>Ask our AI Bot</h3>
+    <button id="bot-close" onclick="toggleBotWindow()">✖</button>
   </div>
   <div id="bot-messages"></div>
   <div id="bot-input">
     <input type="text" id="bot-user-input" placeholder="Type your question..." />
     <button onclick="sendBotMessage()">Send</button>
   </div>
+</div>
+
+<!-- חלונית אישור ביטול תור -->
+<div id="overlay"></div>
+<div id="cancel-confirmation">
+  <p>בטוח שברצונך לבטל את התור?</p>
+  <button class="confirm-btn">כן, בטל תור</button>
+  <button class="cancel-btn">לא, חזור</button>
 </div>
 
 <script>
@@ -391,30 +451,62 @@ function createCancelButton(date, time, name, phone) {
   cancelBtn.style.borderRadius = '6px';
   cancelBtn.style.cursor = 'pointer';
 
-  cancelBtn.onclick = async () => {
-    if (!confirm('האם אתה בטוח שברצונך לבטל את התור?')) return;
-
-    const resCancel = await fetch('/cancel_appointment', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({date, time, name, phone})
-    });
-    const cancelData = await resCancel.json();
-
-    if (cancelData.message) {
-      alert(cancelData.message);
-      document.getElementById('response').textContent = '';
-      document.getElementById('form-container').style.display = 'none';
-      clearBookingDetailsAndForm();
-      await loadAvailability();
-    } else if (cancelData.error) {
-      alert('שגיאה בביטול התור: ' + cancelData.error);
-    }
+  cancelBtn.onclick = () => {
+    openCancelConfirmation(date, time, name, phone);
   };
 
   return cancelBtn;
 }
 
+function openCancelConfirmation(date, time, name, phone) {
+  const overlay = document.getElementById('overlay');
+  const modal = document.getElementById('cancel-confirmation');
+  overlay.style.display = 'block';
+  modal.style.display = 'block';
+
+  const confirmBtn = modal.querySelector('.confirm-btn');
+  const cancelBtn = modal.querySelector('.cancel-btn');
+
+  // נקה מאזינים קיימים כדי לא ליצור כפילויות
+  confirmBtn.replaceWith(confirmBtn.cloneNode(true));
+  cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+
+  const newConfirmBtn = modal.querySelector('.confirm-btn');
+  const newCancelBtn = modal.querySelector('.cancel-btn');
+
+  newConfirmBtn.onclick = async () => {
+    try {
+      const resCancel = await fetch('/cancel_appointment', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({date, time, name, phone})
+      });
+      const cancelData = await resCancel.json();
+
+      if (cancelData.message) {
+        alert(cancelData.message);
+        document.getElementById('response').textContent = '';
+        document.getElementById('form-container').style.display = 'none';
+        clearBookingDetailsAndForm();
+        await loadAvailability();
+      } else if (cancelData.error) {
+        alert('שגיאה בביטול התור: ' + cancelData.error);
+      }
+    } catch (e) {
+      alert('שגיאה בבקשת הביטול');
+    }
+    closeCancelConfirmation();
+  };
+
+  newCancelBtn.onclick = () => {
+    closeCancelConfirmation();
+  };
+}
+
+function closeCancelConfirmation() {
+  document.getElementById('overlay').style.display = 'none';
+  document.getElementById('cancel-confirmation').style.display = 'none';
+}
 
 async function showBookingDetails(date, time) {
   // תחפש את הפרטים בהזמנות שהגיעו מהשרת דרך /appointments?date=...
@@ -459,37 +551,34 @@ document.getElementById('bookingForm').onsubmit = async e => {
   });
   const data = await res.json();
   const responseDiv = document.getElementById('response');
-    if (data.message) {
-       responseDiv.style.color = 'green';
-       responseDiv.textContent = data.message;
+  if (data.message) {
+    responseDiv.style.color = 'green';
+    responseDiv.textContent = data.message;
 
-  // הוסף כפתור ביטול מתחת להודעה
-  const cancelBtn = createCancelButton(date, time, name, phone);
-  responseDiv.appendChild(document.createElement('br'));
-  responseDiv.appendChild(cancelBtn);
+    // הוסף כפתור ביטול מתחת להודעה
+    const cancelBtn = createCancelButton(date, time, name, phone);
+    responseDiv.appendChild(document.createElement('br'));
+    responseDiv.appendChild(cancelBtn);
 
-  // לאחר הזמנה מוצלחת טען שוב את הזמינות (כלומר מעדכן שהשעה תפוסה)  
-  await loadAvailability();
+    // לאחר הזמנה מוצלחת טען שוב את הזמינות (כלומר מעדכן שהשעה תפוסה)  
+    await loadAvailability();
 
-  // הסתר את טופס ההזמנה
-  document.getElementById('form-container').style.display = 'none';
+    // הסתר את טופס ההזמנה
+    document.getElementById('form-container').style.display = 'none';
 
-  // הצג את פרטי ההזמנה החדשה מתחת
-  showBookingDetails(date, time);
+    // הצג את פרטי ההזמנה החדשה מתחת
+    showBookingDetails(date, time);
 
-  // סמן את הכפתור של השעה החדשה (כמו לחיצה)
-  const buttons = document.querySelectorAll('#slots-container button.slot-btn.available');
-  buttons.forEach(b => {
-    if (b.textContent === time) {
-      if (selectedButton) selectedButton.classList.remove('selected');
-      b.classList.add('selected');
-      selectedButton = b;
-    }
-  });
-}
-
-  
-  else {
+    // סמן את הכפתור של השעה החדשה (כמו לחיצה)
+    const buttons = document.querySelectorAll('#slots-container button.slot-btn.available');
+    buttons.forEach(b => {
+      if (b.textContent === time) {
+        if (selectedButton) selectedButton.classList.remove('selected');
+        b.classList.add('selected');
+        selectedButton = b;
+      }
+    });
+  } else {
     responseDiv.style.color = 'red';
     responseDiv.textContent = data.error;
   }
