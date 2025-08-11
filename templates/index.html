@@ -483,20 +483,26 @@ function openCancelConfirmation(date, time, name, phone) {
       });
       const cancelData = await resCancel.json();
 
+      const responseDiv = document.getElementById('response');
+
       if (cancelData.message) {
-        alert(cancelData.message);
-        document.getElementById('response').textContent = '';
+        responseDiv.style.color = 'green';
+        responseDiv.textContent = 'התור בוטל בהצלחה.';
         document.getElementById('form-container').style.display = 'none';
         clearBookingDetailsAndForm();
         await loadAvailability();
       } else if (cancelData.error) {
-        alert('שגיאה בביטול התור: ' + cancelData.error);
+        responseDiv.style.color = 'red';
+        responseDiv.textContent = 'שגיאה בביטול התור: ' + cancelData.error;
       }
     } catch (e) {
-      alert('שגיאה בבקשת הביטול');
-    }
+      const responseDiv = document.getElementById('response');
+      responseDiv.style.color = 'red';
+      responseDiv.textContent = 'שגיאה בבקשת הביטול';
+  }
     closeCancelConfirmation();
   };
+
 
   newCancelBtn.onclick = () => {
     closeCancelConfirmation();
