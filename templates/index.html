@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="he">
+<html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -58,10 +58,10 @@
     background: #27ae60;
   }
   .slot-btn.selected {
-    animation: growBtn 0.2s forwards;
-    border: 2px solid black;   
-    box-shadow: 0 0 8px rgba(0,0,0,0.4);  
-  }
+  animation: growBtn 0.2s forwards;
+  border: 2px solid black;   
+  box-shadow: 0 0 8px rgba(0,0,0,0.4);  
+}
   @keyframes growBtn {
     from { transform: scale(1); }
     to { transform: scale(1.2); }
@@ -117,117 +117,59 @@
     margin-bottom: 10px;
     color: #2980b9;
   }
-  #cancel-confirmation {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    width: 320px;
-    transform: translate(-50%, -50%);
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 0 15px rgba(0,0,0,0.25);
-    padding: 20px;
-    z-index: 9999;
-    display: none;
-    text-align: center;
-    font-size: 16px;
-  }
-  #cancel-confirmation button {
-    margin: 10px 10px 0 10px;
-    padding: 10px 16px;
-    border: none;
-    border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
-  }
-  #cancel-confirmation .confirm-btn {
-    background-color: #e74c3c;
-    color: white;
-  }
-  #cancel-confirmation .cancel-btn {
-    background-color: #ccc;
-    color: #333;
-  }
-  #overlay {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.3);
-    z-index: 9998;
-    display: none;
-  }
-  /* בוט AI */
   #botBtn {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    padding: 14px 24px;
+    display: block;
+    margin: 20px auto 0;
+    padding: 12px;
     background: #27ae60;
     color: white;
     border: none;
-    border-radius: 30px;
+    border-radius: 10px;
     font-weight: bold;
     cursor: pointer;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.3);
-    z-index: 10000;
+    width: 260px;
   }
   #bot-window {
     position: fixed;
-    bottom: 70px;
+    bottom: 20px;
     right: 20px;
-    width: 350px;
-    height: 450px;
+    width: 320px;
+    height: 400px;
     background: white;
     border: 1px solid #ccc;
-    border-radius: 12px;
-    box-shadow: 0 0 20px rgba(0,0,0,0.25);
-    padding: 12px;
+    border-radius: 10px;
+    box-shadow: 0 0 14px rgba(0,0,0,0.18);
+    padding: 10px;
     box-sizing: border-box;
     display: none;
+    resize: both;
     font-size: 14px;
-    z-index: 10000;
-    display: flex;
-    flex-direction: column;
   }
   #bot-header {
-    flex-shrink: 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid #ddd;
-    padding-bottom: 8px;
-    margin-bottom: 10px;
+    position: relative;
+    text-align: center;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
   }
-  #bot-header h3 {
-    margin: 0;
-    color: #27ae60;
-  }
-  #bot-close-btn {
+  #bot-expand {
+    position: absolute;
+    left: 8px;
+    top: 8px;
     background: none;
     border: none;
-    font-size: 22px;
-    font-weight: bold;
+    font-size: 20px;
     cursor: pointer;
-    color: #999;
+    color: #555;
   }
   #bot-messages {
-    flex-grow: 1;
+    height: 290px;
     overflow-y: auto;
     border: 1px solid #ddd;
-    padding: 10px;
+    padding: 8px;
     background: #fafafa;
     border-radius: 6px;
     margin-bottom: 10px;
-  }
-  #bot-messages div {
-    margin-bottom: 8px;
-  }
-  #bot-messages .user-msg {
-    text-align: right;
-    color: #2980b9;
-  }
-  #bot-messages .bot-msg {
-    text-align: left;
-    color: #27ae60;
   }
   #bot-input {
     display: flex;
@@ -308,22 +250,12 @@
   </form>
 </div>
 
-<!-- חלונית אישור ביטול תור בתוך הדף -->
-<div id="overlay"></div>
-<div id="cancel-confirmation">
-  <p>בטוח שברצונך לבטל את התור?</p>
-  <button class="confirm-btn">כן, בטל תור</button>
-  <button class="cancel-btn">לא, חזור</button>
-</div>
-
-<!-- כפתור הבוט -->
 <button id="botBtn" onclick="toggleBotWindow()">Need Help? Ask Our AI Bot</button>
 
-<!-- חלון הבוט -->
 <div id="bot-window">
   <div id="bot-header">
-    <h3>AI Assistant</h3>
-    <button id="bot-close-btn" onclick="toggleBotWindow()">×</button>
+    <button id="bot-expand" onclick="resizeBot()">↕</button>
+    <h3>Ask our AI Bot</h3>
   </div>
   <div id="bot-messages"></div>
   <div id="bot-input">
@@ -337,7 +269,7 @@ let allDates = [];
 let availabilityData = {};
 let chosenDate = '';
 let chosenTime = '';
-let selectedButton = null;
+let selectedButton = null;  // לשמור את הכפתור שנבחר
 
 function formatHebrewDay(dateStr) {
   const date = new Date(dateStr);
@@ -448,33 +380,69 @@ function showDayAvailability(date) {
   });
 }
 
-function showBookingDetails(date, time) {
-  fetch(`/appointments?date=${date}`).then(res => {
-    if (!res.ok) {
-      document.getElementById('booking-details').style.display = 'none';
-      return;
+function createCancelButton(date, time, name, phone) {
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = 'בטל תור';
+  cancelBtn.style.marginTop = '10px';
+  cancelBtn.style.padding = '8px 16px';
+  cancelBtn.style.backgroundColor = '#e74c3c';
+  cancelBtn.style.color = 'white';
+  cancelBtn.style.border = 'none';
+  cancelBtn.style.borderRadius = '6px';
+  cancelBtn.style.cursor = 'pointer';
+
+  cancelBtn.onclick = async () => {
+    if (!confirm('האם אתה בטוח שברצונך לבטל את התור?')) return;
+
+    const resCancel = await fetch('/cancel_appointment', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({date, time, name, phone})
+    });
+    const cancelData = await resCancel.json();
+
+    if (cancelData.message) {
+      alert(cancelData.message);
+      document.getElementById('response').textContent = '';
+      document.getElementById('form-container').style.display = 'none';
+      clearBookingDetailsAndForm();
+      await loadAvailability();
+    } else if (cancelData.error) {
+      alert('שגיאה בביטול התור: ' + cancelData.error);
     }
-    return res.json();
-  }).then(data => {
-    if (!data) return;
-    const appointments = data[date] || [];
-    const appt = appointments.find(a => a.time === time);
-    if (appt) {
-      document.getElementById('selected-time').textContent = time;
-      document.getElementById('detail-name').textContent = appt.name;
-      document.getElementById('detail-phone').textContent = appt.phone;
-      document.getElementById('detail-service').textContent = appt.service;
-      document.getElementById('booking-details').style.display = 'block';
-    } else {
-      document.getElementById('booking-details').style.display = 'none';
-    }
-  });
+  };
+
+  return cancelBtn;
+}
+
+
+async function showBookingDetails(date, time) {
+  // תחפש את הפרטים בהזמנות שהגיעו מהשרת דרך /appointments?date=...
+  const res = await fetch(`/appointments?date=${date}`);
+  if (!res.ok) {
+    document.getElementById('booking-details').style.display = 'none';
+    return;
+  }
+  const data = await res.json();
+  const appointments = data[date] || [];
+
+  // חפש הזמנה תואמת שעה
+  const appt = appointments.find(a => a.time === time);
+  if (appt) {
+    document.getElementById('selected-time').textContent = time;
+    document.getElementById('detail-name').textContent = appt.name;
+    document.getElementById('detail-phone').textContent = appt.phone;
+    document.getElementById('detail-service').textContent = appt.service;
+    document.getElementById('booking-details').style.display = 'block';
+  } else {
+    document.getElementById('booking-details').style.display = 'none';
+  }
 }
 
 document.getElementById('bookingForm').onsubmit = async e => {
   e.preventDefault();
-  const name = document.getElementById('name').value.trim();
-  const phone = document.getElementById('phone').value.trim();
+  const name = document.getElementById('name').value;
+  const phone = document.getElementById('phone').value;
   const service = document.getElementById('service').value;
   const date = document.getElementById('date').value;
   const time = document.getElementById('time').value;
@@ -491,149 +459,79 @@ document.getElementById('bookingForm').onsubmit = async e => {
   });
   const data = await res.json();
   const responseDiv = document.getElementById('response');
-  if (data.message) {
-    responseDiv.style.color = 'green';
-    responseDiv.textContent = data.message;
+    if (data.message) {
+       responseDiv.style.color = 'green';
+       responseDiv.textContent = data.message;
 
-    const cancelBtn = createCancelButton(date, time, name, phone);
-    responseDiv.appendChild(document.createElement('br'));
-    responseDiv.appendChild(cancelBtn);
+  // הוסף כפתור ביטול מתחת להודעה
+  const cancelBtn = createCancelButton(date, time, name, phone);
+  responseDiv.appendChild(document.createElement('br'));
+  responseDiv.appendChild(cancelBtn);
 
-    await loadAvailability();
+  // לאחר הזמנה מוצלחת טען שוב את הזמינות (כלומר מעדכן שהשעה תפוסה)  
+  await loadAvailability();
 
-    document.getElementById('form-container').style.display = 'none';
+  // הסתר את טופס ההזמנה
+  document.getElementById('form-container').style.display = 'none';
 
-    showBookingDetails(date, time);
+  // הצג את פרטי ההזמנה החדשה מתחת
+  showBookingDetails(date, time);
 
-    const buttons = document.querySelectorAll('#slots-container button.slot-btn.available');
-    buttons.forEach(b => {
-      if (b.textContent === time) {
-        if (selectedButton) selectedButton.classList.remove('selected');
-        b.classList.add('selected');
-        selectedButton = b;
-      }
-    });
-  } else {
+  // סמן את הכפתור של השעה החדשה (כמו לחיצה)
+  const buttons = document.querySelectorAll('#slots-container button.slot-btn.available');
+  buttons.forEach(b => {
+    if (b.textContent === time) {
+      if (selectedButton) selectedButton.classList.remove('selected');
+      b.classList.add('selected');
+      selectedButton = b;
+    }
+  });
+}
+
+  
+  else {
     responseDiv.style.color = 'red';
     responseDiv.textContent = data.error;
   }
 };
 
-function createCancelButton(date, time, name, phone) {
-  const cancelBtn = document.createElement('button');
-  cancelBtn.textContent = 'בטל תור';
-  cancelBtn.style.marginTop = '10px';
-  cancelBtn.style.padding = '8px 16px';
-  cancelBtn.style.backgroundColor = '#e74c3c';
-  cancelBtn.style.color = 'white';
-  cancelBtn.style.border = 'none';
-  cancelBtn.style.borderRadius = '6px';
-  cancelBtn.style.cursor = 'pointer';
-
-  cancelBtn.onclick = () => {
-    openCancelConfirmation(date, time, name, phone);
-  };
-
-  return cancelBtn;
-}
-
-function openCancelConfirmation(date, time, name, phone) {
-  const overlay = document.getElementById('overlay');
-  const cancelModal = document.getElementById('cancel-confirmation');
-  overlay.style.display = 'block';
-  cancelModal.style.display = 'block';
-
-  cancelModal.querySelector('.confirm-btn').onclick = async () => {
-    await cancelAppointment(date, time, name, phone);
-    closeCancelConfirmation();
-  };
-  cancelModal.querySelector('.cancel-btn').onclick = () => {
-    closeCancelConfirmation();
-  };
-}
-
-function closeCancelConfirmation() {
-  document.getElementById('overlay').style.display = 'none';
-  document.getElementById('cancel-confirmation').style.display = 'none';
-}
-
-async function cancelAppointment(date, time, name, phone) {
-  const res = await fetch('/cancel', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({date, time, name, phone})
-  });
-  const data = await res.json();
-  const responseDiv = document.getElementById('response');
-  if (data.message) {
-    responseDiv.style.color = 'green';
-    responseDiv.textContent = data.message;
-    document.getElementById('booking-details').style.display = 'none';
-    document.getElementById('form-container').style.display = 'none';
-    await loadAvailability();
-    chosenTime = '';
-    document.getElementById('selected-time-display').textContent = '';
-  } else {
-    responseDiv.style.color = 'red';
-    responseDiv.textContent = data.error;
-  }
-}
-
-/* בוט AI */
 function toggleBotWindow() {
-  const botWindow = document.getElementById('bot-window');
-  if (botWindow.style.display === 'flex') {
-    botWindow.style.display = 'none';
-  } else {
-    botWindow.style.display = 'flex';
-  }
+  const bot = document.getElementById('bot-window');
+  bot.style.display = bot.style.display === 'block' ? 'none' : 'block';
 }
 
 async function sendBotMessage() {
   const input = document.getElementById('bot-user-input');
-  const text = input.value.trim();
-  if (!text) return;
-  addBotMessage(text, 'user');
+  const message = input.value.trim();
+  if (!message) return;
+
+  const messagesDiv = document.getElementById('bot-messages');
+  messagesDiv.innerHTML += `<div><b>You:</b> ${message}</div>`;
   input.value = '';
+  const res = await fetch('/ask', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({message})
+  });
+  const data = await res.json();
+  if (data.answer) {
+    messagesDiv.innerHTML += `<div><b>Bot:</b> ${data.answer}</div>`;
+  }
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
 
-  // הדמיית תגובת בוט עם דיליי קטן
-  addBotMessage('...מחפש תשובה...', 'bot');
-
-  try {
-    // כאן הייתם שולחים לשרת את הטקסט ואז מקבלים תשובה, לדוגמא:
-    // const res = await fetch('/bot', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({message:text})});
-    // const data = await res.json();
-
-    // למטרת הדגמה בלבד:
-    setTimeout(() => {
-      removeLastBotMessage();
-      addBotMessage('שלום! איך אוכל לעזור לך? נסה לשאול אותי שאלות על התורים.', 'bot');
-    }, 1500);
-  } catch(e) {
-    removeLastBotMessage();
-    addBotMessage('סליחה, קרתה שגיאה בבוט.', 'bot');
+function resizeBot() {
+  const bot = document.getElementById('bot-window');
+  if (bot.style.width === '520px') {
+    bot.style.width = '320px';
+    bot.style.height = '400px';
+  } else {
+    bot.style.width = '520px';
+    bot.style.height = '520px';
   }
 }
 
-function addBotMessage(text, sender) {
-  const container = document.getElementById('bot-messages');
-  const div = document.createElement('div');
-  div.textContent = text;
-  div.className = sender === 'user' ? 'user-msg' : 'bot-msg';
-  container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
-}
-
-function removeLastBotMessage() {
-  const container = document.getElementById('bot-messages');
-  if (container.lastChild) {
-    container.removeChild(container.lastChild);
-  }
-}
-
-window.onload = () => {
-  loadAvailability();
-};
+loadAvailability();
 </script>
 
 </body>
