@@ -392,8 +392,7 @@ function createCancelButton(date, time, name, phone) {
   cancelBtn.style.cursor = 'pointer';
 
   cancelBtn.onclick = async () => {
-    if (!confirm('האם אתה בטוח שברצונך לבטל את התור?')) return;
-
+    // ללא popup אישור, פשוט מבצע ביטול מיידי
     const resCancel = await fetch('/cancel_appointment', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -402,19 +401,21 @@ function createCancelButton(date, time, name, phone) {
     const cancelData = await resCancel.json();
 
     if (cancelData.message) {
-      alert(cancelData.message);
-      document.getElementById('response').textContent = '';
+      // עדכון UI בלי להראות alert, פשוט משנה טקסט ומסיר טופס
+      document.getElementById('response').style.color = 'green';
+      document.getElementById('response').textContent = cancelData.message;
+
       document.getElementById('form-container').style.display = 'none';
       clearBookingDetailsAndForm();
       await loadAvailability();
     } else if (cancelData.error) {
-      alert('שגיאה בביטול התור: ' + cancelData.error);
+      document.getElementById('response').style.color = 'red';
+      document.getElementById('response').textContent = 'שגיאה בביטול התור: ' + cancelData.error;
     }
   };
 
   return cancelBtn;
 }
-
 
 async function showBookingDetails(date, time) {
   // תחפש את הפרטים בהזמנות שהגיעו מהשרת דרך /appointments?date=...
@@ -460,33 +461,34 @@ document.getElementById('bookingForm').onsubmit = async e => {
   const data = await res.json();
   const responseDiv = document.getElementById('response');
     if (data.message) {
-       responseDiv.style.color = 'green';
-       responseDiv.textContent = data.message;
+      const responseDiv = document.getElementById('response');
+      responseDiv.style.color = 'green';
+      responseDiv.textContent = data.message;
 
-  // הוסף כפתור ביטול מתחת להודעה
-  const cancelBtn = createCancelButton(date, time, name, phone);
-  responseDiv.appendChild(document.createElement('br'));
-  responseDiv.appendChild(cancelBtn);
+      // הוסף כפתור ביטול מתחת להודעה
+      const cancelBtn = createCancelButton(date, time, name, phone);
+      responseDiv.appendChild(document.createElement('br'));
+      responseDiv.appendChild(cancelBtn);
 
-  // לאחר הזמנה מוצלחת טען שוב את הזמינות (כלומר מעדכן שהשעה תפוסה)  
-  await loadAvailability();
+      // רענן זמינות מיידית
+      await loadAvailability();
 
-  // הסתר את טופס ההזמנה
-  document.getElementById('form-container').style.display = 'none';
+      // הסתר את טופס ההזמנה
+      document.getElementById('form-container').style.display = 'none';
 
-  // הצג את פרטי ההזמנה החדשה מתחת
-  showBookingDetails(date, time);
+      // הצג פרטי הזמנה מתחת
+      showBookingDetails(date, time);
 
-  // סמן את הכפתור של השעה החדשה (כמו לחיצה)
-  const buttons = document.querySelectorAll('#slots-container button.slot-btn.available');
-  buttons.forEach(b => {
-    if (b.textContent === time) {
-      if (selectedButton) selectedButton.classList.remove('selected');
-      b.classList.add('selected');
-      selectedButton = b;
+      // סמן את הכפתור של השעה שנבחרה
+      const buttons = document.querySelectorAll('#slots-container button.slot-btn.available');
+      buttons.forEach(b => {
+        if (b.textContent === time) {
+          if (selectedButton) selectedButton.classList.remove('selected');
+          b.classList.add('selected');
+          selectedButton = b;
+        }
+      });
     }
-  });
-}
 
   
   else {
