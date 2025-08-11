@@ -1,0 +1,20 @@
+{
+  "businesses": [
+    {
+      "id": "salon001",
+      "name": "מספרת גלי",
+      "admin_username": "galiadmin",
+      "admin_password_hash": "hash123",
+      "email": "gali@example.com",
+      "settings": { "working_hours": {...}, "services": [...] }
+    },
+    {
+      "id": "cosmetic001",
+      "name": "קוסמטיקאית רינת",
+      "admin_username": "rinatadmin",
+      "admin_password_hash": "hash456",
+      "email": "rinat@example.com",
+      "settings": { "working_hours": {...}, "services": [...] }
+    }
+  ]
+}
