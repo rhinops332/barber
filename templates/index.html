@@ -483,24 +483,34 @@ function openCancelConfirmation(date, time, name, phone) {
       });
       const cancelData = await resCancel.json();
 
-      const responseDiv = document.getElementById('response');
-
       if (cancelData.message) {
-        responseDiv.style.color = 'green';
-        responseDiv.textContent = 'התור בוטל בהצלחה.';
+        // שנה את תוכן החלונית
+        const modal = document.getElementById('cancel-confirmation');
+        modal.innerHTML = `
+          <p>התור בוטל בהצלחה.</p>
+          <button class="close-btn">סגור</button>
+        `;
+
+        // החלף מאזין לכפתור הסגירה
+        const closeBtn = modal.querySelector('.close-btn');
+        closeBtn.onclick = () => {
+          closeCancelConfirmation();
+          // לאחר הסגירה אפשר לשחזר את תוכן החלונית המקורי, אם רוצים
+          resetCancelConfirmationContent();
+        };
+
+        // טען מחדש את הזמינות והסר טפסים
         document.getElementById('form-container').style.display = 'none';
         clearBookingDetailsAndForm();
         await loadAvailability();
       } else if (cancelData.error) {
-        responseDiv.style.color = 'red';
-        responseDiv.textContent = 'שגיאה בביטול התור: ' + cancelData.error;
+        alert('שגיאה בביטול התור: ' + cancelData.error);
+        closeCancelConfirmation();
       }
     } catch (e) {
-      const responseDiv = document.getElementById('response');
-      responseDiv.style.color = 'red';
-      responseDiv.textContent = 'שגיאה בבקשת הביטול';
-  }
-    closeCancelConfirmation();
+      alert('שגיאה בבקשת הביטול');
+      closeCancelConfirmation();
+    }
   };
 
 
