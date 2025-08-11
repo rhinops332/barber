@@ -689,25 +689,9 @@ def cancel_appointment():
     with open(APPOINTMENTS_FILE, 'w', encoding='utf-8') as f:
         json.dump(appointments, f, ensure_ascii=False, indent=2)
 
-    # עדכון השעה ב-overrides: במקום לסמן כבוי, *מוחקים* את השעה מ-overrides כדי שתהיה "רגילה"
-    try:
-        with open(OVERRIDES_FILE, 'r', encoding='utf-8') as f:
-            overrides = json.load(f)
-    except FileNotFoundError:
-        overrides = {}
+    # במידה ואתה שומר סטטוס שעה במקום אחר (למשל schedule או overrides), תעדכן כאן שזו שעה זמינה
 
-    if date in overrides:
-        # מסירים את השעה מהשינויים (אם קיימת)
-        overrides[date] = [slot for slot in overrides[date] if slot['time'] != time]
-
-        # אם אחרי הסינון אין שעות ביום, מוחקים את היום כולו
-        if not overrides[date]:
-            del overrides[date]
-
-    with open(OVERRIDES_FILE, 'w', encoding='utf-8') as f:
-        json.dump(overrides, f, ensure_ascii=False, indent=2)
-
-    return jsonify({'message': f'התור ב-{date} בשעה {time} בוטל בהצלחה.'})
+    return jsonify({'message': f'Appointment on {date} at {time} canceled successfully.'})
 
 # --- שליחת אימייל ---
 
