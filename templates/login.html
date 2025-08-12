@@ -1,213 +1,100 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-    <meta charset="UTF-8" />
-    <title>התחברות למערכת</title>
-    <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(to bottom, #f0f0f0, #dcdcdc);
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 400px;
-            background: #fff;
-            padding: 30px 40px;
-            border-radius: 12px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.1);
-            box-sizing: border-box;
-        }
-
-        h2 {
-            text-align: center;
-            margin-bottom: 25px;
-            color: #333;
-        }
-
-        form {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        input[type="text"],
-        input[type="password"] {
-            padding: 12px 14px;
-            font-size: 16px;
-            border: 1.5px solid #ccc;
-            border-radius: 6px;
-            transition: border-color 0.2s ease;
-        }
-
-        input[type="text"]:focus,
-        input[type="password"]:focus {
-            border-color: #4CAF50;
-            outline: none;
-        }
-
-        .password-wrapper {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-
-        .toggle-password {
-            position: absolute;
-            left: 10px;
-            cursor: pointer;
-            user-select: none;
-            font-size: 14px;
-            color: #777;
-            transition: color 0.2s ease;
-        }
-
-        .toggle-password:hover {
-            color: #333;
-        }
-
-        input[type="submit"] {
-            background-color: #4CAF50;
-            color: white;
-            padding: 14px;
-            font-size: 18px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background-color 0.3s ease;
-        }
-
-        input[type="submit"]:hover {
-            background-color: #45a049;
-        }
-
-        .error {
-            background-color: #fdecea;
-            color: #c0392b;
-            padding: 12px;
-            border-radius: 6px;
-            text-align: center;
-            font-size: 14px;
-        }
-
-        .back-link {
-            text-align: center;
-            margin-top: 18px;
-        }
-
-        .back-link a {
-            color: #555;
-            text-decoration: none;
-            font-size: 14px;
-        }
-
-        .back-link a:hover {
-            text-decoration: underline;
-        }
-
-        /* מוסיף ומוריד את שדה הסיסמה */
-        .password-container {
-            max-height: 0;
-            opacity: 0;
-            overflow: hidden;
-            transition: max-height 0.4s ease, opacity 0.4s ease;
-        }
-
-        .password-container.show {
-            max-height: 100px;
-            opacity: 1;
-            margin-top: 5px;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <title>התחברות למערכת</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      background: white;
+      padding: 30px 40px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      width: 350px;
+      box-sizing: border-box;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 25px;
+      color: #333;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    input[type="text"],
+    input[type="password"] {
+      padding: 12px;
+      font-size: 16px;
+      border: 1.5px solid #ccc;
+      border-radius: 6px;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+    input[type="text"]:focus,
+    input[type="password"]:focus {
+      border-color: #4CAF50;
+    }
+    input[type="submit"] {
+      background-color: #4CAF50;
+      color: white;
+      padding: 14px;
+      font-size: 18px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.3s ease;
+    }
+    input[type="submit"]:hover {
+      background-color: #45a049;
+    }
+    .error {
+      background: #fdecea;
+      color: #c0392b;
+      padding: 12px;
+      border-radius: 6px;
+      text-align: center;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+  </style>
 </head>
 <body>
-
-<div class="container">
+  <div class="container">
     <h2>התחברות</h2>
 
     {% if error %}
-        <div class="error">{{ error }}</div>
+      <div class="error">{{ error }}</div>
     {% endif %}
 
     <form method="POST" autocomplete="off" novalidate>
-        <input
-            type="text"
-            name="username"
-            id="username"
-            placeholder="שם משתמש"
-            value="{{ request.form.username or '' }}"
-            required
-            autofocus
-        >
-
-        <div id="password-container" class="password-container">
-            <div class="password-wrapper">
-                <input
-                    type="password"
-                    name="password"
-                    id="password"
-                    placeholder="סיסמה"
-                />
-                <span class="toggle-password" aria-label="הצג/הסתר סיסמה" role="button" tabindex="0">הצג</span>
-            </div>
-        </div>
-
-        <input type="submit" value="התחבר" />
+      <input
+        type="text"
+        name="username"
+        placeholder="שם משתמש"
+        required
+        value="{{ request.form.username or '' }}"
+        autofocus
+      />
+      <input
+        type="password"
+        name="password"
+        placeholder="סיסמה"
+        required
+      />
+      <input type="submit" value="התחבר" />
     </form>
-
-    <div class="back-link">
-        <a href="/">חזרה לעמוד הראשי</a>
-    </div>
-</div>
-
-<script>
-    const adminUser = "{{ admin_user }}";
-
-    function togglePasswordField() {
-        const username = document.getElementById('username').value.trim();
-        const passwordContainer = document.getElementById('password-container');
-        if (username === adminUser) {
-            passwordContainer.classList.add('show');
-        } else {
-            passwordContainer.classList.remove('show');
-        }
-    }
-
-    function togglePasswordVisibility() {
-        const passwordInput = document.getElementById('password');
-        const toggle = document.querySelector('.toggle-password');
-        if (passwordInput.type === 'password') {
-            passwordInput.type = 'text';
-            toggle.textContent = 'הסתר';
-        } else {
-            passwordInput.type = 'password';
-            toggle.textContent = 'הצג';
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        const usernameInput = document.getElementById('username');
-        const toggle = document.querySelector('.toggle-password');
-
-        usernameInput.addEventListener('input', togglePasswordField);
-        togglePasswordField(); // בדיקה ראשונית בטעינת הדף
-
-        toggle.addEventListener('click', togglePasswordVisibility);
-        toggle.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                togglePasswordVisibility();
-            }
-        });
-    });
-</script>
-
+  </div>
 </body>
 </html>
