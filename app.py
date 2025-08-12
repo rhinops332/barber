@@ -173,20 +173,15 @@ def login():
     host_pass = os.environ.get('HOST_PASSWORD')
 
     if request.method == 'POST':
-        username = request.form['username'].strip()
-        password = request.form.get('password', '')
-
-        if not username or not password:
-            error = "יש להזין שם משתמש וסיסמה"
-            return render_template('login.html', error=error)
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
 
         if username == host_user and password == host_pass:
             session['username'] = username
-            session['is_host'] = True
+            session['is_admin'] = True
             return redirect('/host_command')
-
-        error = "שם משתמש או סיסמה שגויים"
-        return render_template('login.html', error=error)
+        else:
+            error = "שם משתמש או סיסמה שגויים"
 
     return render_template('login.html', error=error)
 
