@@ -178,7 +178,7 @@ def login():
 
         if username == host_user and password == host_pass:
             session['username'] = username
-            session['is_admin'] = True
+            session['is_host'] = True
             return redirect('/host_command')
         else:
             error = "שם משתמש או סיסמה שגויים"
