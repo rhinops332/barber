@@ -790,10 +790,7 @@ def availability():
 
 @app.route("/")
 def index():
-    if not session.get("username"):  # אם לא מחובר משתמש
-        return redirect("/login")     # העבר לדף התחברות
-    week_slots = generate_week_slots()
-    return render_template("index.html", week_slots=week_slots, services=services_prices)
+    return render_template("login.html")
 
 # --- API - שאלות לבוט ---
 
