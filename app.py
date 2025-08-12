@@ -154,13 +154,13 @@ def is_slot_available(date, time):
 def before_request():
     g.username = session.get('username')
     g.is_admin = session.get('is_admin')
-
-# --- החלפת render_template ---
+    g.is_host = session.get('is_host')
 
 def render_template(template_name_or_list, **context):
     context['session'] = {
         'username': g.get('username'),
-        'is_admin': g.get('is_admin')
+        'is_admin': g.get('is_admin'),
+        'is_host': g.get('is_host')
     }
     return original_render_template(template_name_or_list, **context)
 
@@ -169,31 +169,27 @@ def render_template(template_name_or_list, **context):
 @app.route("/login", methods=['GET', 'POST'])
 def login():
     error = None
-    admin_user = os.environ.get('ADMIN_USERNAME')
-    admin_password = os.environ.get('ADMIN_PASSWORD') or "1234"
+    host_user = os.environ.get('HOST_USERNAME')
+    host_pass = os.environ.get('HOST_PASSWORD')
 
     if request.method == 'POST':
         username = request.form['username'].strip()
         password = request.form.get('password', '')
 
-        if not username:
-            error = "יש להזין שם משתמש"
-            return render_template('login.html', error=error, admin_user=admin_user)
+        if not username or not password:
+            error = "יש להזין שם משתמש וסיסמה"
+            return render_template('login.html', error=error)
 
-        if username == admin_user:
-            if password == admin_password:
-                session['username'] = username
-                session['is_admin'] = True
-                return redirect('/main_admin')
-            else:
-                error = "סיסמה שגויה"
-                return render_template('login.html', error=error, admin_user=admin_user)
+        if username == host_user and password == host_pass:
+            session['username'] = username
+            session['is_host'] = True
+            return redirect('/host_command')
 
-        session['username'] = username
-        session['is_admin'] = False
-        return redirect('/')
+        error = "שם משתמש או סיסמה שגויים"
+        return render_template('login.html', error=error)
 
-    return render_template('login.html', error=error, admin_user=admin_user)
+    return render_template('login.html', error=error)
+
 
 @app.route("/logout")
 def logout():
@@ -201,6 +197,13 @@ def logout():
     return redirect("/")
 
 # --- דף ניהול ראשי ---
+
+@app.route('/host_command')
+def host_command():
+    if not session.get('is_host'):
+        return redirect('/login')
+    # הצגת דף הממשק של ההוסט
+    return render_template('host_command.html')
 
 @app.route("/main_admin")
 def main_admin():
