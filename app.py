@@ -788,9 +788,10 @@ def availability():
 
 # --- דף הבית ---
 
-@app.route("/")
+@app.route("/", methods=["GET", "POST"])
 def index():
     return render_template("login.html")
+
 
 # --- API - שאלות לבוט ---
 
