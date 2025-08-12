@@ -1,20 +1,18 @@
-{
-  "businesses": [
-    {
-      "id": "salon001",
-      "name": "מספרת גלי",
-      "admin_username": "galiadmin",
-      "admin_password_hash": "hash123",
-      "email": "gali@example.com",
-      "settings": { "working_hours": {...}, "services": [...] }
-    },
-    {
-      "id": "cosmetic001",
-      "name": "קוסמטיקאית רינת",
-      "admin_username": "rinatadmin",
-      "admin_password_hash": "hash456",
-      "email": "rinat@example.com",
-      "settings": { "working_hours": {...}, "services": [...] }
-    }
-  ]
-}
+[
+  {
+    "id": "1a2b3c4d-1111-2222-3333-444455556666",
+    "business_name": "HairBoss תל אביב",
+    "username": "hairboss_tlv",
+    "password": "1234",
+    "phone": "0501234567",
+    "email": "info@hairboss.co.il"
+  },
+  {
+    "id": "7e8f9g0h-aaaa-bbbb-cccc-ddddeeeeffff",
+    "business_name": "HairBoss חיפה",
+    "username": "hairboss_haifa",
+    "password": "abcd",
+    "phone": "0509876543",
+    "email": "haifa@hairboss.co.il"
+  }
+]
