@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="he">
 <head>
@@ -11,6 +12,7 @@
             margin: 0;
             padding: 0;
         }
+
         .container {
             width: 100%;
             max-width: 400px;
@@ -20,21 +22,26 @@
             border-radius: 12px;
             box-shadow: 0 0 15px rgba(0,0,0,0.1);
         }
+
         h2 {
             text-align: center;
             color: #333;
         }
+
         form {
             display: flex;
             flex-direction: column;
             gap: 15px;
         }
-        select, input[type="text"], input[type="password"] {
+
+        input[type="text"],
+        input[type="password"] {
             padding: 10px;
             border: 1px solid #ccc;
             border-radius: 6px;
             font-size: 16px;
         }
+
         input[type="submit"] {
             background-color: #4CAF50;
             color: white;
@@ -44,9 +51,11 @@
             border-radius: 6px;
             cursor: pointer;
         }
+
         input[type="submit"]:hover {
             background-color: #45a049;
         }
+
         .error {
             color: #c0392b;
             font-size: 14px;
@@ -56,20 +65,34 @@
             text-align: center;
             margin-bottom: 10px;
         }
+
         .back-link {
             text-align: center;
             margin-top: 15px;
         }
+
         .back-link a {
             color: #555;
             text-decoration: none;
         }
+
         .back-link a:hover {
             text-decoration: underline;
         }
+
         .password-container {
             position: relative;
+            opacity: 0;
+            max-height: 0;
+            transition: all 0.3s ease;
+            overflow: hidden;
         }
+
+        .password-container.show {
+            opacity: 1;
+            max-height: 100px;
+        }
+
         .toggle-password {
             position: absolute;
             left: 10px;
@@ -79,6 +102,7 @@
             font-size: 14px;
             color: #777;
         }
+
         .toggle-password:hover {
             color: #333;
         }
@@ -94,16 +118,10 @@
     {% endif %}
 
     <form method="POST">
-        <select name="role" required>
-            <option value="">בחר סוג משתמש</option>
-            <option value="business">עסק</option>
-            <option value="host">מנהל־על</option>
-        </select>
+        <input type="text" name="username" id="username" placeholder="שם משתמש" value="{{ request.form.username or '' }}" required>
 
-        <input type="text" name="username" id="username" placeholder="שם משתמש" required>
-
-        <div class="password-container">
-            <input type="password" name="password" id="password" placeholder="סיסמה" required>
+        <div id="password-container" class="password-container">
+            <input type="password" name="password" id="password" placeholder="סיסמה">
             <span class="toggle-password" onclick="togglePassword()">הצג</span>
         </div>
 
@@ -116,6 +134,19 @@
 </div>
 
 <script>
+    const adminUser = "{{ admin_user }}";
+
+    function togglePasswordField() {
+        const username = document.getElementById('username').value.trim();
+        const passwordContainer = document.getElementById('password-container');
+
+        if (username === adminUser) {
+            passwordContainer.classList.add("show");
+        } else {
+            passwordContainer.classList.remove("show");
+        }
+    }
+
     function togglePassword() {
         const passwordInput = document.getElementById('password');
         const toggle = document.querySelector('.toggle-password');
@@ -127,6 +158,12 @@
             toggle.textContent = "הצג";
         }
     }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const usernameInput = document.getElementById('username');
+        usernameInput.addEventListener('input', togglePasswordField);
+        togglePasswordField(); // להריץ מידית אם הטופס נטען עם ערך
+    });
 </script>
 
 </body>
