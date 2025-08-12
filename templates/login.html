@@ -1,55 +1,87 @@
-
 <!DOCTYPE html>
-<html lang="he">
+<html lang="he" dir="rtl">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <title>התחברות למערכת</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
-            direction: rtl;
             background: linear-gradient(to bottom, #f0f0f0, #dcdcdc);
             margin: 0;
             padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
         }
 
         .container {
             width: 100%;
             max-width: 400px;
-            margin: 80px auto;
-            background-color: #fff;
-            padding: 30px;
+            background: #fff;
+            padding: 30px 40px;
             border-radius: 12px;
             box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            box-sizing: border-box;
         }
 
         h2 {
             text-align: center;
+            margin-bottom: 25px;
             color: #333;
         }
 
         form {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 20px;
         }
 
         input[type="text"],
         input[type="password"] {
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
+            padding: 12px 14px;
             font-size: 16px;
+            border: 1.5px solid #ccc;
+            border-radius: 6px;
+            transition: border-color 0.2s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            border-color: #4CAF50;
+            outline: none;
+        }
+
+        .password-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .toggle-password {
+            position: absolute;
+            left: 10px;
+            cursor: pointer;
+            user-select: none;
+            font-size: 14px;
+            color: #777;
+            transition: color 0.2s ease;
+        }
+
+        .toggle-password:hover {
+            color: #333;
         }
 
         input[type="submit"] {
             background-color: #4CAF50;
             color: white;
-            padding: 12px;
-            font-size: 16px;
+            padding: 14px;
+            font-size: 18px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
         }
 
         input[type="submit"]:hover {
@@ -57,54 +89,41 @@
         }
 
         .error {
-            color: #c0392b;
-            font-size: 14px;
             background-color: #fdecea;
-            padding: 10px;
+            color: #c0392b;
+            padding: 12px;
             border-radius: 6px;
             text-align: center;
-            margin-bottom: 10px;
+            font-size: 14px;
         }
 
         .back-link {
             text-align: center;
-            margin-top: 15px;
+            margin-top: 18px;
         }
 
         .back-link a {
             color: #555;
             text-decoration: none;
+            font-size: 14px;
         }
 
         .back-link a:hover {
             text-decoration: underline;
         }
 
+        /* מוסיף ומוריד את שדה הסיסמה */
         .password-container {
-            position: relative;
-            opacity: 0;
             max-height: 0;
-            transition: all 0.3s ease;
+            opacity: 0;
             overflow: hidden;
+            transition: max-height 0.4s ease, opacity 0.4s ease;
         }
 
         .password-container.show {
-            opacity: 1;
             max-height: 100px;
-        }
-
-        .toggle-password {
-            position: absolute;
-            left: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            cursor: pointer;
-            font-size: 14px;
-            color: #777;
-        }
-
-        .toggle-password:hover {
-            color: #333;
+            opacity: 1;
+            margin-top: 5px;
         }
     </style>
 </head>
@@ -117,15 +136,30 @@
         <div class="error">{{ error }}</div>
     {% endif %}
 
-    <form method="POST">
-        <input type="text" name="username" id="username" placeholder="שם משתמש" value="{{ request.form.username or '' }}" required>
+    <form method="POST" autocomplete="off" novalidate>
+        <input
+            type="text"
+            name="username"
+            id="username"
+            placeholder="שם משתמש"
+            value="{{ request.form.username or '' }}"
+            required
+            autofocus
+        >
 
         <div id="password-container" class="password-container">
-            <input type="password" name="password" id="password" placeholder="סיסמה">
-            <span class="toggle-password" onclick="togglePassword()">הצג</span>
+            <div class="password-wrapper">
+                <input
+                    type="password"
+                    name="password"
+                    id="password"
+                    placeholder="סיסמה"
+                />
+                <span class="toggle-password" aria-label="הצג/הסתר סיסמה" role="button" tabindex="0">הצג</span>
+            </div>
         </div>
 
-        <input type="submit" value="התחבר">
+        <input type="submit" value="התחבר" />
     </form>
 
     <div class="back-link">
@@ -139,30 +173,39 @@
     function togglePasswordField() {
         const username = document.getElementById('username').value.trim();
         const passwordContainer = document.getElementById('password-container');
-
         if (username === adminUser) {
-            passwordContainer.classList.add("show");
+            passwordContainer.classList.add('show');
         } else {
-            passwordContainer.classList.remove("show");
+            passwordContainer.classList.remove('show');
         }
     }
 
-    function togglePassword() {
+    function togglePasswordVisibility() {
         const passwordInput = document.getElementById('password');
         const toggle = document.querySelector('.toggle-password');
-        if (passwordInput.type === "password") {
-            passwordInput.type = "text";
-            toggle.textContent = "הסתר";
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            toggle.textContent = 'הסתר';
         } else {
-            passwordInput.type = "password";
-            toggle.textContent = "הצג";
+            passwordInput.type = 'password';
+            toggle.textContent = 'הצג';
         }
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', () => {
         const usernameInput = document.getElementById('username');
+        const toggle = document.querySelector('.toggle-password');
+
         usernameInput.addEventListener('input', togglePasswordField);
-        togglePasswordField(); // להריץ מידית אם הטופס נטען עם ערך
+        togglePasswordField(); // בדיקה ראשונית בטעינת הדף
+
+        toggle.addEventListener('click', togglePasswordVisibility);
+        toggle.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                togglePasswordVisibility();
+            }
+        });
     });
 </script>
 
