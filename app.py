@@ -219,12 +219,22 @@ def login():
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '').strip()
 
+        # בדיקה של ההוסט
         if username == host_user and password == host_pass:
             session['username'] = username
             session['is_host'] = True
             return redirect('/host_command')
-        else:
-            error = "שם משתמש או סיסמה שגויים"
+
+        # בדיקה של עסק רגיל
+        businesses = load_json("businesses.json")
+        for b in businesses:
+            if b['username'] == username and check_password_hash(b['password_hash'], password):
+                session['username'] = username
+                session['is_host'] = False
+                session['business_name'] = b['business_name']  # שמירת שם העסק
+                return redirect('/main_admin')
+
+        error = "שם משתמש או סיסמה שגויים"
 
     return render_template('login.html', error=error)
 
@@ -341,9 +351,12 @@ def delete_business():
 
 @app.route("/main_admin")
 def main_admin():
-    if not session.get("is_admin"):
-        return redirect("/login")
-    return render_template("main_admin.html")
+    if not session.get('username') or session.get('is_host'):
+        return redirect('/login')
+    
+    business_name = session.get('business_name', 'עסק לא ידוע')
+    return render_template('main_admin.html', business_name=business_name)
+
 
 @app.route("/admin_routine")
 def admin_routine():
