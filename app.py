@@ -56,6 +56,46 @@ def load_one_time_changes():
 def save_one_time_changes(data):
     save_json(ONE_TIME_FILE, data)
 
+DATA_ROOT = "data"
+BUSINESSES_ROOT = os.path.join(DATA_ROOT, "businesses")
+REGISTRY_FILE = os.path.join(DATA_ROOT, "businesses.json")
+
+def ensure_dirs():
+    os.makedirs(BUSINESSES_ROOT, exist_ok=True)
+    if not os.path.exists(REGISTRY_FILE):
+        save_json(REGISTRY_FILE, {"businesses": []})
+
+def load_businesses():
+    ensure_dirs()
+    data = load_json(REGISTRY_FILE)
+    return data.get("businesses", [])
+
+def save_businesses(businesses_list):
+    ensure_dirs()
+    save_json(REGISTRY_FILE, {"businesses": businesses_list})
+
+def valid_code(code: str) -> bool:
+    return bool(re.fullmatch(r"[A-Za-z0-9_-]{3,32}", code or ""))
+
+def create_business_files(business_code: str):
+    """יוצר תיקיית עסק עם 4 קבצי ברירת מחדל"""
+    path = os.path.join(BUSINESSES_ROOT, business_code)
+    os.makedirs(path, exist_ok=True)
+
+    defaults = {
+        "appointments.json": {},               
+        "overrides.json": {},                   
+        "weekly_schedule.json": {               
+            "0": [], "1": [], "2": [], "3": [], "4": [], "5": [], "6": []
+        },
+        "bot_knowledge.json": {"knowledge": ""}  # תוכן ידע של הבוט
+    }
+
+    for filename, content in defaults.items():
+        with open(os.path.join(path, filename), "w", encoding="utf-8") as f:
+            json.dump(content, f, ensure_ascii=False, indent=2)
+
+
 # --- פונקציה שמוציאה את השעות התפוסות מתוך הפגישות ---
 
 def get_booked_times(appointments):
@@ -193,12 +233,108 @@ def logout():
 
 # --- דף ניהול ראשי ---
 
-@app.route('/host_command')
+@app.route('/host_command', methods=['GET'])
 def host_command():
     if not session.get('is_host'):
         return redirect('/login')
-    # הצגת דף הממשק של ההוסט
-    return render_template('host_command.html')
+    businesses = load_businesses()
+    return render_template('host_command.html', businesses=businesses)
+
+@app.route('/add_business', methods=['POST'])
+def add_business():
+    if not session.get('is_host'):
+        return redirect('/login')
+
+    ensure_dirs()
+
+    business_code = request.form.get('business_code', '').strip()
+    business_name = request.form.get('business_name', '').strip()
+    username = request.form.get('username', '').strip()
+    password = request.form.get('password', '').strip()
+    phone = request.form.get('phone', '').strip()
+    email = request.form.get('email', '').strip()
+
+    # ולידציות בסיסיות
+    if not all([business_code, business_name, username, password, phone, email]):
+        return render_template('host_command.html',
+                               businesses=load_businesses(),
+                               error="יש למלא את כל השדות")
+
+    if not valid_code(business_code):
+        return render_template('host_command.html',
+                               businesses=load_businesses(),
+                               error="קוד עסק חייב להיות 3–32 תווים: A-Z,a-z,0-9,_,-")
+
+    businesses = load_businesses()
+
+    # מניעת כפילויות
+    if any(b.get("business_code") == business_code for b in businesses):
+        return render_template('host_command.html',
+                               businesses=businesses,
+                               error="קוד העסק כבר קיים")
+    if any(b.get("username") == username for b in businesses):
+        return render_template('host_command.html',
+                               businesses=businesses,
+                               error="שם המשתמש כבר בשימוש")
+
+    # יצירת קבצים לתיקיית העסק
+    try:
+        create_business_files(business_code)
+    except Exception as e:
+        return render_template('host_command.html',
+                               businesses=businesses,
+                               error=f"שגיאה ביצירת קבצי העסק: {e}")
+
+    # הוספה לרשומת העסקים (סיסמה בהאש)
+    businesses.append({
+        "business_code": business_code,
+        "business_name": business_name,
+        "username": username,
+        "password_hash": generate_password_hash(password),
+        "phone": phone,
+        "email": email,
+        "created_at": datetime.utcnow().isoformat() + "Z"
+    })
+    save_businesses(businesses)
+
+    return render_template('host_command.html',
+                           businesses=businesses,
+                           msg=f"העסק '{business_name}' נוצר בהצלחה")
+
+@app.route('/delete_business', methods=['POST'])
+def delete_business():
+    if not session.get('is_host'):
+        return redirect('/login')
+
+    username = request.form.get('username', '').strip()
+    businesses = load_businesses()
+    entry = next((b for b in businesses if b.get("username") == username), None)
+
+    if not entry:
+        return render_template('host_command.html',
+                               businesses=businesses,
+                               error="העסק לא נמצא")
+
+    # הסרת הרשומה
+    businesses = [b for b in businesses if b.get("username") != username]
+    save_businesses(businesses)
+
+    # מחיקת תיקיית העסק (לפי business_code)
+    try:
+        bcode = entry.get("business_code")
+        bpath = os.path.join(BUSINESSES_ROOT, bcode)
+        if os.path.isdir(bpath):
+            shutil.rmtree(bpath)
+    except Exception as e:
+        # אם המחיקה נכשלה, נציג אזהרה אבל נשאיר את המחיקה מהרישום
+        return render_template('host_command.html',
+                               businesses=businesses,
+                               error=f"העסק הוסר מהרשימה, אך מחיקת התיקייה נכשלה: {e}")
+
+    return render_template('host_command.html',
+                           businesses=businesses,
+                           msg="העסק נמחק בהצלחה")
+
 
 @app.route("/main_admin")
 def main_admin():
