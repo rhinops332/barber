@@ -28,6 +28,8 @@ services_prices = {
 
 # --- פונקציות עזר ---
 
+import os
+
 def load_json(filename):
     if not os.path.exists(filename):
         return {}
@@ -48,58 +50,57 @@ def save_text(filename, content):
     with open(filename, "w", encoding="utf-8") as f:
         f.write(content.strip())
 
+# --- פונקציות עסקיות אוטומטיות לפי שם העסק מה-session ---
+
+def load_weekly_schedule():
+    business_name = session.get('business_name')
+    path = os.path.join("businesses", business_name, "weekly_schedule.json")
+    return load_json(path)
+
+def save_weekly_schedule(data):
+    business_name = session.get('business_name')
+    path = os.path.join("businesses", business_name, "weekly_schedule.json")
+    save_json(path, data)
+
+def load_overrides():
+    business_name = session.get('business_name')
+    path = os.path.join("businesses", business_name, "overrides.json")
+    return load_json(path)
+
+def save_overrides(data):
+    business_name = session.get('business_name')
+    path = os.path.join("businesses", business_name, "overrides.json")
+    save_json(path, data)
+
 def load_appointments():
-    return load_json(APPOINTMENTS_FILE)
+    business_name = session.get('business_name')
+    path = os.path.join("businesses", business_name, "appointments.json")
+    return load_json(path)
 
 def save_appointments(data):
-    save_json(APPOINTMENTS_FILE, data)
+    business_name = session.get('business_name')
+    path = os.path.join("businesses", business_name, "appointments.json")
+    save_json(path, data)
 
 def load_one_time_changes():
-    return load_json(ONE_TIME_FILE)
+    business_name = session.get('business_name')
+    path = os.path.join("businesses", business_name, "one_time_changes.json")
+    return load_json(path)
 
 def save_one_time_changes(data):
-    save_json(ONE_TIME_FILE, data)
+    business_name = session.get('business_name')
+    path = os.path.join("businesses", business_name, "one_time_changes.json")
+    save_json(path, data)
 
-# --- נתיב קבצים של עסקים ---
+def load_bot_knowledge():
+    business_name = session.get('business_name')
+    path = os.path.join("businesses", business_name, "bot_knowledge.txt")
+    return load_text(path)
 
-DATA_ROOT = "data"
-BUSINESSES_ROOT = os.path.join(DATA_ROOT, "businesses")
-REGISTRY_FILE = os.path.join(BUSINESSES_ROOT, "businesses.json")
-
-def ensure_dirs():
-    os.makedirs(BUSINESSES_ROOT, exist_ok=True)
-    if not os.path.exists(REGISTRY_FILE):
-        save_json(REGISTRY_FILE, {"businesses": []})
-
-def load_businesses():
-    ensure_dirs()
-    data = load_json(REGISTRY_FILE)
-    return data.get("businesses", [])
-
-def save_businesses(businesses_list):
-    ensure_dirs()
-    save_json(REGISTRY_FILE, {"businesses": businesses_list})
-
-def valid_code(code: str) -> bool:
-    return bool(re.fullmatch(r"[A-Za-z0-9_-]{3,32}", code or ""))
-
-def create_business_files(business_code: str):
-    """יוצר תיקיית עסק עם 4 קבצי ברירת מחדל"""
-    path = os.path.join(BUSINESSES_ROOT, business_code)
-    os.makedirs(path, exist_ok=True)
-
-    defaults = {
-        "appointments.json": {},               
-        "overrides.json": {},                   
-        "weekly_schedule.json": {               
-            "0": [], "1": [], "2": [], "3": [], "4": [], "5": [], "6": []
-        },
-        "bot_knowledge.json": {"knowledge": ""}  # תוכן ידע של הבוט
-    }
-
-    for filename, content in defaults.items():
-        with open(os.path.join(path, filename), "w", encoding="utf-8") as f:
-            json.dump(content, f, ensure_ascii=False, indent=2)
+def save_bot_knowledge(content):
+    business_name = session.get('business_name')
+    path = os.path.join("businesses", business_name, "bot_knowledge.txt")
+    save_text(path, content)
 
 # --- יצירת קבצים לכל עסק ---
 
@@ -128,6 +129,13 @@ def create_business_files(business_name):
                 json.dump({}, f, ensure_ascii=False, indent=4)
 
     print(f"נוצרו קבצים עבור העסק '{business_name}' בתוך '{business_path}' עם תוכן התחלתי זהה לקיימים")
+
+def get_business_details(username, password, file_path="businesses.json"):
+    businesses = load_json(file_path)
+    for business_name, details in businesses.items():
+        if details.get("username") == username and details.get("password") == password:
+            return business_name, details.get("email"), details.get("phone")
+    return None, None, None
 
 
 # --- שעות תפוסות ושבועי ---
@@ -254,24 +262,36 @@ def login():
             return redirect('/host_command')
 
         # בדיקה של עסק רגיל
-        businesses = load_businesses()
-        for b in businesses:
-            if b['username'] == username and check_password_hash(b['password_hash'], password):
-                session['username'] = username
-                session['is_host'] = False
-                session['is_admin'] = True
-                session['business_name'] = b['business_name']
-                return redirect('/main_admin')
+        business_name, email, phone = get_business_details(username, password)
+        if business_name:
+            session['username'] = username
+            session['is_host'] = False
+            session['is_admin'] = True
+            session['business_name'] = business_name
+            session['business_email'] = email
+            session['business_phone'] = phone
+            return redirect('/main_admin')
 
         error = "שם משתמש או סיסמה שגויים"
 
     return render_template('login.html', error=error)
 
-
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/")
+
+@app.route('/dashboard')
+def dashboard():
+    if not session.get('is_admin'):
+        return redirect('/login')
+
+    name = session.get('business_name')
+    email = session.get('email')
+    phone = session.get('phone')
+
+    return f"שלום {name}, המייל שלך: {email}, הטלפון: {phone}"
+
 
 # --- דף ניהול ראשי ---
 
