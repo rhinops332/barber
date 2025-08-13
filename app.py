@@ -12,6 +12,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "default_secret")
 
+# --- קבצים ---
 WEEKLY_SCHEDULE_FILE = "weekly_schedule.json"
 OVERRIDES_FILE = "overrides.json"
 BOT_KNOWLEDGE_FILE = "bot_knowledge.txt"
@@ -59,9 +60,11 @@ def load_one_time_changes():
 def save_one_time_changes(data):
     save_json(ONE_TIME_FILE, data)
 
+# --- נתיב קבצים של עסקים ---
+
 DATA_ROOT = "data"
 BUSINESSES_ROOT = os.path.join(DATA_ROOT, "businesses")
-REGISTRY_FILE = os.path.join(DATA_ROOT, "businesses.json")
+REGISTRY_FILE = os.path.join(BUSINESSES_ROOT, "businesses.json")
 
 def ensure_dirs():
     os.makedirs(BUSINESSES_ROOT, exist_ok=True)
@@ -99,32 +102,30 @@ def create_business_files(business_code: str):
             json.dump(content, f, ensure_ascii=False, indent=2)
 
 
-# --- פונקציה שמוציאה את השעות התפוסות מתוך הפגישות ---
+# --- שעות תפוסות ושבועי ---
 
 def get_booked_times(appointments):
     booked = {}
     for date, apps_list in appointments.items():
         times = []
         for app in apps_list:
-            time = app.get('time')  # הנחה שמפתח הזמן נקרא 'time'
+            time = app.get('time')
             if time:
                 times.append(time)
         booked[date] = times
     return booked
 
-# --- יצירת רשימת שעות שבועית עם שינויים ---
-
 def get_source(t, scheduled, added, removed, edits, disabled_day, booked_times):
     if t in booked_times:
-        return "booked"          # אדום - תפוס ע"י לקוח
+        return "booked"          
     for edit in edits:
         if t == edit['to']:
-            return "edited"      # כחול - ערוך
+            return "edited"      
     if t in added and t not in scheduled:
-        return "added"           # צהוב - חדש
+        return "added"           
     if t in scheduled and (t in removed or disabled_day):
-        return "disabled"        # אפור - מושבת ע"י אדמין
-    return "base"                # ירוק - בסיסי
+        return "disabled"        
+    return "base"                
 
 def generate_week_slots(with_sources=False):
     weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
@@ -164,7 +165,6 @@ def generate_week_slots(with_sources=False):
                 else:
                     final_times.append({"time": t, "available": True})
                 continue
-
             if t in edited_from_times:
                 continue
 
@@ -180,7 +180,6 @@ def generate_week_slots(with_sources=False):
 
     return week_slots
 
-
 def is_slot_available(date, time):
     week_slots = generate_week_slots()
     day_info = week_slots.get(date)
@@ -191,7 +190,7 @@ def is_slot_available(date, time):
             return True
     return False
 
-# --- לפני כל בקשה - העברת session ל-g ---
+# --- לפני כל בקשה ---
 
 @app.before_request
 def before_request():
@@ -223,15 +222,17 @@ def login():
         if username == host_user and password == host_pass:
             session['username'] = username
             session['is_host'] = True
+            session['is_admin'] = True
             return redirect('/host_command')
 
         # בדיקה של עסק רגיל
-        businesses = load_json("businesses.json")
+        businesses = load_businesses()
         for b in businesses:
             if b['username'] == username and check_password_hash(b['password_hash'], password):
                 session['username'] = username
                 session['is_host'] = False
-                session['business_name'] = b['business_name']  # שמירת שם העסק
+                session['is_admin'] = True
+                session['business_name'] = b['business_name']
                 return redirect('/main_admin')
 
         error = "שם משתמש או סיסמה שגויים"
