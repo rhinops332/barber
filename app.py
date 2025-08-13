@@ -101,6 +101,34 @@ def create_business_files(business_code: str):
         with open(os.path.join(path, filename), "w", encoding="utf-8") as f:
             json.dump(content, f, ensure_ascii=False, indent=2)
 
+# --- יצירת קבצים לכל עסק ---
+
+def create_business_files(business_name):
+    base_path = "businesses"  # התיקייה הראשית של כל העסקים
+    business_path = os.path.join(base_path, business_name)
+    os.makedirs(business_path, exist_ok=True)
+
+    # רשימת הקבצים שצריך להעתיק
+    files = [
+        "appointments.json",
+        "overrides.json",
+        "weekly_schedule.json",
+        "bot_knowledge.json"
+    ]
+
+    for file_name in files:
+        source_path = file_name  # קובץ קיים בשורש
+        dest_path = os.path.join(business_path, file_name)
+
+        if os.path.exists(source_path):
+            shutil.copy2(source_path, dest_path)
+        else:
+            # אם הקובץ לא קיים בשורש, ניצור קובץ ריק
+            with open(dest_path, "w", encoding="utf-8") as f:
+                json.dump({}, f, ensure_ascii=False, indent=4)
+
+    print(f"נוצרו קבצים עבור העסק '{business_name}' בתוך '{business_path}' עם תוכן התחלתי זהה לקיימים")
+
 
 # --- שעות תפוסות ושבועי ---
 
