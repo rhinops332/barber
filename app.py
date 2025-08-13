@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, render_template as original_render_template, redirect, session, g
 import smtplib
 from email.message import EmailMessage
+import re
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "default_secret")
