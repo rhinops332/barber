@@ -6,6 +6,7 @@ from flask import Flask, request, jsonify, render_template as original_render_te
 import smtplib
 from email.message import EmailMessage
 import re
+import shutil
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
