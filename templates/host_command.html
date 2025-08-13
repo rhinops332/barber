@@ -4,76 +4,21 @@
 <meta charset="UTF-8">
 <title>ניהול עסקים - Host Command</title>
 <style>
-    body {
-        font-family: Arial, sans-serif;
-        direction: rtl;
-        background: linear-gradient(to bottom, #f4f4f4, #e6e6e6);
-        margin: 0;
-        padding: 0;
-    }
-    .container {
-        max-width: 600px;
-        margin: 40px auto;
-        background: #fff;
-        padding: 25px;
-        border-radius: 10px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    h1 {
-        text-align: center;
-        margin-bottom: 20px;
-        color: #333;
-    }
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 30px;
-    }
-    th, td {
-        padding: 12px;
-        border-bottom: 1px solid #ddd;
-        text-align: center;
-    }
-    th {
-        background-color: #f8f8f8;
-    }
-    tr:hover {
-        background-color: #f9f9f9;
-    }
-    button {
-        padding: 10px 16px;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 14px;
-    }
-    .btn-delete {
-        background-color: #e74c3c;
-        color: white;
-    }
-    .btn-add {
-        background-color: #2ecc71;
-        color: white;
-        margin-top: 10px;
-        width: 100%;
-    }
-    form.add-business-form {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-    input {
-        padding: 10px;
-        border-radius: 6px;
-        border: 1px solid #ccc;
-        width: 100%;
-        box-sizing: border-box;
-    }
-    .actions {
-        display: flex;
-        gap: 5px;
-        justify-content: center;
-    }
+    body { font-family: Arial, sans-serif; direction: rtl; background: linear-gradient(to bottom, #f4f4f4, #e6e6e6); margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: 40px auto; background: #fff; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    h1 { text-align: center; margin-bottom: 20px; color: #333; }
+    .msg { margin-bottom: 15px; padding: 10px; border-radius: 6px; background:#ecf9ec; color:#2e7d32; }
+    .err { margin-bottom: 15px; padding: 10px; border-radius: 6px; background:#fdecea; color:#c0392b; }
+    form.add-business-form { display: flex; flex-direction: column; gap: 10px; }
+    input { padding: 10px; border-radius: 6px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; }
+    button { padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
+    .btn-add { background-color: #2ecc71; color: white; margin-top: 10px; width: 100%; }
+    table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+    th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: center; }
+    th { background-color: #f8f8f8; }
+    tr:hover { background-color: #f9f9f9; }
+    .btn-delete { background-color: #e74c3c; color: white; }
+    .actions { display: flex; gap: 5px; justify-content: center; }
 </style>
 </head>
 <body>
@@ -81,8 +26,12 @@
 <div class="container">
     <h1>ניהול עסקים</h1>
 
-    <!-- טופס הוספת עסק חדש -->
-    <form method="POST" action="/add_business" class="add-business-form">
+    {% if msg %}<div class="msg">{{ msg }}</div>{% endif %}
+    {% if error %}<div class="err">{{ error }}</div>{% endif %}
+
+    <!-- טופס הוספת עסק חדש (בטור) -->
+    <form method="POST" action="/add_business" class="add-business-form" autocomplete="off" novalidate>
+        <input type="text" name="business_code" placeholder="קוד עסק (A-Z,a-z,0-9,_,-)" required>
         <input type="text" name="business_name" placeholder="שם העסק" required>
         <input type="text" name="username" placeholder="שם משתמש" required>
         <input type="password" name="password" placeholder="סיסמה" required>
@@ -95,6 +44,7 @@
     <table>
         <thead>
             <tr>
+                <th>קוד עסק</th>
                 <th>שם עסק</th>
                 <th>שם משתמש</th>
                 <th>טלפון</th>
@@ -105,6 +55,7 @@
         <tbody>
             {% for b in businesses %}
             <tr>
+                <td>{{ b.business_code }}</td>
                 <td>{{ b.business_name }}</td>
                 <td>{{ b.username }}</td>
                 <td>{{ b.phone }}</td>
@@ -116,6 +67,8 @@
                     </form>
                 </td>
             </tr>
+            {% else %}
+            <tr><td colspan="6">אין עסקים עדיין.</td></tr>
             {% endfor %}
         </tbody>
     </table>
