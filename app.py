@@ -84,22 +84,40 @@ def valid_code(code: str) -> bool:
     return bool(re.fullmatch(r"[A-Za-z0-9_-]{3,32}", code or ""))
 
 def create_business_files(business_code: str):
-    """יוצר תיקיית עסק עם 4 קבצי ברירת מחדל"""
+    """יוצר תיקיית עסק עם 4 קבצי ברירת מחדל:
+       - appointments.json, overrides.json, weekly_schedule.json מועתקים מהשורש אם קיימים; אחרת נוצרים ריקים/ברירת מחדל.
+       - bot_knowledge.json נוצר ריק.
+    """
     path = os.path.join(BUSINESSES_ROOT, business_code)
     os.makedirs(path, exist_ok=True)
 
-    defaults = {
-        "appointments.json": {},               
-        "overrides.json": {},                   
-        "weekly_schedule.json": {               
-            "0": [], "1": [], "2": [], "3": [], "4": [], "5": [], "6": []
-        },
-        "bot_knowledge.json": {"knowledge": ""}  # תוכן ידע של הבוט
-    }
+    # קבצים להעתקה משורש הפרויקט אל תיקיית העסק
+    default_files = [
+        "appointments.json",
+        "overrides.json",
+        "weekly_schedule.json"
+    ]
 
-    for filename, content in defaults.items():
-        with open(os.path.join(path, filename), "w", encoding="utf-8") as f:
-            json.dump(content, f, ensure_ascii=False, indent=2)
+    for filename in default_files:
+        src = filename  # בקובץ הראשי (שורש הפרויקט)
+        dest = os.path.join(path, filename)
+
+        if os.path.exists(src):
+            # העתקה מלאה עם מטא־דאטה
+            shutil.copy2(src, dest)
+        else:
+            # אם אין קובץ בשורש – ניצור תוכן ברירת־מחדל סביר
+            with open(dest, "w", encoding="utf-8") as f:
+                if filename == "weekly_schedule.json":
+                    json.dump({"0": [], "1": [], "2": [], "3": [], "4": [], "5": [], "6": []},
+                              f, ensure_ascii=False, indent=2)
+                else:
+                    json.dump({}, f, ensure_ascii=False, indent=2)
+
+    # bot_knowledge.json ריק בתיקיית העסק (בהתאם לבקשה)
+    bot_knowledge_path = os.path.join(path, "bot_knowledge.json")
+    with open(bot_knowledge_path, "w", encoding="utf-8") as f:
+        json.dump({"knowledge": ""}, f, ensure_ascii=False, indent=2)
 
 
 # --- שעות תפוסות ושבועי ---
