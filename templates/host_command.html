@@ -12,7 +12,7 @@
         padding: 0;
     }
     .container {
-        max-width: 900px;
+        max-width: 600px;
         margin: 40px auto;
         background: #fff;
         padding: 25px;
@@ -27,7 +27,7 @@
     table {
         width: 100%;
         border-collapse: collapse;
-        margin-bottom: 30px;
+        margin-top: 30px;
     }
     th, td {
         padding: 12px;
@@ -41,7 +41,7 @@
         background-color: #f9f9f9;
     }
     button {
-        padding: 8px 14px;
+        padding: 10px 16px;
         border: none;
         border-radius: 6px;
         cursor: pointer;
@@ -51,24 +51,23 @@
         background-color: #e74c3c;
         color: white;
     }
-    .btn-edit {
-        background-color: #3498db;
-        color: white;
-    }
     .btn-add {
         background-color: #2ecc71;
         color: white;
-        margin-bottom: 15px;
+        margin-top: 10px;
+        width: 100%;
     }
-    form {
-        display: grid;
+    form.add-business-form {
+        display: flex;
+        flex-direction: column;
         gap: 10px;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     }
     input {
         padding: 10px;
         border-radius: 6px;
         border: 1px solid #ccc;
+        width: 100%;
+        box-sizing: border-box;
     }
     .actions {
         display: flex;
@@ -83,7 +82,7 @@
     <h1>ניהול עסקים</h1>
 
     <!-- טופס הוספת עסק חדש -->
-    <form method="POST" action="/add_business">
+    <form method="POST" action="/add_business" class="add-business-form">
         <input type="text" name="business_name" placeholder="שם העסק" required>
         <input type="text" name="username" placeholder="שם משתמש" required>
         <input type="password" name="password" placeholder="סיסמה" required>
@@ -115,7 +114,6 @@
                         <input type="hidden" name="username" value="{{ b.username }}">
                         <button type="submit" class="btn-delete">🗑 מחק</button>
                     </form>
-                    <!-- עריכה תתבצע בעתיד ב־AJAX -->
                 </td>
             </tr>
             {% endfor %}
