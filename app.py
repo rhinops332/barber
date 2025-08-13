@@ -12,7 +12,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "default_secret")
 
-# --- קבצים ---
 WEEKLY_SCHEDULE_FILE = "weekly_schedule.json"
 OVERRIDES_FILE = "overrides.json"
 BOT_KNOWLEDGE_FILE = "bot_knowledge.txt"
@@ -60,11 +59,9 @@ def load_one_time_changes():
 def save_one_time_changes(data):
     save_json(ONE_TIME_FILE, data)
 
-# --- נתיב קבצים של עסקים ---
-
 DATA_ROOT = "data"
 BUSINESSES_ROOT = os.path.join(DATA_ROOT, "businesses")
-REGISTRY_FILE = os.path.join(BUSINESSES_ROOT, "businesses.json")
+REGISTRY_FILE = os.path.join(DATA_ROOT, "businesses.json")
 
 def ensure_dirs():
     os.makedirs(BUSINESSES_ROOT, exist_ok=True)
@@ -84,66 +81,50 @@ def valid_code(code: str) -> bool:
     return bool(re.fullmatch(r"[A-Za-z0-9_-]{3,32}", code or ""))
 
 def create_business_files(business_code: str):
-    """יוצר תיקיית עסק עם 4 קבצי ברירת מחדל:
-       - appointments.json, overrides.json, weekly_schedule.json מועתקים מהשורש אם קיימים; אחרת נוצרים ריקים/ברירת מחדל.
-       - bot_knowledge.json נוצר ריק.
-    """
+    """יוצר תיקיית עסק עם 4 קבצי ברירת מחדל"""
     path = os.path.join(BUSINESSES_ROOT, business_code)
     os.makedirs(path, exist_ok=True)
 
-    # קבצים להעתקה משורש הפרויקט אל תיקיית העסק
-    default_files = [
-        "appointments.json",
-        "overrides.json",
-        "weekly_schedule.json"
-    ]
+    defaults = {
+        "appointments.json": {},               
+        "overrides.json": {},                   
+        "weekly_schedule.json": {               
+            "0": [], "1": [], "2": [], "3": [], "4": [], "5": [], "6": []
+        },
+        "bot_knowledge.json": {"knowledge": ""}  # תוכן ידע של הבוט
+    }
 
-    for filename in default_files:
-        src = filename  # בקובץ הראשי (שורש הפרויקט)
-        dest = os.path.join(path, filename)
-
-        if os.path.exists(src):
-            # העתקה מלאה עם מטא־דאטה
-            shutil.copy2(src, dest)
-        else:
-            # אם אין קובץ בשורש – ניצור תוכן ברירת־מחדל סביר
-            with open(dest, "w", encoding="utf-8") as f:
-                if filename == "weekly_schedule.json":
-                    json.dump({"0": [], "1": [], "2": [], "3": [], "4": [], "5": [], "6": []},
-                              f, ensure_ascii=False, indent=2)
-                else:
-                    json.dump({}, f, ensure_ascii=False, indent=2)
-
-    # bot_knowledge.json ריק בתיקיית העסק (בהתאם לבקשה)
-    bot_knowledge_path = os.path.join(path, "bot_knowledge.json")
-    with open(bot_knowledge_path, "w", encoding="utf-8") as f:
-        json.dump({"knowledge": ""}, f, ensure_ascii=False, indent=2)
+    for filename, content in defaults.items():
+        with open(os.path.join(path, filename), "w", encoding="utf-8") as f:
+            json.dump(content, f, ensure_ascii=False, indent=2)
 
 
-# --- שעות תפוסות ושבועי ---
+# --- פונקציה שמוציאה את השעות התפוסות מתוך הפגישות ---
 
 def get_booked_times(appointments):
     booked = {}
     for date, apps_list in appointments.items():
         times = []
         for app in apps_list:
-            time = app.get('time')
+            time = app.get('time')  # הנחה שמפתח הזמן נקרא 'time'
             if time:
                 times.append(time)
         booked[date] = times
     return booked
 
+# --- יצירת רשימת שעות שבועית עם שינויים ---
+
 def get_source(t, scheduled, added, removed, edits, disabled_day, booked_times):
     if t in booked_times:
-        return "booked"          
+        return "booked"          # אדום - תפוס ע"י לקוח
     for edit in edits:
         if t == edit['to']:
-            return "edited"      
+            return "edited"      # כחול - ערוך
     if t in added and t not in scheduled:
-        return "added"           
+        return "added"           # צהוב - חדש
     if t in scheduled and (t in removed or disabled_day):
-        return "disabled"        
-    return "base"                
+        return "disabled"        # אפור - מושבת ע"י אדמין
+    return "base"                # ירוק - בסיסי
 
 def generate_week_slots(with_sources=False):
     weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
@@ -183,6 +164,7 @@ def generate_week_slots(with_sources=False):
                 else:
                     final_times.append({"time": t, "available": True})
                 continue
+
             if t in edited_from_times:
                 continue
 
@@ -198,6 +180,7 @@ def generate_week_slots(with_sources=False):
 
     return week_slots
 
+
 def is_slot_available(date, time):
     week_slots = generate_week_slots()
     day_info = week_slots.get(date)
@@ -208,7 +191,7 @@ def is_slot_available(date, time):
             return True
     return False
 
-# --- לפני כל בקשה ---
+# --- לפני כל בקשה - העברת session ל-g ---
 
 @app.before_request
 def before_request():
@@ -236,24 +219,12 @@ def login():
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '').strip()
 
-        # בדיקה של ההוסט
         if username == host_user and password == host_pass:
             session['username'] = username
             session['is_host'] = True
-            session['is_admin'] = True
             return redirect('/host_command')
-
-        # בדיקה של עסק רגיל
-        businesses = load_businesses()
-        for b in businesses:
-            if b['username'] == username and check_password_hash(b['password_hash'], password):
-                session['username'] = username
-                session['is_host'] = False
-                session['is_admin'] = True
-                session['business_name'] = b['business_name']
-                return redirect('/main_admin')
-
-        error = "שם משתמש או סיסמה שגויים"
+        else:
+            error = "שם משתמש או סיסמה שגויים"
 
     return render_template('login.html', error=error)
 
@@ -370,12 +341,9 @@ def delete_business():
 
 @app.route("/main_admin")
 def main_admin():
-    if not session.get('username') or session.get('is_host'):
-        return redirect('/login')
-    
-    business_name = session.get('business_name', 'עסק לא ידוע')
-    return render_template('main_admin.html', business_name=business_name)
-
+    if not session.get("is_admin"):
+        return redirect("/login")
+    return render_template("main_admin.html")
 
 @app.route("/admin_routine")
 def admin_routine():
