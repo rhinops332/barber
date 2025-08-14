@@ -299,7 +299,7 @@ def dashboard():
 def host_command():
     if not session.get('is_host'):
         return redirect('/login')
-    businesses = add_businesses()
+    businesses = add_business()
     return render_template('host_command.html', businesses=businesses)
 
 @app.route('/add_business', methods=['POST'])
