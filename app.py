@@ -13,13 +13,7 @@ app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "default_secret")
 
 # --- קבצים ---
-WEEKLY_SCHEDULE_FILE = "weekly_schedule.json"
-OVERRIDES_FILE = "overrides.json"
-BOT_KNOWLEDGE_FILE = "bot_knowledge.txt"
-APPOINTMENTS_FILE = "appointments.json"
-ONE_TIME_FILE = "one_time_changes.json"  
 BUSINESSES_FILE = "businesses.json"
-
 
 services_prices = {
     "Men's Haircut": 80,
@@ -56,76 +50,83 @@ def load_businesses():
 def save_businesses(data):
     save_json(BUSINESSES_FILE, data)
 
-# --- פונקציות עסקיות אוטומטיות לפי שם העסק מה-session ---
+# --- פונקציות עסקיות לכל עסק ---
+
+def get_business_files_path(business_name):
+    return os.path.join("businesses", business_name)
+
+def ensure_business_files(business_name):
+    base_path = get_business_files_path(business_name)
+    os.makedirs(base_path, exist_ok=True)
+
+    files_defaults = {
+        "weekly_schedule.json": {
+            "0": [], "1": [], "2": [], "3": [], "4": [], "5": [], "6": []
+        },
+        "overrides.json": {},
+        "appointments.json": {},
+        "one_time_changes.json": {},
+        "bot_knowledge.txt": ""
+    }
+
+    for fname, default_content in files_defaults.items():
+        fpath = os.path.join(base_path, fname)
+        if not os.path.exists(fpath):
+            if fname.endswith(".txt"):
+                save_text(fpath, default_content)
+            else:
+                save_json(fpath, default_content)
 
 def load_weekly_schedule(business_name):
-    path = os.path.join("businesses", business_name, "weekly_schedule.json")
+    ensure_business_files(business_name)
+    path = os.path.join(get_business_files_path(business_name), "weekly_schedule.json")
     return load_json(path)
 
 def save_weekly_schedule(business_name, data):
-    path = os.path.join("businesses", business_name, "weekly_schedule.json")
+    path = os.path.join(get_business_files_path(business_name), "weekly_schedule.json")
     save_json(path, data)
 
 def load_overrides(business_name):
-    path = os.path.join("businesses", business_name, "overrides.json")
+    ensure_business_files(business_name)
+    path = os.path.join(get_business_files_path(business_name), "overrides.json")
     return load_json(path)
 
 def save_overrides(business_name, data):
-    path = os.path.join("businesses", business_name, "overrides.json")
+    path = os.path.join(get_business_files_path(business_name), "overrides.json")
     save_json(path, data)
 
 def load_appointments(business_name):
-    path = os.path.join("businesses", business_name, "appointments.json")
+    ensure_business_files(business_name)
+    path = os.path.join(get_business_files_path(business_name), "appointments.json")
     return load_json(path)
 
 def save_appointments(business_name, data):
-    path = os.path.join("businesses", business_name, "appointments.json")
+    path = os.path.join(get_business_files_path(business_name), "appointments.json")
     save_json(path, data)
 
 def load_one_time_changes(business_name):
-    path = os.path.join("businesses", business_name, "one_time_changes.json")
+    ensure_business_files(business_name)
+    path = os.path.join(get_business_files_path(business_name), "one_time_changes.json")
     return load_json(path)
 
-def save_one_time_changes(data):
-    path = os.path.join("businesses", business_name, "one_time_changes.json")
+def save_one_time_changes(business_name, data):
+    path = os.path.join(get_business_files_path(business_name), "one_time_changes.json")
     save_json(path, data)
 
 def load_bot_knowledge(business_name):
-    path = os.path.join("businesses", business_name, "bot_knowledge.txt")
+    ensure_business_files(business_name)
+    path = os.path.join(get_business_files_path(business_name), "bot_knowledge.txt")
     return load_text(path)
 
 def save_bot_knowledge(business_name, content):
-    path = os.path.join("businesses", business_name, "bot_knowledge.txt")
+    path = os.path.join(get_business_files_path(business_name), "bot_knowledge.txt")
     save_text(path, content)
 
-
-# --- יצירת קבצים לכל עסק ---
+# --- פונקציות עסקיות בסיסיות ---
 
 def create_business_files(business_name):
-    base_path = "businesses"  # התיקייה הראשית של כל העסקים
-    business_path = os.path.join(base_path, business_name)
-    os.makedirs(business_path, exist_ok=True)
-
-    # רשימת הקבצים שצריך להעתיק
-    files = [
-        "appointments.json",
-        "overrides.json",
-        "weekly_schedule.json",
-        "bot_knowledge.json"
-    ]
-
-    for file_name in files:
-        source_path = file_name  # קובץ קיים בשורש
-        dest_path = os.path.join(business_path, file_name)
-
-        if os.path.exists(source_path):
-            shutil.copy2(source_path, dest_path)
-        else:
-            # אם הקובץ לא קיים בשורש, ניצור קובץ ריק
-            with open(dest_path, "w", encoding="utf-8") as f:
-                json.dump({}, f, ensure_ascii=False, indent=4)
-
-    print(f"נוצרו קבצים עבור העסק '{business_name}' בתוך '{business_path}' עם תוכן התחלתי זהה לקיימים")
+    ensure_business_files(business_name)
+    print(f"קבצים נוצרו עבור העסק '{business_name}'")
 
 def get_business_details(username, password):
     businesses = load_businesses()
@@ -134,7 +135,14 @@ def get_business_details(username, password):
             return b['business_name'], b['email'], b['phone']
     return None, None, None
 
-# --- שעות תפוסות ושבועי ---
+# --- ניהול שבועי ושינויים ---
+
+def get_booked_times(appointments):
+    booked = {}
+    for date, apps_list in appointments.items():
+        times = [app['time'] for app in apps_list if 'time' in app]
+        booked[date] = times
+    return booked
 
 def generate_week_slots(business_name, with_sources=False):
     weekly_schedule = load_weekly_schedule(business_name)
@@ -160,13 +168,12 @@ def generate_week_slots(business_name, with_sources=False):
         disabled_day = removed == ["__all__"]
 
         booked_times = bookings.get(date_str, [])
-
         edited_to_times = [edit['to'] for edit in edits]
         edited_from_times = [edit['from'] for edit in edits]
 
         all_times = sorted(set(scheduled + added + edited_to_times))
-
         final_times = []
+
         for t in all_times:
             if t in edited_to_times:
                 if with_sources:
@@ -176,17 +183,20 @@ def generate_week_slots(business_name, with_sources=False):
                 continue
             if t in edited_from_times:
                 continue
-
             available = not (disabled_day or t in removed or t in booked_times)
             if with_sources:
-                source = get_source(t, scheduled, added, removed, edits, disabled_day, booked_times)
+                source = "base"
+                if t in booked_times:
+                    source = "booked"
+                elif t in added and t not in scheduled:
+                    source = "added"
+                elif t in scheduled and (t in removed or disabled_day):
+                    source = "disabled"
                 final_times.append({"time": t, "available": available, "source": source})
             else:
                 if available:
                     final_times.append({"time": t, "available": True})
-
         week_slots[date_str] = {"day_name": day_name, "times": final_times}
-
     return week_slots
 
 def is_slot_available(business_name, date, time):
@@ -198,17 +208,6 @@ def is_slot_available(business_name, date, time):
         if t["time"] == time and t.get("available", True):
             return True
     return False
-
-def get_booked_times(appointments):
-    booked = {}
-    for date, apps_list in appointments.items():
-        times = []
-        for app in apps_list:
-            time = app.get('time')
-            if time:
-                times.append(time)
-        booked[date] = times
-    return booked
 
 def get_source(t, scheduled, added, removed, edits, disabled_day, booked_times):
     if t in booked_times:
