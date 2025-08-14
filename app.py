@@ -394,7 +394,7 @@ def admin_routine():
     if not session.get("is_admin"):
         return redirect("/login")
         
-    business_name = session['business_name']
+    business_name = session.get('business_name')
     weekly_schedule = load_weekly_schedule(business_name)
 
     return render_template("admin_routine.html", weekly_schedule=weekly_schedule)
@@ -405,7 +405,7 @@ def admin_overrides():
     if not session.get("is_admin"):
         return redirect("/login")
 
-    business_name = session['business_name']
+    business_name = session.get('business_name')
     weekly_schedule = load_weekly_schedule(business_name)
     overrides = load_overrides(business_name)
 
@@ -434,7 +434,7 @@ def admin_appointments():
     if not session.get("is_admin"):
         return redirect("/login")
 
-    business_name = session['business_name']
+    business_name = session.get('business_name')
     appointments = load_appointments(business_name)
     return render_template("admin_appointments.html", appointments=appointments)
 
@@ -451,7 +451,7 @@ def update_weekly_schedule():
     time = data.get("time")
     new_time = data.get("new_time")
 
-    business_name = session['business_name']
+    business_name = session.get('business_name')
     weekly_schedule = load_weekly_schedule(business_name)
 
     if day_key not in [str(i) for i in range(7)]:
@@ -461,13 +461,13 @@ def update_weekly_schedule():
         if day_key not in weekly_schedule:
             weekly_schedule[day_key] = []
 
-        business_name = session['business_name']
+        business_name = session.get('business_name')
         save_weekly_schedule(business_name, weekly_schedule)
         return jsonify({"success": True})
 
     if action == "disable_day":
         weekly_schedule[day_key] = []
-        business_name = session['business_name']
+        business_name = session.get('business_name')]
         save_weekly_schedule(business_name, weekly_schedule)
         return jsonify({"success": True})
 
@@ -492,7 +492,7 @@ def update_weekly_schedule():
     else:
         return jsonify({"error": "Invalid action or missing time"}), 400
 
-    business_name = session['business_name']
+    business_name = session.get('business_name')
     save_weekly_schedule(business_name, weekly_schedule)
     return jsonify({"message": "Weekly schedule updated", "weekly_schedule": weekly_schedule})
 
@@ -508,7 +508,7 @@ def toggle_weekly_day():
     if day_key not in [str(i) for i in range(7)]:
         return jsonify({"error": "Invalid day key"}), 400
 
-    business_name = session['business_name']
+    business_name = session.get('business_name')
     weekly_schedule = load_weekly_schedule(business_name)
     weekly_schedule[day_key] = [] if not enabled else weekly_schedule.get(day_key, [])
     save_weekly_schedule(business_name, weekly_schedule)
@@ -529,7 +529,7 @@ def update_overrides():
     time = data.get("time")
     new_time = data.get("new_time")
 
-    business_name = session['business_name']
+    business_name = session.get('business_name')
     overrides = load_overrides(business_name)
 
     if date not in overrides:
@@ -647,7 +647,7 @@ def toggle_override_day():
     date = data.get("date")
     enabled = data.get("enabled")
 
-    business_name = session['business_name']
+    business_name = session.get('business_name')
     overrides = load_overrides(business_name)
 
     if not enabled:
@@ -722,7 +722,7 @@ def appointment_details():
     date = request.args.get('date')
     time = request.args.get('time')
 
-    business_name = session['business_name']
+    business_name = session.get('business_name')
     appointments = load_appointments(business_name)
 
     if date in appointments:
@@ -741,7 +741,7 @@ def bot_knowledge():
 
     if request.method == "POST":
         content = request.form.get("content", "")
-        business_name = session['business_name']
+        business_name = session.get('business_name')
         save_business_json(session.get('business_name'), "bot_knowledge.json", content)
         return redirect("/main_admin")
 
@@ -765,10 +765,11 @@ def book_appointment():
     if service not in services_prices:
         return jsonify({"error": "Unknown service"}), 400
 
-    if not is_slot_available(date, time):
+    business_name = session.get('business_name')
+    if not is_slot_available(business_name, date, time):
         return jsonify({"error": "This time slot is not available"}), 400
 
-    business_name = session['business_name']
+    business_name = session.get('business_name')
     appointments = load_appointments(business_name)
     date_appointments = appointments.get(date, [])
 
@@ -785,7 +786,7 @@ def book_appointment():
     }
     date_appointments.append(appointment)
     appointments[date] = date_appointments
-    business_name = session['business_name']
+    business_name = session.get('business_name')
     save_appointments(business_name, appointments)
 
     overrides = load_overrides(business_name)
@@ -805,7 +806,7 @@ def book_appointment():
     if time in overrides[date]["add"]:
         overrides[date]["add"].remove(time)
 
-    business_name = session['business_name']
+    business_name = session.get('business_name')
     save_overrides(business_name, overrides)
 
     try:
@@ -929,7 +930,7 @@ def ask_bot():
     if not question:
         return jsonify({"answer": "אנא כתוב שאלה."})
 
-    business_name = session['business_name']
+    business_name = session.get('business_name')
     knowledge_text = load_bot_knowledge(business_name)
 
     messages = [
