@@ -18,6 +18,8 @@ OVERRIDES_FILE = "overrides.json"
 BOT_KNOWLEDGE_FILE = "bot_knowledge.txt"
 APPOINTMENTS_FILE = "appointments.json"
 ONE_TIME_FILE = "one_time_changes.json"  
+BUSINESSES_FILE = "businesses.json"
+
 
 services_prices = {
     "Men's Haircut": 80,
@@ -27,8 +29,6 @@ services_prices = {
 }
 
 # --- פונקציות עזר ---
-
-import os
 
 def load_json(filename):
     if not os.path.exists(filename):
@@ -49,6 +49,12 @@ def load_text(filename):
 def save_text(filename, content):
     with open(filename, "w", encoding="utf-8") as f:
         f.write(content.strip())
+
+def load_businesses():
+    return load_json(BUSINESSES_FILE)
+
+def save_businesses(data):
+    save_json(BUSINESSES_FILE, data)
 
 # --- פונקציות עסקיות אוטומטיות לפי שם העסק מה-session ---
 
