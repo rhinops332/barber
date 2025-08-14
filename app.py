@@ -347,11 +347,6 @@ def add_business():
                                businesses=load_businesses(),
                                error="יש למלא את כל השדות")
 
-    if not valid_code(business_code):
-        return render_template('host_command.html',
-                               businesses=load_businesses(),
-                               error="קוד עסק חייב להיות 3–32 תווים: A-Z,a-z,0-9,_,-")
-
     businesses = load_businesses()
 
     # מניעת כפילויות
