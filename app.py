@@ -467,7 +467,7 @@ def update_weekly_schedule():
 
     if action == "disable_day":
         weekly_schedule[day_key] = []
-        business_name = session.get('business_name')]
+        business_name = session.get('business_name')
         save_weekly_schedule(business_name, weekly_schedule)
         return jsonify({"success": True})
 
