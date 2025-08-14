@@ -307,7 +307,6 @@ def add_business():
     if not session.get('is_host'):
         return redirect('/login')
 
-    ensure_dirs()
 
     business_code = request.form.get('business_code', '').strip()
     business_name = request.form.get('business_name', '').strip()
@@ -746,10 +745,10 @@ def bot_knowledge():
 
     if request.method == "POST":
         content = request.form.get("content", "")
-        save_text(BOT_KNOWLEDGE_FILE, content)
+        save_business_json(session.get('business_name'), "bot_knowledge.json", content)
         return redirect("/main_admin")
 
-    content = load_text(BOT_KNOWLEDGE_FILE)
+    content = load_business_json(session.get('business_name'), "bot_knowledge.json")
     return render_template("bot_knowledge.html", content=content)
 
 # --- ניהול הזמנות ---
@@ -832,8 +831,7 @@ def cancel_appointment():
     phone = data.get('phone')
     
     try:
-        with open(APPOINTMENTS_FILE, 'r', encoding='utf-8') as f:
-            appointments = json.load(f)
+        appointments = load_business_json(session.get('business_name'), "appointments.json")
     except FileNotFoundError:
         appointments = {}
 
@@ -849,8 +847,7 @@ def cancel_appointment():
 
     appointments[date] = new_day_appointments
 
-    with open(APPOINTMENTS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(appointments, f, ensure_ascii=False, indent=2)
+   save_business_json(session.get('business_name'), "appointments.json", appointments)
 
 
     try:
@@ -932,7 +929,7 @@ def ask_bot():
     if not question:
         return jsonify({"answer": "אנא כתוב שאלה."})
 
-    knowledge_text = load_text(BOT_KNOWLEDGE_FILE)
+    knowledge_text = load_bot_knowledge()
 
     messages = [
         {"role": "system", "content": "You are a helpful assistant for a hair salon booking system."},
