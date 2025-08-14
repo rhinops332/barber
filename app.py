@@ -58,73 +58,43 @@ def save_businesses(data):
 
 # --- פונקציות עסקיות אוטומטיות לפי שם העסק מה-session ---
 
-def load_weekly_schedule():
-    business_name = session.get('business_name')
-    if not business_name:
-        return {}
+def load_weekly_schedule(business_name):
     path = os.path.join("businesses", business_name, "weekly_schedule.json")
     return load_json(path)
 
-def save_weekly_schedule(data):
-    business_name = session.get('business_name')
-    if not business_name:
-        return
+def save_weekly_schedule(business_name, data):
     path = os.path.join("businesses", business_name, "weekly_schedule.json")
     save_json(path, data)
 
-def load_overrides():
-    business_name = session.get('business_name')
-    if not business_name:
-        return {}
+def load_overrides(business_name):
     path = os.path.join("businesses", business_name, "overrides.json")
     return load_json(path)
 
-def save_overrides(data):
-    business_name = session.get('business_name')
-    if not business_name:
-        return
+def save_overrides(business_name, data):
     path = os.path.join("businesses", business_name, "overrides.json")
     save_json(path, data)
 
-def load_appointments():
-    business_name = session.get('business_name')
-    if not business_name:
-        return {}
+def load_appointments(business_name):
     path = os.path.join("businesses", business_name, "appointments.json")
     return load_json(path)
 
-def save_appointments(data):
-    business_name = session.get('business_name')
-    if not business_name:
-        return
+def save_appointments(business_name, data):
     path = os.path.join("businesses", business_name, "appointments.json")
     save_json(path, data)
 
-def load_one_time_changes():
-    business_name = session.get('business_name')
-    if not business_name:
-        return {}
+def load_one_time_changes(business_name, business_name):
     path = os.path.join("businesses", business_name, "one_time_changes.json")
     return load_json(path)
 
 def save_one_time_changes(data):
-    business_name = session.get('business_name')
-    if not business_name:
-        return
     path = os.path.join("businesses", business_name, "one_time_changes.json")
     save_json(path, data)
 
-def load_bot_knowledge():
-    business_name = session.get('business_name')
-    if not business_name:
-        return ""
+def load_bot_knowledge(business_name):
     path = os.path.join("businesses", business_name, "bot_knowledge.txt")
     return load_text(path)
 
-def save_bot_knowledge(content):
-    business_name = session.get('business_name')
-    if not business_name:
-        return
+def save_bot_knowledge(business_name, content):
     path = os.path.join("businesses", business_name, "bot_knowledge.txt")
     save_text(path, content)
 
