@@ -847,7 +847,7 @@ def cancel_appointment():
 
     appointments[date] = new_day_appointments
 
-   save_business_json(session.get('business_name'), "appointments.json", appointments)
+    save_business_json(session.get('business_name'), "appointments.json", appointments)
 
 
     try:
