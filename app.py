@@ -918,7 +918,7 @@ def availability():
 @app.route("/")
 def index():
     business_name = session.get('business_name')
-    week_slots = generate_week_slots(business_name))
+    week_slots = generate_week_slots(business_name)
     return render_template("index.html", week_slots=week_slots, services=services_prices)
 
 
