@@ -157,18 +157,12 @@ def create_business_files(business_name):
 
     print(f"נוצרו קבצים עבור העסק '{business_name}' בתוך '{business_path}' עם תוכן התחלתי זהה לקיימים")
 
-def get_business_details(username, password, file_path="businesses.json"):
-    businesses = load_json(file_path)
-    for business_name, details in businesses.items():
-        if details.get("username") == username and details.get("password") == password:
-            return business_name, details.get("email"), details.get("phone")
+def get_business_details(username, password):
+    businesses = load_businesses()
+    for b in businesses:
+        if b['username'] == username and check_password_hash(b['password_hash'], password):
+            return b['business_name'], b['email'], b['phone']
     return None, None, None
-
-def load_businesses():
-    path = os.path.join("businesses.json")
-    return load_json(path)
-
-
 
 # --- שעות תפוסות ושבועי ---
 
