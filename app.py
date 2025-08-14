@@ -281,12 +281,33 @@ def dashboard():
     if not session.get('is_admin'):
         return redirect('/login')
 
+    # כאן נקח את business_name של המשתמש הנוכחי בלבד
     business_name = session.get('business_name')
-    email = session.get('email')
-    phone = session.get('phone')
+    email = session.get('business_email')
+    phone = session.get('business_phone')
 
-    return f"שלום {name}, המייל שלך: {email}, הטלפון: {phone}"
+    return f"שלום {business_name}, המייל שלך: {email}, הטלפון: {phone}"
 
+@app.route('/get_week_slots')
+def get_week_slots():
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    # נקבל את השם של העסק מה־session של המשתמש הנוכחי בלבד
+    business_name = session.get('business_name')
+    week_slots = generate_week_slots(business_name, with_sources=True)
+    return jsonify(week_slots)
+
+
+@app.route('/update_schedule', methods=['POST'])
+def update_schedule():
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    business_name = session.get('business_name')
+    data = request.json
+    save_weekly_schedule(business_name, data)
+    return jsonify({"status": "success"})
 # --- דף ניהול ראשי ---
 
 @app.route('/host_command', methods=['GET'])
