@@ -82,7 +82,7 @@ def save_appointments(business_name, data):
     path = os.path.join("businesses", business_name, "appointments.json")
     save_json(path, data)
 
-def load_one_time_changes(business_name, business_name):
+def load_one_time_changes(business_name):
     path = os.path.join("businesses", business_name, "one_time_changes.json")
     return load_json(path)
 
