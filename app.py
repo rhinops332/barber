@@ -136,6 +136,69 @@ def get_business_details(username, password):
 
 # --- שעות תפוסות ושבועי ---
 
+def generate_week_slots(business_name, with_sources=False):
+    weekly_schedule = load_weekly_schedule(business_name)
+    overrides = load_overrides(business_name)
+    appointments = load_appointments(business_name)
+    bookings = get_booked_times(appointments)
+    today = datetime.today()
+    week_slots = {}
+    heb_days = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
+
+    for i in range(7):
+        current_date = today + timedelta(days=i)
+        date_str = current_date.strftime("%Y-%m-%d")
+        weekday = current_date.weekday()
+        day_name = heb_days[weekday]
+
+        day_key = str(weekday)
+        scheduled = weekly_schedule.get(day_key, [])
+        override = overrides.get(date_str, {"add": [], "remove": [], "edit": []})
+        added = override.get("add", [])
+        removed = override.get("remove", [])
+        edits = override.get("edit", [])
+        disabled_day = removed == ["__all__"]
+
+        booked_times = bookings.get(date_str, [])
+
+        edited_to_times = [edit['to'] for edit in edits]
+        edited_from_times = [edit['from'] for edit in edits]
+
+        all_times = sorted(set(scheduled + added + edited_to_times))
+
+        final_times = []
+        for t in all_times:
+            if t in edited_to_times:
+                if with_sources:
+                    final_times.append({"time": t, "available": True, "source": "edited"})
+                else:
+                    final_times.append({"time": t, "available": True})
+                continue
+            if t in edited_from_times:
+                continue
+
+            available = not (disabled_day or t in removed or t in booked_times)
+            if with_sources:
+                source = get_source(t, scheduled, added, removed, edits, disabled_day, booked_times)
+                final_times.append({"time": t, "available": available, "source": source})
+            else:
+                if available:
+                    final_times.append({"time": t, "available": True})
+
+        week_slots[date_str] = {"day_name": day_name, "times": final_times}
+
+    return week_slots
+
+def is_slot_available(business_name, date, time):
+    week_slots = generate_week_slots(business_name)
+    day_info = week_slots.get(date)
+    if not day_info:
+        return False
+    for t in day_info["times"]:
+        if t["time"] == time and t.get("available", True):
+            return True
+    return False
+
 def get_booked_times(appointments):
     booked = {}
     for date, apps_list in appointments.items():
@@ -225,71 +288,6 @@ def dashboard():
 
     return f"שלום {name}, המייל שלך: {email}, הטלפון: {phone}"
 
-
-def generate_week_slots(with_sources=False):
-    weekly_schedule = load_weekly_schedule(business_name)
-    overrides = load_overrides(business_name)
-    appointments = load_appointments(business_name)
-    bookings = get_booked_times(appointments)
-    today = datetime.today()
-    week_slots = {}
-    heb_days = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
-
-    for i in range(7):
-        current_date = today + timedelta(days=i)
-        date_str = current_date.strftime("%Y-%m-%d")
-        weekday = current_date.weekday()
-        day_name = heb_days[weekday]
-
-        day_key = str(weekday)
-        scheduled = weekly_schedule.get(day_key, [])
-        override = overrides.get(date_str, {"add": [], "remove": [], "edit": []})
-        added = override.get("add", [])
-        removed = override.get("remove", [])
-        edits = override.get("edit", [])
-        disabled_day = removed == ["__all__"]
-
-        booked_times = bookings.get(date_str, [])
-
-        edited_to_times = [edit['to'] for edit in edits]
-        edited_from_times = [edit['from'] for edit in edits]
-
-        all_times = sorted(set(scheduled + added + edited_to_times))
-
-        final_times = []
-        for t in all_times:
-            if t in edited_to_times:
-                if with_sources:
-                    final_times.append({"time": t, "available": True, "source": "edited"})
-                else:
-                    final_times.append({"time": t, "available": True})
-                continue
-            if t in edited_from_times:
-                continue
-
-            available = not (disabled_day or t in removed or t in booked_times)
-            if with_sources:
-                source = get_source(t, scheduled, added, removed, edits, disabled_day, booked_times)
-                final_times.append({"time": t, "available": available, "source": source})
-            else:
-                if available:
-                    final_times.append({"time": t, "available": True})
-
-        week_slots[date_str] = {"day_name": day_name, "times": final_times}
-
-    return week_slots
-
-def is_slot_available(date, time):
-    week_slots = generate_week_slots()
-    day_info = week_slots.get(date)
-    if not day_info:
-        return False
-    for t in day_info["times"]:
-        if t["time"] == time and t.get("available", True):
-            return True
-    return False
-
-
 # --- דף ניהול ראשי ---
 
 @app.route('/host_command', methods=['GET'])
@@ -300,7 +298,7 @@ def host_command():
     return render_template('host_command.html', businesses=businesses)
 
 @app.route('/add_business', methods=['POST'])
-def add_business():
+def add_business(business_name):
     if not session.get('is_host'):
         return redirect('/login')
 
@@ -349,7 +347,7 @@ def add_business():
 
 
 @app.route('/delete_business', methods=['POST'])
-def delete_business():
+def delete_business(business_name):
     if not session.get('is_host'):
         return redirect('/login')
 
@@ -395,7 +393,8 @@ def main_admin():
 def admin_routine():
     if not session.get("is_admin"):
         return redirect("/login")
-
+        
+    business_name = session['business_name']
     weekly_schedule = load_weekly_schedule(business_name)
 
     return render_template("admin_routine.html", weekly_schedule=weekly_schedule)
@@ -406,6 +405,7 @@ def admin_overrides():
     if not session.get("is_admin"):
         return redirect("/login")
 
+    business_name = session['business_name']
     weekly_schedule = load_weekly_schedule(business_name)
     overrides = load_overrides(business_name)
 
@@ -433,7 +433,9 @@ def admin_overrides():
 def admin_appointments():
     if not session.get("is_admin"):
         return redirect("/login")
-    appointments = load_appointments()
+
+    business_name = session['business_name']
+    appointments = load_appointments(business_name)
     return render_template("admin_appointments.html", appointments=appointments)
 
 # --- ניהול שגרה שבועית ---
@@ -449,6 +451,7 @@ def update_weekly_schedule():
     time = data.get("time")
     new_time = data.get("new_time")
 
+    business_name = session['business_name']
     weekly_schedule = load_weekly_schedule(business_name)
 
     if day_key not in [str(i) for i in range(7)]:
@@ -457,11 +460,14 @@ def update_weekly_schedule():
     if action == "enable_day":
         if day_key not in weekly_schedule:
             weekly_schedule[day_key] = []
+
+        business_name = session['business_name']
         save_weekly_schedule(business_name, weekly_schedule)
         return jsonify({"success": True})
 
     if action == "disable_day":
         weekly_schedule[day_key] = []
+        business_name = session['business_name']
         save_weekly_schedule(business_name, weekly_schedule)
         return jsonify({"success": True})
 
@@ -486,6 +492,7 @@ def update_weekly_schedule():
     else:
         return jsonify({"error": "Invalid action or missing time"}), 400
 
+    business_name = session['business_name']
     save_weekly_schedule(business_name, weekly_schedule)
     return jsonify({"message": "Weekly schedule updated", "weekly_schedule": weekly_schedule})
 
@@ -501,6 +508,7 @@ def toggle_weekly_day():
     if day_key not in [str(i) for i in range(7)]:
         return jsonify({"error": "Invalid day key"}), 400
 
+    business_name = session['business_name']
     weekly_schedule = load_weekly_schedule(business_name)
     weekly_schedule[day_key] = [] if not enabled else weekly_schedule.get(day_key, [])
     save_weekly_schedule(business_name, weekly_schedule)
@@ -521,6 +529,7 @@ def update_overrides():
     time = data.get("time")
     new_time = data.get("new_time")
 
+    business_name = session['business_name']
     overrides = load_overrides(business_name)
 
     if date not in overrides:
@@ -638,6 +647,7 @@ def toggle_override_day():
     date = data.get("date")
     enabled = data.get("enabled")
 
+    business_name = session['business_name']
     overrides = load_overrides(business_name)
 
     if not enabled:
@@ -712,7 +722,8 @@ def appointment_details():
     date = request.args.get('date')
     time = request.args.get('time')
 
-    appointments = load_appointments()
+    business_name = session['business_name']
+    appointments = load_appointments(business_name)
 
     if date in appointments:
         for appt in appointments[date]:
@@ -730,6 +741,7 @@ def bot_knowledge():
 
     if request.method == "POST":
         content = request.form.get("content", "")
+        business_name = session['business_name']
         save_business_json(session.get('business_name'), "bot_knowledge.json", content)
         return redirect("/main_admin")
 
@@ -756,7 +768,8 @@ def book_appointment():
     if not is_slot_available(date, time):
         return jsonify({"error": "This time slot is not available"}), 400
 
-    appointments = load_appointments()
+    business_name = session['business_name']
+    appointments = load_appointments(business_name)
     date_appointments = appointments.get(date, [])
 
     for appt in date_appointments:
@@ -772,7 +785,8 @@ def book_appointment():
     }
     date_appointments.append(appointment)
     appointments[date] = date_appointments
-    save_appointments(appointments)
+    business_name = session['business_name']
+    save_appointments(business_name, appointments)
 
     overrides = load_overrides(business_name)
     if date not in overrides:
@@ -791,6 +805,7 @@ def book_appointment():
     if time in overrides[date]["add"]:
         overrides[date]["add"].remove(time)
 
+    business_name = session['business_name']
     save_overrides(business_name, overrides)
 
     try:
@@ -914,7 +929,8 @@ def ask_bot():
     if not question:
         return jsonify({"answer": "אנא כתוב שאלה."})
 
-    knowledge_text = load_bot_knowledge()
+    business_name = session['business_name']
+    knowledge_text = load_bot_knowledge(business_name)
 
     messages = [
         {"role": "system", "content": "You are a helpful assistant for a hair salon booking system."},
