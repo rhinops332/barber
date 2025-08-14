@@ -298,7 +298,7 @@ def host_command():
     return render_template('host_command.html', businesses=businesses)
 
 @app.route('/add_business', methods=['POST'])
-def add_business(business_name):
+def add_business():
     if not session.get('is_host'):
         return redirect('/login')
 
@@ -344,7 +344,6 @@ def add_business(business_name):
     return render_template('host_command.html',
                            businesses=businesses,
                            msg=f"העסק '{business_name}' נוצר בהצלחה")
-
 
 @app.route('/delete_business', methods=['POST'])
 def delete_business(business_name):
