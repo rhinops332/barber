@@ -333,8 +333,6 @@ def add_business():
     if not session.get('is_host'):
         return redirect('/login')
 
-
-    business_code = request.form.get('business_code', '').strip()
     business_name = request.form.get('business_name', '').strip()
     username = request.form.get('username', '').strip()
     password = request.form.get('password', '').strip()
@@ -342,7 +340,7 @@ def add_business():
     email = request.form.get('email', '').strip()
 
     # ולידציות בסיסיות
-    if not all([business_code, business_name, username, password, phone, email]):
+    if not all([business_name, username, password, phone, email]):
         return render_template('host_command.html',
                                businesses=load_businesses(),
                                error="יש למלא את כל השדות")
@@ -350,10 +348,6 @@ def add_business():
     businesses = load_businesses()
 
     # מניעת כפילויות
-    if any(b.get("business_code") == business_code for b in businesses):
-        return render_template('host_command.html',
-                               businesses=businesses,
-                               error="קוד העסק כבר קיים")
     if any(b.get("username") == username for b in businesses):
         return render_template('host_command.html',
                                businesses=businesses,
@@ -361,7 +355,7 @@ def add_business():
 
     # יצירת קבצים לתיקיית העסק
     try:
-        create_business_files(business_code)
+        create_business_files(business_name)
     except Exception as e:
         return render_template('host_command.html',
                                businesses=businesses,
@@ -369,7 +363,6 @@ def add_business():
 
     # הוספה לרשומת העסקים (סיסמה בהאש)
     businesses.append({
-        "business_code": business_code,
         "business_name": business_name,
         "username": username,
         "password_hash": generate_password_hash(password),
@@ -382,6 +375,7 @@ def add_business():
     return render_template('host_command.html',
                            businesses=businesses,
                            msg=f"העסק '{business_name}' נוצר בהצלחה")
+
 
 @app.route('/delete_business', methods=['POST'])
 def delete_business():
@@ -401,14 +395,13 @@ def delete_business():
     businesses = [b for b in businesses if b.get("username") != username]
     save_businesses(businesses)
 
-    # מחיקת תיקיית העסק (לפי business_code)
+    # מחיקת תיקיית העסק לפי שם העסק
     try:
-        bcode = entry.get("business_code")
-        bpath = os.path.join(BUSINESSES_ROOT, bcode)
+        bname = entry.get("business_name")
+        bpath = os.path.join(BUSINESSES_ROOT, bname)
         if os.path.isdir(bpath):
             shutil.rmtree(bpath)
     except Exception as e:
-        # אם המחיקה נכשלה, נציג אזהרה אבל נשאיר את המחיקה מהרישום
         return render_template('host_command.html',
                                businesses=businesses,
                                error=f"העסק הוסר מהרשימה, אך מחיקת התיקייה נכשלה: {e}")
