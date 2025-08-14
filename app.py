@@ -164,8 +164,8 @@ def get_source(t, scheduled, added, removed, edits, disabled_day, booked_times):
     return "base"                
 
 def generate_week_slots(with_sources=False):
-    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
-    overrides = load_json(OVERRIDES_FILE)
+    weekly_schedule = load_weekly_schedule()
+    overrides = load_overrides()
     appointments = load_appointments()
     bookings = get_booked_times(appointments)
     today = datetime.today()
@@ -412,7 +412,7 @@ def admin_routine():
     if not session.get("is_admin"):
         return redirect("/login")
 
-    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
+    weekly_schedule = load_weekly_schedule()
 
     return render_template("admin_routine.html", weekly_schedule=weekly_schedule)
 
@@ -422,8 +422,8 @@ def admin_overrides():
     if not session.get("is_admin"):
         return redirect("/login")
 
-    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
-    overrides = load_json(OVERRIDES_FILE)
+    weekly_schedule = load_weekly_schedule()
+    overrides = load_overrides()
 
     today = datetime.today()
     week_dates = [(today + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)]
@@ -465,7 +465,7 @@ def update_weekly_schedule():
     time = data.get("time")
     new_time = data.get("new_time")
 
-    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
+    weekly_schedule = load_weekly_schedule()
 
     if day_key not in [str(i) for i in range(7)]:
         return jsonify({"error": "Invalid day key"}), 400
@@ -473,12 +473,12 @@ def update_weekly_schedule():
     if action == "enable_day":
         if day_key not in weekly_schedule:
             weekly_schedule[day_key] = []
-        save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
+        save_weekly_schedule(weekly_schedule)
         return jsonify({"success": True})
 
     if action == "disable_day":
         weekly_schedule[day_key] = []
-        save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
+        save_weekly_schedule(weekly_schedule)
         return jsonify({"success": True})
 
     day_times = weekly_schedule.get(day_key, [])
@@ -502,7 +502,7 @@ def update_weekly_schedule():
     else:
         return jsonify({"error": "Invalid action or missing time"}), 400
 
-    save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
+    save_weekly_schedule(weekly_schedule)
     return jsonify({"message": "Weekly schedule updated", "weekly_schedule": weekly_schedule})
 
 @app.route("/weekly_toggle_day", methods=["POST"])
@@ -517,9 +517,9 @@ def toggle_weekly_day():
     if day_key not in [str(i) for i in range(7)]:
         return jsonify({"error": "Invalid day key"}), 400
 
-    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
+    weekly_schedule = load_weekly_schedule()
     weekly_schedule[day_key] = [] if not enabled else weekly_schedule.get(day_key, [])
-    save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
+    save_weekly_schedule(weekly_schedule)
 
     return jsonify({"message": "Day updated", "weekly_schedule": weekly_schedule})
 
@@ -537,7 +537,7 @@ def update_overrides():
     time = data.get("time")
     new_time = data.get("new_time")
 
-    overrides = load_json(OVERRIDES_FILE)
+    overrides = load_overrides()
 
     if date not in overrides:
         overrides[date] = {"add": [], "remove": []}
@@ -549,7 +549,7 @@ def update_overrides():
                 overrides[date]["remove"].append(t)
             if t in overrides[date]["add"]:
                 overrides[date]["add"].remove(t)
-        save_json(OVERRIDES_FILE, overrides)
+        save_overrides(overrides)
         return jsonify({"message": "Multiple times removed", "overrides": overrides})
 
     elif action == "add" and time:
@@ -557,7 +557,7 @@ def update_overrides():
             overrides[date]["add"].append(time)
         if time in overrides[date]["remove"]:
             overrides[date]["remove"].remove(time)
-        save_json(OVERRIDES_FILE, overrides)
+        save_overrides(overrides)
         return jsonify({"message": "Time added", "overrides": overrides})
 
     elif action == "remove" and time:
@@ -576,7 +576,7 @@ def update_overrides():
             ]
             if not overrides[date]["edit"]:
                 overrides[date].pop("edit", None)
-        save_json(OVERRIDES_FILE, overrides)
+        save_overrides(overrides)
         return jsonify({"message": "Time removed", "overrides": overrides})
 
     elif action == "edit" and time and new_time:
@@ -605,18 +605,18 @@ def update_overrides():
         if new_time not in overrides[date]["add"]:
             overrides[date]["add"].append(new_time)
 
-        save_json(OVERRIDES_FILE, overrides)
+        save_overrides(overrides)
         return jsonify({"message": "Time edited", "overrides": overrides})
 
     elif action == "clear" and date:
         if date in overrides:
             overrides.pop(date)
-        save_json(OVERRIDES_FILE, overrides)
+        save_overrides(overrides)
         return jsonify({"message": "Day overrides cleared", "overrides": overrides})
 
     elif action == "disable_day" and date:
         overrides[date] = {"add": [], "remove": ["__all__"]}
-        save_json(OVERRIDES_FILE, overrides)
+        save_overrides(overrides)
         return jsonify({"message": "Day disabled", "overrides": overrides})
 
     elif action == "revert" and date and time:
@@ -638,7 +638,7 @@ def update_overrides():
             if not overrides[date].get("add") and not overrides[date].get("remove") and not overrides[date].get("edit"):
                 overrides.pop(date)
 
-        save_json(OVERRIDES_FILE, overrides)
+        save_overrides(overrides)
         return jsonify({"message": "Time reverted", "overrides": overrides})
 
     else:
@@ -654,7 +654,7 @@ def toggle_override_day():
     date = data.get("date")
     enabled = data.get("enabled")
 
-    overrides = load_json(OVERRIDES_FILE)
+    overrides = load_overrides()
 
     if not enabled:
         overrides[date] = {"add": [], "remove": ["__all__"]}
@@ -662,7 +662,7 @@ def toggle_override_day():
         if date in overrides and overrides[date].get("remove") == ["__all__"]:
             overrides.pop(date)
 
-    save_json(OVERRIDES_FILE, overrides)
+    save_overrides(overrides)
     return jsonify({"message": "Day override toggled", "overrides": overrides})
 
 @app.route('/admin/one-time/toggle_day', methods=['POST'])
@@ -790,7 +790,7 @@ def book_appointment():
     appointments[date] = date_appointments
     save_appointments(appointments)
 
-    overrides = load_json(OVERRIDES_FILE)
+    overrides = load_overrides()
     if date not in overrides:
         overrides[date] = {"add": [], "remove": [], "edit": [], "booked": []}
     elif "booked" not in overrides[date]:
@@ -807,7 +807,7 @@ def book_appointment():
     if time in overrides[date]["add"]:
         overrides[date]["add"].remove(time)
 
-    save_json(OVERRIDES_FILE, overrides)
+    save_overrides(overrides)
 
     try:
         send_email(name, phone, date, time, service, services_prices[service])
