@@ -12,7 +12,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "default_secret")
 
-# --- קבצים ---
 WEEKLY_SCHEDULE_FILE = "weekly_schedule.json"
 OVERRIDES_FILE = "overrides.json"
 BOT_KNOWLEDGE_FILE = "bot_knowledge.txt"
@@ -27,8 +26,6 @@ services_prices = {
 }
 
 # --- פונקציות עזר ---
-
-import os
 
 def load_json(filename):
     if not os.path.exists(filename):
@@ -50,118 +47,84 @@ def save_text(filename, content):
     with open(filename, "w", encoding="utf-8") as f:
         f.write(content.strip())
 
-# --- פונקציות עסקיות אוטומטיות לפי שם העסק מה-session ---
-
-def load_weekly_schedule():
-    business_name = session.get('business_name')
-    path = os.path.join("businesses", business_name, "weekly_schedule.json")
-    return load_json(path)
-
-def save_weekly_schedule(data):
-    business_name = session.get('business_name')
-    path = os.path.join("businesses", business_name, "weekly_schedule.json")
-    save_json(path, data)
-
-def load_overrides():
-    business_name = session.get('business_name')
-    path = os.path.join("businesses", business_name, "overrides.json")
-    return load_json(path)
-
-def save_overrides(data):
-    business_name = session.get('business_name')
-    path = os.path.join("businesses", business_name, "overrides.json")
-    save_json(path, data)
-
 def load_appointments():
-    business_name = session.get('business_name')
-    path = os.path.join("businesses", business_name, "appointments.json")
-    return load_json(path)
+    return load_json(APPOINTMENTS_FILE)
 
 def save_appointments(data):
-    business_name = session.get('business_name')
-    path = os.path.join("businesses", business_name, "appointments.json")
-    save_json(path, data)
+    save_json(APPOINTMENTS_FILE, data)
 
 def load_one_time_changes():
-    business_name = session.get('business_name')
-    path = os.path.join("businesses", business_name, "one_time_changes.json")
-    return load_json(path)
+    return load_json(ONE_TIME_FILE)
 
 def save_one_time_changes(data):
-    business_name = session.get('business_name')
-    path = os.path.join("businesses", business_name, "one_time_changes.json")
-    save_json(path, data)
+    save_json(ONE_TIME_FILE, data)
 
-def load_bot_knowledge():
-    business_name = session.get('business_name')
-    path = os.path.join("businesses", business_name, "bot_knowledge.txt")
-    return load_text(path)
+DATA_ROOT = "data"
+BUSINESSES_ROOT = os.path.join(DATA_ROOT, "businesses")
+REGISTRY_FILE = os.path.join(DATA_ROOT, "businesses.json")
 
-def save_bot_knowledge(content):
-    business_name = session.get('business_name')
-    path = os.path.join("businesses", business_name, "bot_knowledge.txt")
-    save_text(path, content)
+def ensure_dirs():
+    os.makedirs(BUSINESSES_ROOT, exist_ok=True)
+    if not os.path.exists(REGISTRY_FILE):
+        save_json(REGISTRY_FILE, {"businesses": []})
 
-# --- יצירת קבצים לכל עסק ---
+def load_businesses():
+    ensure_dirs()
+    data = load_json(REGISTRY_FILE)
+    return data.get("businesses", [])
 
-def create_business_files(business_name):
-    base_path = "businesses"  # התיקייה הראשית של כל העסקים
-    business_path = os.path.join(base_path, business_name)
-    os.makedirs(business_path, exist_ok=True)
+def save_businesses(businesses_list):
+    ensure_dirs()
+    save_json(REGISTRY_FILE, {"businesses": businesses_list})
 
-    # רשימת הקבצים שצריך להעתיק
-    files = [
-        "appointments.json",
-        "overrides.json",
-        "weekly_schedule.json",
-        "bot_knowledge.json"
-    ]
+def valid_code(code: str) -> bool:
+    return bool(re.fullmatch(r"[A-Za-z0-9_-]{3,32}", code or ""))
 
-    for file_name in files:
-        source_path = file_name  # קובץ קיים בשורש
-        dest_path = os.path.join(business_path, file_name)
+def create_business_files(business_code: str):
+    """יוצר תיקיית עסק עם 4 קבצי ברירת מחדל"""
+    path = os.path.join(BUSINESSES_ROOT, business_code)
+    os.makedirs(path, exist_ok=True)
 
-        if os.path.exists(source_path):
-            shutil.copy2(source_path, dest_path)
-        else:
-            # אם הקובץ לא קיים בשורש, ניצור קובץ ריק
-            with open(dest_path, "w", encoding="utf-8") as f:
-                json.dump({}, f, ensure_ascii=False, indent=4)
+    defaults = {
+        "appointments.json": {},               
+        "overrides.json": {},                   
+        "weekly_schedule.json": {               
+            "0": [], "1": [], "2": [], "3": [], "4": [], "5": [], "6": []
+        },
+        "bot_knowledge.json": {"knowledge": ""}  # תוכן ידע של הבוט
+    }
 
-    print(f"נוצרו קבצים עבור העסק '{business_name}' בתוך '{business_path}' עם תוכן התחלתי זהה לקיימים")
-
-def get_business_details(username, password, file_path="businesses.json"):
-    businesses = load_json(file_path)
-    for business_name, details in businesses.items():
-        if details.get("username") == username and details.get("password") == password:
-            return business_name, details.get("email"), details.get("phone")
-    return None, None, None
+    for filename, content in defaults.items():
+        with open(os.path.join(path, filename), "w", encoding="utf-8") as f:
+            json.dump(content, f, ensure_ascii=False, indent=2)
 
 
-# --- שעות תפוסות ושבועי ---
+# --- פונקציה שמוציאה את השעות התפוסות מתוך הפגישות ---
 
 def get_booked_times(appointments):
     booked = {}
     for date, apps_list in appointments.items():
         times = []
         for app in apps_list:
-            time = app.get('time')
+            time = app.get('time')  # הנחה שמפתח הזמן נקרא 'time'
             if time:
                 times.append(time)
         booked[date] = times
     return booked
 
+# --- יצירת רשימת שעות שבועית עם שינויים ---
+
 def get_source(t, scheduled, added, removed, edits, disabled_day, booked_times):
     if t in booked_times:
-        return "booked"          
+        return "booked"          # אדום - תפוס ע"י לקוח
     for edit in edits:
         if t == edit['to']:
-            return "edited"      
+            return "edited"      # כחול - ערוך
     if t in added and t not in scheduled:
-        return "added"           
+        return "added"           # צהוב - חדש
     if t in scheduled and (t in removed or disabled_day):
-        return "disabled"        
-    return "base"                
+        return "disabled"        # אפור - מושבת ע"י אדמין
+    return "base"                # ירוק - בסיסי
 
 def generate_week_slots(with_sources=False):
     weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
@@ -201,6 +164,7 @@ def generate_week_slots(with_sources=False):
                 else:
                     final_times.append({"time": t, "available": True})
                 continue
+
             if t in edited_from_times:
                 continue
 
@@ -216,6 +180,7 @@ def generate_week_slots(with_sources=False):
 
     return week_slots
 
+
 def is_slot_available(date, time):
     week_slots = generate_week_slots()
     day_info = week_slots.get(date)
@@ -226,7 +191,7 @@ def is_slot_available(date, time):
             return True
     return False
 
-# --- לפני כל בקשה ---
+# --- לפני כל בקשה - העברת session ל-g ---
 
 @app.before_request
 def before_request():
@@ -258,40 +223,26 @@ def login():
         if username == host_user and password == host_pass:
             session['username'] = username
             session['is_host'] = True
-            session['is_admin'] = True
             return redirect('/host_command')
 
         # בדיקה של עסק רגיל
-        business_name, email, phone = get_business_details(username, password)
-        if business_name:
-            session['username'] = username
-            session['is_host'] = False
-            session['is_admin'] = True
-            session['business_name'] = business_name
-            session['business_email'] = email
-            session['business_phone'] = phone
-            return redirect('/main_admin')
+        businesses = load_json("businesses.json")
+        for b in businesses:
+            if b['username'] == username and check_password_hash(b['password_hash'], password):
+                session['username'] = username
+                session['is_host'] = False
+                session['business_name'] = b['business_name']  # שמירת שם העסק
+                return redirect('/main_admin')
 
         error = "שם משתמש או סיסמה שגויים"
 
     return render_template('login.html', error=error)
 
+
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/")
-
-@app.route('/dashboard')
-def dashboard():
-    if not session.get('is_admin'):
-        return redirect('/login')
-
-    name = session.get('business_name')
-    email = session.get('email')
-    phone = session.get('phone')
-
-    return f"שלום {name}, המייל שלך: {email}, הטלפון: {phone}"
-
 
 # --- דף ניהול ראשי ---
 
