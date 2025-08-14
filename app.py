@@ -419,7 +419,8 @@ def admin_overrides():
         day_name = hebrew_day_names[d.weekday()]
         date_map[d_str] = f"{d.strftime('%-d.%m')} ({day_name})"
 
-    week_slots = generate_week_slots(with_sources=True)
+    business_name = session.get('business_name')
+    week_slots = generate_week_slots(business_name, with_sources=True)
 
     return render_template("admin_overrides.html",
                            overrides=overrides,
@@ -908,14 +909,16 @@ Price: {price}₪
 
 @app.route("/availability")
 def availability():
-    week_slots = generate_week_slots()
+    business_name = session.get('business_name')
+    week_slots = generate_week_slots(business_name)
     return jsonify(week_slots)  # מחזיר מפתחות כמו "2025-08-01"
 
 # --- דף הבית ---
 
 @app.route("/")
 def index():
-    week_slots = generate_week_slots()
+    business_name = session.get('business_name')
+    week_slots = generate_week_slots(business_name))
     return render_template("index.html", week_slots=week_slots, services=services_prices)
 
 
