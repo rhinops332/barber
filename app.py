@@ -840,7 +840,7 @@ def cancel_appointment():
 
 @app.route("/")
 def index():
-    business_name = request.args.get("business") or session.get("business_name")
+    business_name = session.get("business_name")
     if not business_name:
         return jsonify({"error": "Missing business_name"}), 400
     week_slots = generate_week_slots(business_name)
@@ -848,7 +848,7 @@ def index():
 
 @app.route("/availability")
 def availability():
-    business_name = request.args.get("business") or session.get("business_name")
+    business_name = session.get("business_name")
     if not business_name:
         return jsonify({"error": "Missing business_name"}), 400
     week_slots = generate_week_slots(business_name)
