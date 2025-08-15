@@ -281,7 +281,7 @@ def dashboard():
     if not session.get('is_admin'):
         return redirect('/login')
 
-    business_name = request.args.get("business")  # במקום session
+    business_name = session.get("business_name")
     if not business_name:
         return "Missing business_name", 400
     email = session.get('email')
@@ -394,7 +394,7 @@ def admin_routine():
     if not session.get("is_admin"):
         return redirect("/login")
         
-    business_name = request.args.get("business")  # במקום session
+    business_name = session.get("business_name")
     if not business_name:
         return "Missing business_name", 400
 
@@ -408,7 +408,7 @@ def admin_overrides():
     if not session.get("is_admin"):
         return redirect("/login")
 
-    business_name = request.args.get("business")  # במקום session
+    business_name = session.get("business_name")
     if not business_name:
         return "Missing business_name", 400
 
@@ -440,7 +440,7 @@ def admin_appointments():
     if not session.get("is_admin"):
         return redirect("/login")
 
-    business_name = request.args.get("business")  # במקום session
+    business_name = session.get("business_name")
     if not business_name:
         return "Missing business_name", 400
 
@@ -743,7 +743,7 @@ def bot_knowledge():
     if not session.get("is_admin"):
         return redirect("/login")
 
-    business_name = request.args.get("business") or session.get("business_name")
+    business_name = session.get("business_name")
     if not business_name:
         return jsonify({"error": "Missing business_name"}), 400
 
