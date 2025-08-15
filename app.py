@@ -453,7 +453,10 @@ def admin_appointments():
 
 @app.route("/orders")
 def orders():
-    week_slots = generate_week_slots()
+    business_name = session.get('business_name')
+    if not business_name:
+        return redirect("/login")
+    week_slots = generate_week_slots(business_name)
     return render_template("orders.html", week_slots=week_slots)
 
 # --- ניהול שגרה שבועית ---
