@@ -402,7 +402,7 @@ def admin_routine():
         return redirect("/login")
         
     business_name = session.get('business_name')
-     if not business_name:
+    if not business_name:
         return redirect("/login")
     weekly_schedule = load_weekly_schedule(business_name)
 
