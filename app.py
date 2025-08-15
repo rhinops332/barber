@@ -451,10 +451,10 @@ def admin_appointments():
     appointments = load_appointments(business_name)
     return render_template("admin_appointments.html", appointments=appointments)
 
-@app.route("o")
-def o():
+@app.route("/orders")
+def orders():
     week_slots = generate_week_slots()
-    return render_template("o.html", week_slots=week_slots)
+    return render_template("orders.html", week_slots=week_slots)
 
 # --- ניהול שגרה שבועית ---
 
