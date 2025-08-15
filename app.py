@@ -544,7 +544,7 @@ def update_overrides():
     new_time = data.get("new_time")
 
     business_name = session.get('business_name')
-     if not business_name:
+    if not business_name:
         return redirect("/login")
     overrides = load_overrides(business_name)
 
