@@ -14,6 +14,7 @@ app.secret_key = os.getenv("SECRET_KEY", "default_secret")
 
 # --- קבצים ---
 BUSINESSES_FILE = "businesses.json"
+BUSINESSES_ROOT = "businesses"
 
 services_prices = {
     "Men's Haircut": 80,
@@ -53,7 +54,7 @@ def save_businesses(data):
 # --- פונקציות עסקיות לכל עסק ---
 
 def get_business_files_path(business_name):
-    return os.path.join("businesses", business_name)
+    return os.path.join(BUSINESSES_ROOT, business_name)
 
 def ensure_business_files(business_name):
     base_path = get_business_files_path(business_name)
@@ -132,8 +133,8 @@ def get_business_details(username, password):
     businesses = load_businesses()
     for b in businesses:
         if b['username'] == username and check_password_hash(b['password_hash'], password):
-            return b['business_name'], b['email'], b['phone']
-    return None, None, None
+            return b['business_name'], b['email'], b['phone'], b.get('business_code')
+    return None, None, None, None
 
 # --- ניהול שבועי ושינויים ---
 
@@ -257,7 +258,7 @@ def login():
             return redirect('/host_command')
 
         # בדיקה של עסק רגיל
-        business_name, email, phone = get_business_details(username, password)
+        business_name, email, phone, business_code = get_business_details(username, password)
         if business_name:
             session['username'] = username
             session['is_host'] = False
@@ -265,6 +266,7 @@ def login():
             session['business_name'] = business_name
             session['business_email'] = email
             session['business_phone'] = phone
+            session['business_code'] = business_code
             return redirect('/main_admin')
 
         error = "שם משתמש או סיסמה שגויים"
@@ -322,6 +324,7 @@ def add_business():
     if not session.get('is_host'):
         return redirect('/login')
 
+    business_code = request.form.get('business_code', '').strip()
     business_name = request.form.get('business_name', '').strip()
     username = request.form.get('username', '').strip()
     password = request.form.get('password', '').strip()
@@ -329,10 +332,15 @@ def add_business():
     email = request.form.get('email', '').strip()
 
     # ולידציות בסיסיות
-    if not all([business_name, username, password, phone, email]):
+    if not all([business_code, business_name, username, password, phone, email]):
         return render_template('host_command.html',
                                businesses=load_businesses(),
                                error="יש למלא את כל השדות")
+
+    if not re.match(r'^[A-Za-z0-9_-]{3,32}$', business_code):
+        return render_template('host_command.html',
+                               businesses=load_businesses(),
+                               error="קוד עסק לא חוקי. השתמשו באותיות/ספרות/_/- (3-32 תווים)")
 
     businesses = load_businesses()
 
@@ -341,10 +349,14 @@ def add_business():
         return render_template('host_command.html',
                                businesses=businesses,
                                error="שם המשתמש כבר בשימוש")
+    if any(b.get("business_code") == business_code for b in businesses):
+        return render_template('host_command.html',
+                               businesses=businesses,
+                               error="קוד העסק כבר קיים")
 
     # יצירת קבצים לתיקיית העסק
     try:
-        create_business_files(business_name)
+        create_business_files(business_code)
     except Exception as e:
         return render_template('host_command.html',
                                businesses=businesses,
@@ -352,6 +364,7 @@ def add_business():
 
     # הוספה לרשומת העסקים (סיסמה בהאש)
     businesses.append({
+        "business_code": business_code,
         "business_name": business_name,
         "username": username,
         "password_hash": generate_password_hash(password),
@@ -366,7 +379,7 @@ def add_business():
                            msg=f"העסק '{business_name}' נוצר בהצלחה")
 
 @app.route('/delete_business', methods=['POST'])
-def delete_business(business_name):
+def delete_business():
     if not session.get('is_host'):
         return redirect('/login')
 
@@ -383,10 +396,10 @@ def delete_business(business_name):
     businesses = [b for b in businesses if b.get("username") != username]
     save_businesses(businesses)
 
-    # מחיקת תיקיית העסק לפי שם העסק
+    # מחיקת תיקיית העסק לפי קוד העסק
     try:
-        bname = entry.get("business_name")
-        bpath = os.path.join(BUSINESSES_ROOT, bname)
+        bcode = entry.get("business_code") or entry.get("business_name")
+        bpath = get_business_files_path(bcode)
         if os.path.isdir(bpath):
             shutil.rmtree(bpath)
     except Exception as e:
@@ -413,8 +426,8 @@ def admin_routine():
     if not session.get("is_admin"):
         return redirect("/login")
         
-    business_name = session.get('business_name')
-    weekly_schedule = load_weekly_schedule(business_name)
+    business_code = session.get('business_code')
+    weekly_schedule = load_weekly_schedule(business_code)
 
     return render_template("admin_routine.html", weekly_schedule=weekly_schedule)
 
@@ -424,9 +437,9 @@ def admin_overrides():
     if not session.get("is_admin"):
         return redirect("/login")
 
-    business_name = session.get('business_name')
-    weekly_schedule = load_weekly_schedule(business_name)
-    overrides = load_overrides(business_name)
+    business_code = session.get('business_code')
+    weekly_schedule = load_weekly_schedule(business_code)
+    overrides = load_overrides(business_code)
 
     today = datetime.today()
     week_dates = [(today + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)]
@@ -439,7 +452,7 @@ def admin_overrides():
         date_map[d_str] = f"{d.strftime('%-d.%m')} ({day_name})"
 
     business_name = session.get('business_name')
-    week_slots = generate_week_slots(business_name, with_sources=True)
+    week_slots = generate_week_slots(business_code, with_sources=True)
 
     return render_template("admin_overrides.html",
                            overrides=overrides,
@@ -454,8 +467,8 @@ def admin_appointments():
     if not session.get("is_admin"):
         return redirect("/login")
 
-    business_name = session.get('business_name')
-    appointments = load_appointments(business_name)
+    business_code = session.get('business_code')
+    appointments = load_appointments(business_code)
     return render_template("admin_appointments.html", appointments=appointments)
 
 # --- ניהול שגרה שבועית ---
@@ -471,8 +484,8 @@ def update_weekly_schedule():
     time = data.get("time")
     new_time = data.get("new_time")
 
-    business_name = session.get('business_name')
-    weekly_schedule = load_weekly_schedule(business_name)
+    business_code = session.get('business_code')
+    weekly_schedule = load_weekly_schedule(business_code)
 
     if day_key not in [str(i) for i in range(7)]:
         return jsonify({"error": "Invalid day key"}), 400
@@ -481,14 +494,12 @@ def update_weekly_schedule():
         if day_key not in weekly_schedule:
             weekly_schedule[day_key] = []
 
-        business_name = session.get('business_name')
-        save_weekly_schedule(business_name, weekly_schedule)
+        save_weekly_schedule(business_code, weekly_schedule)
         return jsonify({"success": True})
 
     if action == "disable_day":
         weekly_schedule[day_key] = []
-        business_name = session.get('business_name')
-        save_weekly_schedule(business_name, weekly_schedule)
+        save_weekly_schedule(business_code, weekly_schedule)
         return jsonify({"success": True})
 
     day_times = weekly_schedule.get(day_key, [])
@@ -512,8 +523,7 @@ def update_weekly_schedule():
     else:
         return jsonify({"error": "Invalid action or missing time"}), 400
 
-    business_name = session.get('business_name')
-    save_weekly_schedule(business_name, weekly_schedule)
+    save_weekly_schedule(business_code, weekly_schedule)
     return jsonify({"message": "Weekly schedule updated", "weekly_schedule": weekly_schedule})
 
 @app.route("/weekly_toggle_day", methods=["POST"])
@@ -528,10 +538,10 @@ def toggle_weekly_day():
     if day_key not in [str(i) for i in range(7)]:
         return jsonify({"error": "Invalid day key"}), 400
 
-    business_name = session.get('business_name')
-    weekly_schedule = load_weekly_schedule(business_name)
+    business_code = session.get('business_code')
+    weekly_schedule = load_weekly_schedule(business_code)
     weekly_schedule[day_key] = [] if not enabled else weekly_schedule.get(day_key, [])
-    save_weekly_schedule(business_name, weekly_schedule)
+    save_weekly_schedule(business_code, weekly_schedule)
 
     return jsonify({"message": "Day updated", "weekly_schedule": weekly_schedule})
 
@@ -549,8 +559,8 @@ def update_overrides():
     time = data.get("time")
     new_time = data.get("new_time")
 
-    business_name = session.get('business_name')
-    overrides = load_overrides(business_name)
+    business_code = session.get('business_code')
+    overrides = load_overrides(business_code)
 
     if date not in overrides:
         overrides[date] = {"add": [], "remove": []}
@@ -562,7 +572,7 @@ def update_overrides():
                 overrides[date]["remove"].append(t)
             if t in overrides[date]["add"]:
                 overrides[date]["add"].remove(t)
-        save_overrides(business_name, overrides)
+        save_overrides(business_code, overrides)
         return jsonify({"message": "Multiple times removed", "overrides": overrides})
 
     elif action == "add" and time:
@@ -570,7 +580,7 @@ def update_overrides():
             overrides[date]["add"].append(time)
         if time in overrides[date]["remove"]:
             overrides[date]["remove"].remove(time)
-        save_overrides(business_name, overrides)
+        save_overrides(business_code, overrides)
         return jsonify({"message": "Time added", "overrides": overrides})
 
     elif action == "remove" and time:
@@ -589,7 +599,7 @@ def update_overrides():
             ]
             if not overrides[date]["edit"]:
                 overrides[date].pop("edit", None)
-        save_overrides(business_name, overrides)
+        save_overrides(business_code, overrides)
         return jsonify({"message": "Time removed", "overrides": overrides})
 
     elif action == "edit" and time and new_time:
@@ -618,18 +628,18 @@ def update_overrides():
         if new_time not in overrides[date]["add"]:
             overrides[date]["add"].append(new_time)
 
-        save_overrides(business_name, overrides)
+        save_overrides(business_code, overrides)
         return jsonify({"message": "Time edited", "overrides": overrides})
 
     elif action == "clear" and date:
         if date in overrides:
             overrides.pop(date)
-        save_overrides(business_name, overrides)
+        save_overrides(business_code, overrides)
         return jsonify({"message": "Day overrides cleared", "overrides": overrides})
 
     elif action == "disable_day" and date:
         overrides[date] = {"add": [], "remove": ["__all__"]}
-        save_overrides(business_name, overrides)
+        save_overrides(business_code, overrides)
         return jsonify({"message": "Day disabled", "overrides": overrides})
 
     elif action == "revert" and date and time:
@@ -651,7 +661,7 @@ def update_overrides():
             if not overrides[date].get("add") and not overrides[date].get("remove") and not overrides[date].get("edit"):
                 overrides.pop(date)
 
-        save_overrides(business_name, overrides)
+        save_overrides(business_code, overrides)
         return jsonify({"message": "Time reverted", "overrides": overrides})
 
     else:
@@ -667,8 +677,8 @@ def toggle_override_day():
     date = data.get("date")
     enabled = data.get("enabled")
 
-    business_name = session.get('business_name')
-    overrides = load_overrides(business_name)
+    business_code = session.get('business_code')
+    overrides = load_overrides(business_code)
 
     if not enabled:
         overrides[date] = {"add": [], "remove": ["__all__"]}
@@ -676,14 +686,15 @@ def toggle_override_day():
         if date in overrides and overrides[date].get("remove") == ["__all__"]:
             overrides.pop(date)
 
-    save_overrides(business_name, overrides)
+    save_overrides(business_code, overrides)
     return jsonify({"message": "Day override toggled", "overrides": overrides})
 
 @app.route('/admin/one-time/toggle_day', methods=['POST'])
 def toggle_day():
     data = request.json
     date = data['date']
-    one_time = load_one_time_changes()
+    business_code = session.get('business_code')
+    one_time = load_one_time_changes(business_code)
     if date not in one_time:
         return jsonify({'error': 'Date not found'}), 404
 
@@ -691,50 +702,54 @@ def toggle_day():
     for slot in one_time[date]:
         slot['available'] = not all_disabled
 
-    save_one_time_changes(one_time)
+    save_one_time_changes(business_code, one_time)
     return jsonify({'message': 'Day toggled successfully'})
 
 @app.route('/admin/one-time/delete', methods=['POST'])
 def delete_slot():
     data = request.json
     date, time = data['date'], data['time']
-    one_time = load_one_time_changes()
+    business_code = session.get('business_code')
+    one_time = load_one_time_changes(business_code)
     if date in one_time:
         one_time[date] = [slot for slot in one_time[date] if slot['time'] != time]
-        save_one_time_changes(one_time)
+        save_one_time_changes(business_code, one_time)
     return jsonify({'message': 'Slot deleted'})
 
 @app.route('/admin/one-time/edit', methods=['POST'])
 def edit_slot():
     data = request.json
     date, old_time, new_time = data['date'], data['old_time'], data['new_time']
-    one_time = load_one_time_changes()
+    business_code = session.get('business_code')
+    one_time = load_one_time_changes(business_code)
     for slot in one_time.get(date, []):
         if slot['time'] == old_time:
             slot['time'] = new_time
             break
-    save_one_time_changes(one_time)
+    save_one_time_changes(business_code, one_time)
     return jsonify({'message': 'Slot edited'})
 
 @app.route('/admin/one-time/toggle_slot', methods=['POST'])
 def toggle_slot():
     data = request.json
     date, time = data['date'], data['time']
-    one_time = load_one_time_changes()
+    business_code = session.get('business_code')
+    one_time = load_one_time_changes(business_code)
     for slot in one_time.get(date, []):
         if slot['time'] == time:
             slot['available'] = not slot['available']
             break
-    save_one_time_changes(one_time)
+    save_one_time_changes(business_code, one_time)
     return jsonify({'message': 'Slot toggled'})
 
 @app.route('/admin/one-time/add', methods=['POST'])
 def add_slot():
     data = request.json
     date, time = data['date'], data['time']
-    one_time = load_one_time_changes()
+    business_code = session.get('business_code')
+    one_time = load_one_time_changes(business_code)
     one_time.setdefault(date, []).append({'time': time, 'available': True})
-    save_one_time_changes(one_time)
+    save_one_time_changes(business_code, one_time)
     return jsonify({'message': 'Slot added'})
 
 @app.route('/appointment_details')
@@ -742,8 +757,8 @@ def appointment_details():
     date = request.args.get('date')
     time = request.args.get('time')
 
-    business_name = session.get('business_name')
-    appointments = load_appointments(business_name)
+    business_code = session.get('business_code')
+    appointments = load_appointments(business_code)
 
     if date in appointments:
         for appt in appointments[date]:
@@ -761,11 +776,11 @@ def bot_knowledge():
 
     if request.method == "POST":
         content = request.form.get("content", "")
-        business_name = session.get('business_name')
-        save_business_json(session.get('business_name'), "bot_knowledge.json", content)
+        business_code = session.get('business_code')
+        save_bot_knowledge(business_code, content)
         return redirect("/main_admin")
 
-    content = load_business_json(session.get('business_name'), "bot_knowledge.json")
+    content = load_bot_knowledge(session.get('business_code'))
     return render_template("bot_knowledge.html", content=content)
 
 # --- ניהול הזמנות ---
@@ -785,12 +800,11 @@ def book_appointment():
     if service not in services_prices:
         return jsonify({"error": "Unknown service"}), 400
 
-    business_name = session.get('business_name')
-    if not is_slot_available(business_name, date, time):
+    business_code = session.get('business_code')
+    if not is_slot_available(business_code, date, time):
         return jsonify({"error": "This time slot is not available"}), 400
 
-    business_name = session.get('business_name')
-    appointments = load_appointments(business_name)
+    appointments = load_appointments(business_code)
     date_appointments = appointments.get(date, [])
 
     for appt in date_appointments:
@@ -806,10 +820,9 @@ def book_appointment():
     }
     date_appointments.append(appointment)
     appointments[date] = date_appointments
-    business_name = session.get('business_name')
-    save_appointments(business_name, appointments)
+    save_appointments(business_code, appointments)
 
-    overrides = load_overrides(business_name)
+    overrides = load_overrides(business_code)
     if date not in overrides:
         overrides[date] = {"add": [], "remove": [], "edit": [], "booked": []}
     elif "booked" not in overrides[date]:
@@ -826,8 +839,7 @@ def book_appointment():
     if time in overrides[date]["add"]:
         overrides[date]["add"].remove(time)
 
-    business_name = session.get('business_name')
-    save_overrides(business_name, overrides)
+    save_overrides(business_code, overrides)
 
     try:
         send_email(name, phone, date, time, service, services_prices[service])
@@ -851,32 +863,23 @@ def cancel_appointment():
     name = data.get('name')
     phone = data.get('phone')
     
-    try:
-        appointments = load_business_json(session.get('business_name'), "appointments.json")
-    except FileNotFoundError:
-        appointments = {}
+    business_code = session.get('business_code')
 
+    appointments = load_appointments(business_code)
     day_appointments = appointments.get(date, [])
 
     new_day_appointments = [
         appt for appt in day_appointments
-        if not (appt['time'] == time and appt['name'] == name and appt['phone'] == phone)
+        if not (appt.get('time') == time and appt.get('name') == name and appt.get('phone') == phone)
     ]
 
     if len(new_day_appointments) == len(day_appointments):
         return jsonify({'error': 'Appointment not found'}), 404
 
     appointments[date] = new_day_appointments
+    save_appointments(business_code, appointments)
 
-    save_business_json(session.get('business_name'), "appointments.json", appointments)
-
-
-    try:
-        with open(OVERRIDES_FILE, 'r', encoding='utf-8') as f:
-            overrides = json.load(f)
-    except FileNotFoundError:
-        overrides = {}
-
+    overrides = load_overrides(business_code)
     if date not in overrides:
         overrides[date] = {"add": [], "remove": [], "edit": []}
 
@@ -886,8 +889,7 @@ def cancel_appointment():
     if time not in overrides[date].get("add", []):
         overrides[date]["add"].append(time)
 
-    with open(OVERRIDES_FILE, 'w', encoding='utf-8') as f:
-        json.dump(overrides, f, ensure_ascii=False, indent=2)
+    save_overrides(business_code, overrides)
 
     return jsonify({'message': f'Appointment on {date} at {time} canceled successfully.'})
 
@@ -928,8 +930,8 @@ Price: {price}₪
 
 @app.route("/availability")
 def availability():
-    business_name = session.get('business_name')
-    week_slots = generate_week_slots(business_name)
+    business_code = session.get('business_code')
+    week_slots = generate_week_slots(business_code)
     return jsonify(week_slots)  # מחזיר מפתחות כמו "2025-08-01"
 
 # --- דף הבית ---
@@ -952,8 +954,195 @@ def ask_bot():
     if not question:
         return jsonify({"answer": "אנא כתוב שאלה."})
 
-    business_name = session.get('business_name')
-    knowledge_text = load_bot_knowledge(business_name)
+    business_code = session.get('business_code')
+    knowledge_text = load_bot_knowledge(business_code)
+
+    messages = [
+        {"role": "system", "content": "You are a helpful assistant for a hair salon booking system."},
+        {"role": "system", "content": f"Additional info: {knowledge_text}"},
+        {"role": "user", "content": question}
+    ]
+
+    GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
+    if not GITHUB_TOKEN:
+        return jsonify({"error": "Missing GitHub API token"}), 500
+
+    headers = {
+        "Authorization": f"Bearer {GITHUB_TOKEN}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "model": "openai/gpt-4.1",
+        "messages": messages,
+        "temperature": 0.7,
+        "max_tokens": 200
+    }
+
+    try:
+        response = requests.post(
+            "https://models.github.ai/inference/v1/chat/completions",
+            headers=headers,
+            json=payload
+        )
+        response.raise_for_status()
+        output = response.json()
+        answer = output["choices"][0]["message"]["content"].strip()
+        return jsonify({"answer": answer})
+    except Exception as e:
+        print("Error calling GitHub AI API:", e)
+        fallback_answer = "מצטער, לא הצלחתי לעבד את השאלה כרגע."
+        return jsonify({"answer": fallback_answer})
+
+# --- מסלולים ציבוריים לפי קוד עסק (/b/<business_code>) ---
+
+def get_business_by_code(business_code):
+    businesses = load_businesses()
+    for b in businesses:
+        if b.get('business_code') == business_code:
+            return b
+    return None
+
+@app.route('/b/<business_code>/')
+def business_public_home(business_code):
+    if not get_business_by_code(business_code):
+        return "Business not found", 404
+    return original_render_template('orders.html', api_prefix=f"/b/{business_code}")
+
+@app.route('/b/<business_code>/availability')
+def public_availability(business_code):
+    if not get_business_by_code(business_code):
+        return jsonify({"error": "Business not found"}), 404
+    week_slots = generate_week_slots(business_code)
+    return jsonify(week_slots)
+
+@app.route('/b/<business_code>/appointments')
+def public_appointments(business_code):
+    if not get_business_by_code(business_code):
+        return jsonify({"error": "Business not found"}), 404
+    date_filter = request.args.get('date')
+    appts = load_appointments(business_code)
+    if date_filter:
+        return jsonify({date_filter: appts.get(date_filter, [])})
+    return jsonify(appts)
+
+@app.route('/b/<business_code>/book', methods=['POST'])
+def public_book(business_code):
+    if not get_business_by_code(business_code):
+        return jsonify({"error": "Business not found"}), 404
+
+    data = request.get_json()
+    name = data.get("name", "").strip()
+    phone = data.get("phone", "").strip()
+    date = data.get("date", "").strip()
+    time = data.get("time", "").strip()
+    service = data.get("service", "").strip()
+
+    if not all([name, phone, date, time, service]):
+        return jsonify({"error": "Missing fields"}), 400
+    if service not in services_prices:
+        return jsonify({"error": "Unknown service"}), 400
+
+    if not is_slot_available(business_code, date, time):
+        return jsonify({"error": "This time slot is not available"}), 400
+
+    appointments = load_appointments(business_code)
+    date_appointments = appointments.get(date, [])
+    if any(appt.get("time") == time for appt in date_appointments):
+        return jsonify({"error": "This time slot is already booked"}), 400
+
+    appointment = {
+        "name": name,
+        "phone": phone,
+        "time": time,
+        "service": service,
+        "price": services_prices[service]
+    }
+    date_appointments.append(appointment)
+    appointments[date] = date_appointments
+    save_appointments(business_code, appointments)
+
+    overrides = load_overrides(business_code)
+    if date not in overrides:
+        overrides[date] = {"add": [], "remove": [], "edit": [], "booked": []}
+    elif "booked" not in overrides[date]:
+        overrides[date]["booked"] = []
+
+    overrides[date]["booked"].append({
+        "time": time,
+        "name": name,
+        "phone": phone,
+        "service": service
+    })
+    if time not in overrides[date]["remove"]:
+        overrides[date]["remove"].append(time)
+    if time in overrides[date]["add"]:
+        overrides[date]["add"].remove(time)
+
+    save_overrides(business_code, overrides)
+
+    try:
+        send_email(name, phone, date, time, service, services_prices[service])
+    except Exception as e:
+        print("Error sending email:", e)
+
+    return jsonify({
+        "message": f"Appointment booked for {date} at {time} for {service}.",
+        "date": date,
+        "time": time,
+        "service": service,
+        "can_cancel": True,
+        "cancel_endpoint": f"/b/{business_code}/cancel"
+    })
+
+@app.route('/b/<business_code>/cancel', methods=['POST'])
+def public_cancel(business_code):
+    if not get_business_by_code(business_code):
+        return jsonify({"error": "Business not found"}), 404
+
+    data = request.get_json()
+    date = data.get('date')
+    time = data.get('time')
+    name = data.get('name')
+    phone = data.get('phone')
+
+    appointments = load_appointments(business_code)
+    day_appointments = appointments.get(date, [])
+    new_day_appointments = [
+        appt for appt in day_appointments
+        if not (appt.get('time') == time and appt.get('name') == name and appt.get('phone') == phone)
+    ]
+
+    if len(new_day_appointments) == len(day_appointments):
+        return jsonify({'error': 'Appointment not found'}), 404
+
+    appointments[date] = new_day_appointments
+    save_appointments(business_code, appointments)
+
+    overrides = load_overrides(business_code)
+    if date not in overrides:
+        overrides[date] = {"add": [], "remove": [], "edit": []}
+
+    if time in overrides[date].get("remove", []):
+        overrides[date]["remove"].remove(time)
+    if time not in overrides[date].get("add", []):
+        overrides[date]["add"].append(time)
+
+    save_overrides(business_code, overrides)
+
+    return jsonify({'message': f'Appointment on {date} at {time} canceled successfully.'})
+
+@app.route('/b/<business_code>/ask', methods=['POST'])
+def public_ask(business_code):
+    if not get_business_by_code(business_code):
+        return jsonify({"error": "Business not found"}), 404
+
+    data = request.get_json()
+    question = data.get("message", "").strip()
+    if not question:
+        return jsonify({"answer": "אנא כתוב שאלה."})
+
+    knowledge_text = load_bot_knowledge(business_code)
 
     messages = [
         {"role": "system", "content": "You are a helpful assistant for a hair salon booking system."},
