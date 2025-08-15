@@ -59,24 +59,7 @@ def ensure_business_files(business_name):
     base_path = get_business_files_path(business_name)
     os.makedirs(base_path, exist_ok=True)
 
-    files_defaults = {
-        "weekly_schedule.json": {
-            "0": [], "1": [], "2": [], "3": [], "4": [], "5": [], "6": []
-        },
-        "overrides.json": {},
-        "appointments.json": {},
-        "one_time_changes.json": {},
-        "bot_knowledge.txt": ""
-    }
-
-    for fname, default_content in files_defaults.items():
-        fpath = os.path.join(base_path, fname)
-        if not os.path.exists(fpath):
-            if fname.endswith(".txt"):
-                save_text(fpath, default_content)
-            else:
-                save_json(fpath, default_content)
-
+    
 def load_weekly_schedule(business_name):
     ensure_business_files(business_name)
     path = os.path.join(get_business_files_path(business_name), "weekly_schedule.json")
@@ -125,9 +108,31 @@ def save_bot_knowledge(business_name, content):
 # --- פונקציות עסקיות בסיסיות ---
 
 def create_business_files(business_name):
-    ensure_business_files(business_name)
-    print(f"קבצים נוצרו עבור העסק '{business_name}'")
+    base_path = "businesses"  # התיקייה הראשית של כל העסקים
+    business_path = os.path.join(base_path, business_name)
+    os.makedirs(business_path, exist_ok=True)
 
+    # רשימת הקבצים שצריך להעתיק
+    files = [
+        "appointments.json",
+        "overrides.json",
+        "weekly_schedule.json",
+        "bot_knowledge.json"
+    ]
+
+    for file_name in files:
+        source_path = file_name  # קובץ קיים בשורש
+        dest_path = os.path.join(business_path, file_name)
+
+        if os.path.exists(source_path):
+            shutil.copy2(source_path, dest_path)
+        else:
+            # אם הקובץ לא קיים בשורש, ניצור קובץ ריק
+            with open(dest_path, "w", encoding="utf-8") as f:
+                json.dump({}, f, ensure_ascii=False, indent=4)
+
+    print(f"נוצרו קבצים עבור העסק '{business_name}' בתוך '{business_path}' עם תוכן התחלתי זהה לקיימים")
+    
 def get_business_details(username, password):
     businesses = load_businesses()
     for b in businesses:
