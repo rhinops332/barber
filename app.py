@@ -287,8 +287,12 @@ def dashboard():
         return redirect('/login')
 
     business_name = session.get('business_name')
+    if not business_name:
+        return redirect('/login')  # או עמוד שגיאה מתאים
+
     email = session.get('email')
     phone = session.get('phone')
+    name = session.get('name')  # אחרת ה־f-string שלך ישבר
 
     return f"שלום {name}, המייל שלך: {email}, הטלפון: {phone}"
 
@@ -398,6 +402,8 @@ def admin_routine():
         return redirect("/login")
         
     business_name = session.get('business_name')
+     if not business_name:
+        return redirect("/login")
     weekly_schedule = load_weekly_schedule(business_name)
 
     return render_template("admin_routine.html", weekly_schedule=weekly_schedule)
@@ -409,6 +415,8 @@ def admin_overrides():
         return redirect("/login")
 
     business_name = session.get('business_name')
+    if not business_name:
+        return redirect("/login")
     weekly_schedule = load_weekly_schedule(business_name)
     overrides = load_overrides(business_name)
 
@@ -422,7 +430,6 @@ def admin_overrides():
         day_name = hebrew_day_names[d.weekday()]
         date_map[d_str] = f"{d.strftime('%-d.%m')} ({day_name})"
 
-    business_name = session.get('business_name')
     week_slots = generate_week_slots(business_name, with_sources=True)
 
     return render_template("admin_overrides.html",
@@ -439,6 +446,8 @@ def admin_appointments():
         return redirect("/login")
 
     business_name = session.get('business_name')
+    if not business_name:
+        return redirect("/login")
     appointments = load_appointments(business_name)
     return render_template("admin_appointments.html", appointments=appointments)
 
@@ -456,6 +465,8 @@ def update_weekly_schedule():
     new_time = data.get("new_time")
 
     business_name = session.get('business_name')
+     if not business_name:
+        return redirect("/login")
     weekly_schedule = load_weekly_schedule(business_name)
 
     if day_key not in [str(i) for i in range(7)]:
@@ -465,13 +476,11 @@ def update_weekly_schedule():
         if day_key not in weekly_schedule:
             weekly_schedule[day_key] = []
 
-        business_name = session.get('business_name')
         save_weekly_schedule(business_name, weekly_schedule)
         return jsonify({"success": True})
 
     if action == "disable_day":
         weekly_schedule[day_key] = []
-        business_name = session.get('business_name')
         save_weekly_schedule(business_name, weekly_schedule)
         return jsonify({"success": True})
 
@@ -496,7 +505,6 @@ def update_weekly_schedule():
     else:
         return jsonify({"error": "Invalid action or missing time"}), 400
 
-    business_name = session.get('business_name')
     save_weekly_schedule(business_name, weekly_schedule)
     return jsonify({"message": "Weekly schedule updated", "weekly_schedule": weekly_schedule})
 
@@ -513,6 +521,8 @@ def toggle_weekly_day():
         return jsonify({"error": "Invalid day key"}), 400
 
     business_name = session.get('business_name')
+    if not business_name:
+        return redirect("/login")
     weekly_schedule = load_weekly_schedule(business_name)
     weekly_schedule[day_key] = [] if not enabled else weekly_schedule.get(day_key, [])
     save_weekly_schedule(business_name, weekly_schedule)
@@ -534,6 +544,8 @@ def update_overrides():
     new_time = data.get("new_time")
 
     business_name = session.get('business_name')
+     if not business_name:
+        return redirect("/login")
     overrides = load_overrides(business_name)
 
     if date not in overrides:
@@ -652,6 +664,8 @@ def toggle_override_day():
     enabled = data.get("enabled")
 
     business_name = session.get('business_name')
+    if not business_name:
+        return redirect("/login")
     overrides = load_overrides(business_name)
 
     if not enabled:
@@ -727,6 +741,8 @@ def appointment_details():
     time = request.args.get('time')
 
     business_name = session.get('business_name')
+    if not business_name:
+        return redirect("/login")
     appointments = load_appointments(business_name)
 
     if date in appointments:
@@ -746,6 +762,8 @@ def bot_knowledge():
     if request.method == "POST":
         content = request.form.get("content", "")
         business_name = session.get('business_name')
+        if not business_name: 
+            return redirect("/login")
         save_business_json(session.get('business_name'), "bot_knowledge.json", content)
         return redirect("/main_admin")
 
@@ -770,10 +788,11 @@ def book_appointment():
         return jsonify({"error": "Unknown service"}), 400
 
     business_name = session.get('business_name')
+    if not business_name:
+        return redirect("/login")
     if not is_slot_available(business_name, date, time):
         return jsonify({"error": "This time slot is not available"}), 400
 
-    business_name = session.get('business_name')
     appointments = load_appointments(business_name)
     date_appointments = appointments.get(date, [])
 
@@ -790,7 +809,6 @@ def book_appointment():
     }
     date_appointments.append(appointment)
     appointments[date] = date_appointments
-    business_name = session.get('business_name')
     save_appointments(business_name, appointments)
 
     overrides = load_overrides(business_name)
@@ -810,7 +828,6 @@ def book_appointment():
     if time in overrides[date]["add"]:
         overrides[date]["add"].remove(time)
 
-    business_name = session.get('business_name')
     save_overrides(business_name, overrides)
 
     try:
@@ -913,19 +930,21 @@ Price: {price}₪
 @app.route("/availability")
 def availability():
     business_name = session.get('business_name')
-    week_slots = generate_week_slots(business_name)
-    return jsonify(week_slots)  # מחזיר מפתחות כמו "2025-08-01"
+    if not business_name:
+        return jsonify({"error": "Business name not set"}), 400
 
+    week_slots = generate_week_slots(business_name)
+    return jsonify(week_slots)
 # --- דף הבית ---
 
 @app.route("/")
 def index():
     business_name = session.get('business_name')
+    if not business_name:
+        return redirect("/login")  # או עמוד ברירת מחדל
+
     week_slots = generate_week_slots(business_name)
     return render_template("index.html", week_slots=week_slots, services=services_prices)
-
-
-
 # --- API - שאלות לבוט ---
 
 @app.route("/ask", methods=["POST"])
@@ -937,6 +956,8 @@ def ask_bot():
         return jsonify({"answer": "אנא כתוב שאלה."})
 
     business_name = session.get('business_name')
+    if not business_name:
+        return redirect("/login")
     knowledge_text = load_bot_knowledge(business_name)
 
     messages = [
