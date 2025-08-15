@@ -331,6 +331,11 @@ let chosenDate = '';
 let chosenTime = '';
 let selectedButton = null;  // לשמור את הכפתור שנבחר
 
+const apiPrefix = '{{ api_prefix | default("") }}';
+function api(path) {
+  return (apiPrefix || '') + path;
+}
+
 function formatHebrewDay(dateStr) {
   const date = new Date(dateStr);
   const days = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
@@ -338,7 +343,7 @@ function formatHebrewDay(dateStr) {
 }
 
 async function loadAvailability() {
-  const res = await fetch('/availability');
+  const res = await fetch(api('/availability'));
   const data = await res.json();
   availabilityData = data;
   allDates = Object.keys(data);
@@ -476,7 +481,7 @@ function openCancelConfirmation(date, time, name, phone) {
 
   newConfirmBtn.onclick = async () => {
     try {
-      const resCancel = await fetch('/cancel_appointment', {
+      const resCancel = await fetch(api('/cancel'), {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({date, time, name, phone})
@@ -526,7 +531,7 @@ function closeCancelConfirmation() {
 
 async function showBookingDetails(date, time) {
   // תחפש את הפרטים בהזמנות שהגיעו מהשרת דרך /appointments?date=...
-  const res = await fetch(`/appointments?date=${date}`);
+  const res = await fetch(api(`/appointments?date=${date}`));
   if (!res.ok) {
     document.getElementById('booking-details').style.display = 'none';
     return;
@@ -560,7 +565,7 @@ document.getElementById('bookingForm').onsubmit = async e => {
     return;
   }
 
-  const res = await fetch('/book', {
+  const res = await fetch(api('/book'), {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({name, phone, date, time, service})
@@ -613,7 +618,7 @@ async function sendBotMessage() {
   const messagesDiv = document.getElementById('bot-messages');
   messagesDiv.innerHTML += `<div><b>You:</b> ${message}</div>`;
   input.value = '';
-  const res = await fetch('/ask', {
+  const res = await fetch(api('/ask'), {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({message})
