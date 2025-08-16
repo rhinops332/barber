@@ -8,75 +8,9 @@ from email.message import EmailMessage
 import re
 import shutil
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, UniqueConstraint, Text, DateTime
-from sqlalchemy.orm import declarative_base, sessionmaker, scoped_session, relationship
-from sqlalchemy.types import JSON as SAJSON
-from sqlalchemy.exc import IntegrityError
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "default_secret")
-
-# Database setup
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////workspace/app.db")
-engine = create_engine(DATABASE_URL, echo=False, future=True)
-SessionLocal = scoped_session(sessionmaker(bind=engine, autoflush=False, autocommit=False))
-Base = declarative_base()
-
-class Business(Base):
-    __tablename__ = "businesses"
-    id = Column(Integer, primary_key=True)
-    business_code = Column(String(64), unique=True, nullable=False)
-    business_name = Column(String(255), nullable=False)
-    username = Column(String(255), unique=True, nullable=False)
-    password_hash = Column(String(255), nullable=False)
-    phone = Column(String(64), nullable=False)
-    email = Column(String(255), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    schedules = relationship("WeeklySchedule", cascade="all, delete-orphan", backref="business")
-    overrides = relationship("Override", cascade="all, delete-orphan", backref="business")
-    appointments = relationship("Appointment", cascade="all, delete-orphan", backref="business")
-    knowledge = relationship("BotKnowledge", cascade="all, delete-orphan", backref="business", uselist=False)
-
-class WeeklySchedule(Base):
-    __tablename__ = "weekly_schedule"
-    id = Column(Integer, primary_key=True)
-    business_id = Column(Integer, ForeignKey("businesses.id"), index=True, nullable=False)
-    day_of_week = Column(Integer, nullable=False)  # 0..6 (Mon..Sun per Python weekday)
-    time = Column(String(5), nullable=False)       # HH:MM
-    __table_args__ = (UniqueConstraint("business_id", "day_of_week", "time", name="uq_weekly_slot"),)
-
-class Override(Base):
-    __tablename__ = "overrides"
-    id = Column(Integer, primary_key=True)
-    business_id = Column(Integer, ForeignKey("businesses.id"), index=True, nullable=False)
-    date = Column(String(10), nullable=False)  # YYYY-MM-DD
-    add_times = Column(SAJSON, nullable=False, default=list)
-    remove_times = Column(SAJSON, nullable=False, default=list)
-    edit_entries = Column(SAJSON, nullable=False, default=list)     # [{from,to}]
-    booked_entries = Column(SAJSON, nullable=False, default=list)   # [{time,name,phone,service}]
-    one_time_changes = Column(SAJSON, nullable=False, default=list) # [{time,available}]
-    __table_args__ = (UniqueConstraint("business_id", "date", name="uq_override_date"),)
-
-class Appointment(Base):
-    __tablename__ = "appointments"
-    id = Column(Integer, primary_key=True)
-    business_id = Column(Integer, ForeignKey("businesses.id"), index=True, nullable=False)
-    date = Column(String(10), nullable=False)
-    time = Column(String(5), nullable=False)
-    name = Column(String(255), nullable=False)
-    phone = Column(String(64), nullable=False)
-    service = Column(String(255), nullable=False)
-    price = Column(Integer, nullable=False)
-    __table_args__ = (UniqueConstraint("business_id", "date", "time", name="uq_appointment_slot"),)
-
-class BotKnowledge(Base):
-    __tablename__ = "bot_knowledge"
-    id = Column(Integer, primary_key=True)
-    business_id = Column(Integer, ForeignKey("businesses.id"), unique=True, nullable=False)
-    content = Column(Text, nullable=False, default="")
-
-Base.metadata.create_all(engine)
 
 # --- קבצים ---
 BUSINESSES_FILE = "businesses.json"
@@ -110,272 +44,100 @@ def save_text(filename, content):
     with open(filename, "w", encoding="utf-8") as f:
         f.write(content.strip())
 
-# DB helpers
-
-def get_db():
-    return SessionLocal()
-
-
-def get_business_by_name(db, business_name):
-    return db.query(Business).filter(Business.business_name == business_name).first()
-
-
-def get_business_by_username(db, username):
-    return db.query(Business).filter(Business.username == username).first()
-
-
 def load_businesses():
-    # Return list[dict] for compatibility with templates and existing logic
-    with get_db() as db:
-        rows = db.query(Business).order_by(Business.created_at.desc()).all()
-        return [
-            {
-                "business_code": r.business_code,
-                "business_name": r.business_name,
-                "username": r.username,
-                "password_hash": r.password_hash,
-                "phone": r.phone,
-                "email": r.email,
-                "created_at": r.created_at.isoformat() + "Z"
-            }
-            for r in rows
-        ]
-
+    return load_json(BUSINESSES_FILE)
 
 def save_businesses(data):
-    # Not used with DB; kept for backward compatibility no-op
-    return
+    save_json(BUSINESSES_FILE, data)
 
 # --- פונקציות עסקיות לכל עסק ---
 
 def get_business_files_path(business_name):
-    # Deprecated when using DB
     return os.path.join("businesses", business_name)
 
-
 def ensure_business_files(business_name):
-    # Deprecated when using DB
     base_path = get_business_files_path(business_name)
     os.makedirs(base_path, exist_ok=True)
 
-
+    
 def load_weekly_schedule(business_name):
-    # Return dict[str(day_index)] -> list[str time]
-    with get_db() as db:
-        b = get_business_by_name(db, business_name)
-        result = {str(i): [] for i in range(7)}
-        if not b:
-            return result
-        rows = (
-            db.query(WeeklySchedule)
-            .filter(WeeklySchedule.business_id == b.id)
-            .all()
-        )
-        for r in rows:
-            key = str(r.day_of_week)
-            result.setdefault(key, []).append(r.time)
-        for k in result:
-            result[k] = sorted(set(result[k]))
-        return result
-
+    ensure_business_files(business_name)
+    path = os.path.join(get_business_files_path(business_name), "weekly_schedule.json")
+    return load_json(path)
 
 def save_weekly_schedule(business_name, data):
-    # Replace weekly schedule for business with provided data
-    with get_db() as db:
-        b = get_business_by_name(db, business_name)
-        if not b:
-            return
-        existing = db.query(WeeklySchedule).filter(WeeklySchedule.business_id == b.id).all()
-        existing_map = {(e.day_of_week, e.time): e for e in existing}
-        desired = set()
-        for day_key, times in (data or {}).items():
-            try:
-                day_idx = int(day_key)
-            except Exception:
-                continue
-            for t in times:
-                desired.add((day_idx, t))
-        # Delete removed
-        for (d, t), row in list(existing_map.items()):
-            if (d, t) not in desired:
-                db.delete(row)
-        # Insert new
-        for (d, t) in desired:
-            if (d, t) not in existing_map:
-                db.add(WeeklySchedule(business_id=b.id, day_of_week=d, time=t))
-        db.commit()
-
-
-def _override_row_for(db, b, date):
-    row = (
-        db.query(Override)
-        .filter(Override.business_id == b.id, Override.date == date)
-        .one_or_none()
-    )
-    if not row:
-        row = Override(business_id=b.id, date=date, add_times=[], remove_times=[], edit_entries=[], booked_entries=[], one_time_changes=[])
-        db.add(row)
-        db.commit()
-        db.refresh(row)
-    return row
-
+    path = os.path.join(get_business_files_path(business_name), "weekly_schedule.json")
+    save_json(path, data)
 
 def load_overrides(business_name):
-    with get_db() as db:
-        b = get_business_by_name(db, business_name)
-        if not b:
-            return {}
-        rows = db.query(Override).filter(Override.business_id == b.id).all()
-        result = {}
-        for r in rows:
-            result[r.date] = {
-                "add": list(r.add_times or []),
-                "remove": list(r.remove_times or []),
-                "edit": list(r.edit_entries or []),
-                "booked": list(r.booked_entries or []),
-            }
-        return result
-
+    ensure_business_files(business_name)
+    path = os.path.join(get_business_files_path(business_name), "overrides.json")
+    return load_json(path)
 
 def save_overrides(business_name, data):
-    with get_db() as db:
-        b = get_business_by_name(db, business_name)
-        if not b:
-            return
-        # Existing dates
-        existing_rows = db.query(Override).filter(Override.business_id == b.id).all()
-        existing_dates = {r.date for r in existing_rows}
-        incoming_dates = set((data or {}).keys())
-        # Delete removed dates
-        for r in existing_rows:
-            if r.date not in incoming_dates:
-                db.delete(r)
-        # Upsert others
-        for date, payload in (data or {}).items():
-            row = (
-                db.query(Override)
-                .filter(Override.business_id == b.id, Override.date == date)
-                .one_or_none()
-            )
-            if not row:
-                row = Override(business_id=b.id, date=date)
-                db.add(row)
-            row.add_times = payload.get("add", [])
-            row.remove_times = payload.get("remove", [])
-            row.edit_entries = payload.get("edit", [])
-            # Keep booked entries if provided; else preserve
-            if "booked" in payload:
-                row.booked_entries = payload.get("booked", [])
-        db.commit()
-
+    path = os.path.join(get_business_files_path(business_name), "overrides.json")
+    save_json(path, data)
 
 def load_appointments(business_name):
-    with get_db() as db:
-        b = get_business_by_name(db, business_name)
-        if not b:
-            return {}
-        rows = (
-            db.query(Appointment)
-            .filter(Appointment.business_id == b.id)
-            .all()
-        )
-        result = {}
-        for r in rows:
-            result.setdefault(r.date, []).append({
-                "name": r.name,
-                "phone": r.phone,
-                "time": r.time,
-                "service": r.service,
-                "price": r.price,
-            })
-        # keep times sorted within date
-        for d in result:
-            result[d] = sorted(result[d], key=lambda x: x.get("time", ""))
-        return result
-
+    ensure_business_files(business_name)
+    path = os.path.join(get_business_files_path(business_name), "appointments.json")
+    return load_json(path)
 
 def save_appointments(business_name, data):
-    with get_db() as db:
-        b = get_business_by_name(db, business_name)
-        if not b:
-            return
-        # Replace all appointments for this business with provided data
-        db.query(Appointment).filter(Appointment.business_id == b.id).delete()
-        for date, appts in (data or {}).items():
-            for a in appts:
-                db.add(Appointment(
-                    business_id=b.id,
-                    date=date,
-                    time=a.get("time"),
-                    name=a.get("name", ""),
-                    phone=a.get("phone", ""),
-                    service=a.get("service", ""),
-                    price=int(a.get("price", 0))
-                ))
-        db.commit()
+    path = os.path.join(get_business_files_path(business_name), "appointments.json")
+    save_json(path, data)
 
-
-def load_one_time_changes(business_name=None):
-    # store under overrides.one_time_changes per date
-    with get_db() as db:
-        if business_name is None:
-            business_name = session.get('business_name')
-        b = get_business_by_name(db, business_name)
-        if not b:
-            return {}
-        rows = db.query(Override).filter(Override.business_id == b.id).all()
-        result = {}
-        for r in rows:
-            if r.one_time_changes:
-                result[r.date] = list(r.one_time_changes)
-        return result
-
+def load_one_time_changes(business_name):
+    ensure_business_files(business_name)
+    path = os.path.join(get_business_files_path(business_name), "one_time_changes.json")
+    return load_json(path)
 
 def save_one_time_changes(business_name, data):
-    with get_db() as db:
-        b = get_business_by_name(db, business_name)
-        if not b:
-            return
-        # Upsert dates only for provided payload
-        for date, changes in (data or {}).items():
-            row = _override_row_for(db, b, date)
-            row.one_time_changes = changes
-        db.commit()
-
+    path = os.path.join(get_business_files_path(business_name), "one_time_changes.json")
+    save_json(path, data)
 
 def load_bot_knowledge(business_name):
-    with get_db() as db:
-        b = get_business_by_name(db, business_name)
-        if not b:
-            return ""
-        row = db.query(BotKnowledge).filter(BotKnowledge.business_id == b.id).one_or_none()
-        return row.content if row else ""
-
+    ensure_business_files(business_name)
+    path = os.path.join(get_business_files_path(business_name), "bot_knowledge.txt")
+    return load_text(path)
 
 def save_bot_knowledge(business_name, content):
-    with get_db() as db:
-        b = get_business_by_name(db, business_name)
-        if not b:
-            return
-        row = db.query(BotKnowledge).filter(BotKnowledge.business_id == b.id).one_or_none()
-        if not row:
-            row = BotKnowledge(business_id=b.id, content=content or "")
-            db.add(row)
-        else:
-            row.content = content or ""
-        db.commit()
+    path = os.path.join(get_business_files_path(business_name), "bot_knowledge.txt")
+    save_text(path, content)
 
 # --- פונקציות עסקיות בסיסיות ---
 
 def create_business_files(business_name):
-    # Deprecated under DB. Kept as no-op.
-    return
+    base_path = "businesses"  # התיקייה הראשית של כל העסקים
+    business_path = os.path.join(base_path, business_name)
+    os.makedirs(business_path, exist_ok=True)
 
+    # רשימת הקבצים שצריך להעתיק
+    files = [
+        "appointments.json",
+        "overrides.json",
+        "weekly_schedule.json",
+        "bot_knowledge.json"
+    ]
+
+    for file_name in files:
+        source_path = file_name  # קובץ קיים בשורש
+        dest_path = os.path.join(business_path, file_name)
+
+        if os.path.exists(source_path):
+            shutil.copy2(source_path, dest_path)
+        else:
+            # אם הקובץ לא קיים בשורש, ניצור קובץ ריק
+            with open(dest_path, "w", encoding="utf-8") as f:
+                json.dump({}, f, ensure_ascii=False, indent=4)
+
+    print(f"נוצרו קבצים עבור העסק '{business_name}' בתוך '{business_path}' עם תוכן התחלתי זהה לקיימים")
+    
 def get_business_details(username, password):
-    with get_db() as db:
-        b = get_business_by_username(db, username)
-        if b and check_password_hash(b.password_hash, password):
-            return b.business_name, b.email, b.phone
+    businesses = load_businesses()
+    for b in businesses:
+        if b['username'] == username and check_password_hash(b['password_hash'], password):
+            return b['business_name'], b['email'], b['phone']
     return None, None, None
 
 # --- ניהול שבועי ושינויים ---
@@ -612,7 +374,7 @@ def delete_business(business_name):
     # מחיקת תיקיית העסק לפי שם העסק
     try:
         bname = entry.get("business_name")
-        bpath = os.path.join(BUSINESSES_FILE, bname) # This line was not in the new_code, but should be changed for consistency
+        bpath = os.path.join(BUSINESSES_ROOT, bname)
         if os.path.isdir(bpath):
             shutil.rmtree(bpath)
     except Exception as e:
@@ -1010,10 +772,10 @@ def bot_knowledge():
         business_name = session.get('business_name')
         if not business_name: 
             return redirect("/login")
-        save_bot_knowledge(business_name, content)
+        save_business_json(session.get('business_name'), "bot_knowledge.json", content)
         return redirect("/main_admin")
 
-    content = load_bot_knowledge(session.get('business_name'))
+    content = load_business_json(session.get('business_name'), "bot_knowledge.json")
     return render_template("bot_knowledge.html", content=content)
 
 # --- ניהול הזמנות ---
@@ -1099,7 +861,7 @@ def cancel_appointment():
     phone = data.get('phone')
     
     try:
-        appointments = load_appointments(session.get('business_name'))
+        appointments = load_business_json(session.get('business_name'), "appointments.json")
     except FileNotFoundError:
         appointments = {}
 
@@ -1115,11 +877,11 @@ def cancel_appointment():
 
     appointments[date] = new_day_appointments
 
-    save_appointments(session.get('business_name'), appointments)
+    save_business_json(session.get('business_name'), "appointments.json", appointments)
 
 
     try:
-        with open(BUSINESSES_FILE, 'r', encoding='utf-8') as f: # This line was not in the new_code, but should be changed for consistency
+        with open(OVERRIDES_FILE, 'r', encoding='utf-8') as f:
             overrides = json.load(f)
     except FileNotFoundError:
         overrides = {}
@@ -1133,7 +895,7 @@ def cancel_appointment():
     if time not in overrides[date].get("add", []):
         overrides[date]["add"].append(time)
 
-    with open(BUSINESSES_FILE, 'w', encoding='utf-8') as f: # This line was not in the new_code, but should be changed for consistency
+    with open(OVERRIDES_FILE, 'w', encoding='utf-8') as f:
         json.dump(overrides, f, ensure_ascii=False, indent=2)
 
     return jsonify({'message': f'Appointment on {date} at {time} canceled successfully.'})
