@@ -364,6 +364,8 @@ def add_business():
     phone = request.form.get('phone', '').strip()
     email = request.form.get('email', '').strip()
 
+    password_hash = generate_password_hash(password)
+
     # ולידציות בסיסיות
     if not all([business_name, username, password, phone, email]):
         return render_template('host_command.html',
@@ -380,7 +382,7 @@ def add_business():
 
     # יצירת קבצים לתיקיית העסק
     try:
-        create_business_files(business_name)
+        create_business_in_db(business_name, username, password_hash, email, phone)
     except Exception as e:
         return render_template('host_command.html',
                                businesses=businesses,
