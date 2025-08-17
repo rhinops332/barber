@@ -8,6 +8,7 @@ from email.message import EmailMessage
 import re
 import shutil
 from werkzeug.security import generate_password_hash, check_password_hash
+import psycopg2
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "default_secret")
@@ -107,39 +108,56 @@ def save_bot_knowledge(business_name, content):
 
 # --- פונקציות עסקיות בסיסיות ---
 
-def create_business_files(business_name):
-    base_path = "businesses"  # התיקייה הראשית של כל העסקים
-    business_path = os.path.join(base_path, business_name)
-    os.makedirs(business_path, exist_ok=True)
+# חיבור למסד
+def get_db_connection():
+    conn = psycopg2.connect(
+        host="dpg-d2gamrndiees73dabd0g-a.frankfurt-postgres.render.com",
+        port=5432,
+        database="booking_app_tx3i",
+        user="booking_app_tx3i_user",
+        password="MRWYtWCxlO4azGBf6Iwo6AdP99aSmsxY"
+    )
+    return conn
 
-    # רשימת הקבצים שצריך להעתיק
-    files = [
-        "appointments.json",
-        "overrides.json",
-        "weekly_schedule.json",
-        "bot_knowledge.json"
-    ]
+# יצירת עסק חדש במסד
+def create_business_in_db(business_name, username, password_hash, email="", phone=""):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO businesses (name, username, password_hash, email, phone)
+        VALUES (%s, %s, %s, %s, %s) RETURNING id
+    """, (business_name, username, password_hash, email, phone))
+    business_id = cur.fetchone()[0]
 
-    for file_name in files:
-        source_path = file_name  # קובץ קיים בשורש
-        dest_path = os.path.join(business_path, file_name)
-
-        if os.path.exists(source_path):
-            shutil.copy2(source_path, dest_path)
-        else:
-            # אם הקובץ לא קיים בשורש, ניצור קובץ ריק
-            with open(dest_path, "w", encoding="utf-8") as f:
-                json.dump({}, f, ensure_ascii=False, indent=4)
-
-    print(f"נוצרו קבצים עבור העסק '{business_name}' בתוך '{business_path}' עם תוכן התחלתי זהה לקיימים")
+    # יצירת רשומות ריקות לשאר הטבלאות
+    for table in ["appointments", "weekly_schedule", "overrides", "bot_knowledge"]:
+        cur.execute(f"""
+            INSERT INTO {table} (business_id)
+            VALUES (%s)
+        """, (business_id,))
     
-def get_business_details(username, password):
-    businesses = load_businesses()
-    for b in businesses:
-        if b['username'] == username and check_password_hash(b['password_hash'], password):
-            return b['business_name'], b['email'], b['phone']
-    return None, None, None
+    conn.commit()
+    cur.close()
+    conn.close()
+    print(f"עסק '{business_name}' נוצר במסד עם ID = {business_id}")
 
+# קבלת פרטי עסק לפי שם משתמש וסיסמה
+def get_business_details(username, password):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, name, email, phone, password_hash
+        FROM businesses
+        WHERE username = %s
+    """, (username,))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+
+    if row and check_password_hash(row[4], password):
+        business_id, business_name, email, phone, _ = row
+        return business_name, email, phone, business_id
+    return None, None, None, None
 # --- ניהול שבועי ושינויים ---
 
 def get_booked_times(appointments):
