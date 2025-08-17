@@ -8,7 +8,7 @@ from email.message import EmailMessage
 import re
 import shutil
 from werkzeug.security import generate_password_hash, check_password_hash
-import psycopg2
+
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "default_secret")
