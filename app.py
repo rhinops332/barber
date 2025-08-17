@@ -1,14 +1,14 @@
 import os
 import requests
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from flask import Flask, request, jsonify, render_template as original_render_template, redirect, session, g
 import smtplib
 from email.message import EmailMessage
 import re
 import shutil
 from werkzeug.security import generate_password_hash, check_password_hash
-
+import psycopg2
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "default_secret")
@@ -60,7 +60,6 @@ def ensure_business_files(business_name):
     base_path = get_business_files_path(business_name)
     os.makedirs(base_path, exist_ok=True)
 
-    
 def load_weekly_schedule(business_name):
     ensure_business_files(business_name)
     path = os.path.join(get_business_files_path(business_name), "weekly_schedule.json")
@@ -106,9 +105,8 @@ def save_bot_knowledge(business_name, content):
     path = os.path.join(get_business_files_path(business_name), "bot_knowledge.txt")
     save_text(path, content)
 
-# --- פונקציות עסקיות בסיסיות ---
+# --- חיבור למסד ---
 
-# חיבור למסד
 def get_db_connection():
     conn = psycopg2.connect(
         host="dpg-d2gamrndiees73dabd0g-a.frankfurt-postgres.render.com",
@@ -119,29 +117,36 @@ def get_db_connection():
     )
     return conn
 
-# יצירת עסק חדש במסד
+# --- פונקציות למסד ---
+
 def create_business_in_db(business_name, username, password_hash, email="", phone=""):
     conn = get_db_connection()
     cur = conn.cursor()
+    # יצירת העסק
     cur.execute("""
         INSERT INTO businesses (name, username, password_hash, email, phone)
         VALUES (%s, %s, %s, %s, %s) RETURNING id
     """, (business_name, username, password_hash, email, phone))
     business_id = cur.fetchone()[0]
 
-    # יצירת רשומות ריקות לשאר הטבלאות
-    for table in ["appointments", "weekly_schedule", "overrides", "bot_knowledge"]:
-        cur.execute(f"""
-            INSERT INTO {table} (business_id)
-            VALUES (%s)
-        """, (business_id,))
-    
+    # יצירת שגרה שבועית כברירת מחדל
+    default_schedule = create_default_weekly_schedule()
+    for day, slots in default_schedule.items():
+        for slot in slots:
+            cur.execute("""
+                INSERT INTO weekly_schedule (business_id, day, start_time, end_time)
+                VALUES (%s, %s, %s, %s)
+            """, (business_id, day, slot['start_time'], slot['end_time']))
+
+    # יצירת רשומות ריקות לטבלאות אחרות
+    for table in ["appointments", "overrides", "bot_knowledge"]:
+        cur.execute(f"INSERT INTO {table} (business_id) VALUES (%s)", (business_id,))
+
     conn.commit()
     cur.close()
     conn.close()
     print(f"עסק '{business_name}' נוצר במסד עם ID = {business_id}")
 
-# קבלת פרטי עסק לפי שם משתמש וסיסמה
 def get_business_details(username, password):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -158,6 +163,31 @@ def get_business_details(username, password):
         business_id, business_name, email, phone, _ = row
         return business_name, email, phone, business_id
     return None, None, None, None
+
+# --- יצירת שגרה שבועית ברירת מחדל ---
+
+def create_default_weekly_schedule():
+    schedule = {}
+    # ימים 0-6
+    for day in range(7):
+        slots = []
+        start_hour = 8
+        end_hour = 20
+        blocked_start = 14  # שעה שמתחילים חסימה
+        blocked_end = 16    # שעה שמסתיים החסימה
+        current = datetime.combine(datetime.today(), time(start_hour, 0))
+        while current.time() < time(end_hour, 0):
+            slot_end = (current + timedelta(minutes=30)).time()
+            # בדיקה אם התור בתוך שעות החסומות
+            if not (time(blocked_start, 0) <= current.time() < time(blocked_end, 0)):
+                slots.append({
+                    "start_time": current.time(),
+                    "end_time": slot_end
+                })
+            current += timedelta(minutes=30)
+        schedule[day] = slots
+    return schedule
+
 # --- ניהול שבועי ושינויים ---
 
 def get_booked_times(appointments):
