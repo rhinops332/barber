@@ -332,11 +332,12 @@ def create_default_weekly_schedule():
 # --- ניהול שבועי ושינויים ---
 
 def get_booked_times(appointments):
-    booked = {}
-    for date, apps_list in appointments.items():
-        times = [app['time'] for app in apps_list if 'time' in app]
-        booked[date] = times
-    return booked
+    bookings = {}
+    for appt in appointments:
+        date = appt["date"]
+        time = appt["time"]
+        bookings.setdefault(date, []).append(time)
+    return bookings
 
 def generate_week_slots(business_name, with_sources=False):
     weekly_schedule = load_weekly_schedule(business_name)
