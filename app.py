@@ -992,27 +992,44 @@ def book_appointment():
     business_name = session.get('business_name')
     if not business_name:
         return redirect("/login")
+
     if not is_slot_available(business_name, date, time):
         return jsonify({"error": "This time slot is not available"}), 400
 
-    appointments = load_appointments(business_name)
+    # Load appointments and convert list to dict by date
+    appointments_list = load_appointments(business_name)
+    appointments = {}
+    for appt in appointments_list:
+        d = appt["date"]
+        appointments.setdefault(d, []).append(appt)
+
     date_appointments = appointments.get(date, [])
 
+    # Check if slot is already booked
     for appt in date_appointments:
         if appt["time"] == time:
             return jsonify({"error": "This time slot is already booked"}), 400
 
+    # Add new appointment
     appointment = {
         "name": name,
         "phone": phone,
+        "date": date,
         "time": time,
         "service": service,
         "price": services_prices[service]
     }
     date_appointments.append(appointment)
     appointments[date] = date_appointments
-    save_appointments(business_name, appointments)
 
+    # Flatten dict back to list for saving
+    flattened_appointments = []
+    for apps_list in appointments.values():
+        flattened_appointments.extend(apps_list)
+
+    save_appointments(business_name, flattened_appointments)
+
+    # Update overrides
     overrides = load_overrides(business_name)
     if date not in overrides:
         overrides[date] = {"add": [], "remove": [], "edit": [], "booked": []}
@@ -1032,18 +1049,21 @@ def book_appointment():
 
     save_overrides(business_name, overrides)
 
+    # Send confirmation email
     try:
         send_email(name, phone, date, time, service, services_prices[service])
     except Exception as e:
         print("Error sending email:", e)
 
     return jsonify({
-    "message": f"Appointment booked for {date} at {time} for {service}.",
-    "date": date,
-    "time": time,
-    "service": service,
-    "can_cancel": True,
-    "cancel_endpoint": "/cancel_appointment"
+        "message": f"Appointment booked for {date} at {time} for {service}.",
+        "date": date,
+        "time": time,
+        "service": service,
+        "can_cancel": True,
+        "cancel_endpoint": "/cancel_appointment"
+    })
+
 })
 
 @app.route('/cancel_appointment', methods=['POST'])
