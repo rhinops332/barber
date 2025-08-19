@@ -169,7 +169,7 @@ def load_appointments(business_name):
     business_id = row[0]
 
     # עדכן כאן לפי שמות עמודות אמיתיים במסד שלך
-    cur.execute("SELECT name, phone, date, start_time, service, price FROM appointments WHERE business_id = %s", (business_id,))
+    cur.execute("SELECT name, phone, date, time, service, price FROM appointments WHERE business_id = %s", (business_id,))
     rows = cur.fetchall()
     cur.close()
     conn.close()
@@ -202,7 +202,7 @@ def save_appointments(business_name, appointments_data):
 
     for appt in appointments_data:
         cur.execute(
-            "INSERT INTO appointments (business_id, name, phone, date, start_time, service, price) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+            "INSERT INTO appointments (business_id, name, phone, date, time, service, price) VALUES (%s,%s,%s,%s,%s,%s,%s)",
             (business_id, appt.get('name'), appt.get('phone'), appt.get('date'), appt.get('time'), appt.get('service'), appt.get('price'))
         )
 
