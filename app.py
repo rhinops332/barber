@@ -768,9 +768,11 @@ def update_overrides():
         return redirect("/login")
     overrides = load_overrides(business_name)
 
+    # ודא שתמיד יש מבנה מלא
     if date not in overrides:
         overrides[date] = {"add": [], "remove": [], "edit": []}
 
+    # מחיקה של כמה שעות ביחד
     if action == "remove_many":
         times = data.get("times", [])
         for t in times:
@@ -781,6 +783,7 @@ def update_overrides():
         save_overrides(business_name, overrides)
         return jsonify({"message": "Multiple times removed", "overrides": overrides})
 
+    # הוספת שעה
     elif action == "add" and time:
         if time not in overrides[date]["add"]:
             overrides[date]["add"].append(time)
@@ -789,6 +792,7 @@ def update_overrides():
         save_overrides(business_name, overrides)
         return jsonify({"message": "Time added", "overrides": overrides})
 
+    # הסרת שעה
     elif action == "remove" and time:
         if time not in overrides[date]["remove"]:
             overrides[date]["remove"].append(time)
@@ -803,6 +807,7 @@ def update_overrides():
         save_overrides(business_name, overrides)
         return jsonify({"message": "Time removed", "overrides": overrides})
 
+    # עריכת שעה (כמו "שנה 16:00 → 17:00")
     elif action == "edit" and time and new_time:
         if time == new_time:
             return jsonify({"message": "No changes made"})
@@ -817,24 +822,27 @@ def update_overrides():
             if e.get("from") != time and e.get("to") != time
         ]
 
-        # הוספה למבנה edit
+        # הוספה ל-edit
         overrides[date].setdefault("edit", [])
         overrides[date]["edit"].append({"from": time, "to": new_time})
 
         save_overrides(business_name, overrides)
         return jsonify({"message": "Time edited", "overrides": overrides})
 
+    # מחיקת כל השינויים של יום מסוים
     elif action == "clear" and date:
         if date in overrides:
             overrides.pop(date)
         save_overrides(business_name, overrides)
         return jsonify({"message": "Day overrides cleared", "overrides": overrides})
 
+    # ביטול יום שלם
     elif action == "disable_day" and date:
         overrides[date] = {"add": [], "remove": ["__all__"]}
         save_overrides(business_name, overrides)
         return jsonify({"message": "Day disabled", "overrides": overrides})
 
+    # החזרת שעה למצבה המקורי
     elif action == "revert" and date and time:
         if date in overrides:
             if time in overrides[date].get("add", []):
