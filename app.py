@@ -53,57 +53,152 @@ def save_businesses(data):
 
 # --- פונקציות עסקיות לכל עסק ---
 
-def get_business_files_path(business_name):
-    return os.path.join("businesses", business_name)
-
-def ensure_business_files(business_name):
-    base_path = get_business_files_path(business_name)
-    os.makedirs(base_path, exist_ok=True)
-
+# --- מסד נתונים במקום קבצים ---
 def load_weekly_schedule(business_name):
-    ensure_business_files(business_name)
-    path = os.path.join(get_business_files_path(business_name), "weekly_schedule.json")
-    return load_json(path)
+    conn = get_db_connection()
+    cur = conn.cursor()
 
-def save_weekly_schedule(business_name, data):
-    path = os.path.join(get_business_files_path(business_name), "weekly_schedule.json")
-    save_json(path, data)
+    # שולפים את business_id
+    cur.execute("SELECT id FROM businesses WHERE name = %s", (business_name,))
+    row = cur.fetchone()
+    if not row:
+        cur.close()
+        conn.close()
+        return {}
+    business_id = row[0]
+
+    # שולפים את כל השעות מהטבלה weekly_schedule
+    cur.execute("SELECT day, start_time FROM weekly_schedule WHERE business_id = %s", (business_id,))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    # ממיינים לפי יום ומייצרים מילון '0'..'6'
+    weekly_schedule = {str(i): [] for i in range(7)}
+    for day, start_time in rows:
+        weekly_schedule[str(day)].append(start_time.strftime("%H:%M"))
+
+    return weekly_schedule
+
+def save_weekly_schedule(business_name, schedule_data):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM businesses WHERE name = %s", (business_name,))
+    business_id = cur.fetchone()[0]
+
+    # מוחקים קודם כל את כל השעות הקיימות
+    cur.execute("DELETE FROM weekly_schedule WHERE business_id = %s", (business_id,))
+
+    # מוסיפים את השעות החדשות
+    for day, times in schedule_data.items():
+        for time in times:
+            cur.execute(
+                "INSERT INTO weekly_schedule (business_id, day, start_time, end_time) VALUES (%s, %s, %s, %s)",
+                (business_id, day, time, time)  # end_time = start_time כברירת מחדל
+            )
+
+    conn.commit()
+    cur.close()
+    conn.close()
 
 def load_overrides(business_name):
-    ensure_business_files(business_name)
-    path = os.path.join(get_business_files_path(business_name), "overrides.json")
-    return load_json(path)
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM businesses WHERE name = %s", (business_name,))
+    business_id = cur.fetchone()[0]
 
-def save_overrides(business_name, data):
-    path = os.path.join(get_business_files_path(business_name), "overrides.json")
-    save_json(path, data)
+    cur.execute("SELECT date, start_time, end_time FROM overrides WHERE business_id = %s", (business_id,))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    overrides = {}
+    for date, start_time, end_time in rows:
+        overrides.setdefault(date.strftime("%Y-%m-%d"), []).append(start_time.strftime("%H:%M"))
+    return overrides
+
+def save_overrides(business_name, overrides_data):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM businesses WHERE name = %s", (business_name,))
+    business_id = cur.fetchone()[0]
+
+    cur.execute("DELETE FROM overrides WHERE business_id = %s", (business_id,))
+
+    for date_str, times in overrides_data.items():
+        for time in times:
+            cur.execute(
+                "INSERT INTO overrides (business_id, date, start_time, end_time) VALUES (%s, %s, %s, %s)",
+                (business_id, date_str, time, time)
+            )
+
+    conn.commit()
+    cur.close()
+    conn.close()
 
 def load_appointments(business_name):
-    ensure_business_files(business_name)
-    path = os.path.join(get_business_files_path(business_name), "appointments.json")
-    return load_json(path)
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM businesses WHERE name = %s", (business_name,))
+    business_id = cur.fetchone()[0]
 
-def save_appointments(business_name, data):
-    path = os.path.join(get_business_files_path(business_name), "appointments.json")
-    save_json(path, data)
+    cur.execute("SELECT client_name, phone, date, time, service, price FROM appointments WHERE business_id = %s", (business_id,))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
 
-def load_one_time_changes(business_name):
-    ensure_business_files(business_name)
-    path = os.path.join(get_business_files_path(business_name), "one_time_changes.json")
-    return load_json(path)
+    appointments = []
+    for client_name, phone, date, time, service, price in rows:
+        appointments.append({
+            "client_name": client_name,
+            "phone": phone,
+            "date": date.strftime("%Y-%m-%d"),
+            "time": time.strftime("%H:%M"),
+            "service": service,
+            "price": price
+        })
+    return appointments
 
-def save_one_time_changes(business_name, data):
-    path = os.path.join(get_business_files_path(business_name), "one_time_changes.json")
-    save_json(path, data)
+def save_appointments(business_name, appointments_data):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM businesses WHERE name = %s", (business_name,))
+    business_id = cur.fetchone()[0]
+
+    cur.execute("DELETE FROM appointments WHERE business_id = %s", (business_id,))
+
+    for appt in appointments_data:
+        cur.execute(
+            "INSERT INTO appointments (business_id, client_name, phone, date, time, service, price) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+            (business_id, appt['client_name'], appt['phone'], appt['date'], appt['time'], appt['service'], appt['price'])
+        )
+
+    conn.commit()
+    cur.close()
+    conn.close()
 
 def load_bot_knowledge(business_name):
-    ensure_business_files(business_name)
-    path = os.path.join(get_business_files_path(business_name), "bot_knowledge.txt")
-    return load_text(path)
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM businesses WHERE name = %s", (business_name,))
+    business_id = cur.fetchone()[0]
+
+    cur.execute("SELECT content FROM bot_knowledge WHERE business_id = %s", (business_id,))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    return row[0] if row else ""
 
 def save_bot_knowledge(business_name, content):
-    path = os.path.join(get_business_files_path(business_name), "bot_knowledge.txt")
-    save_text(path, content)
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM businesses WHERE name = %s", (business_name,))
+    business_id = cur.fetchone()[0]
+
+    cur.execute("UPDATE bot_knowledge SET content=%s WHERE business_id=%s", (content, business_id))
+    conn.commit()
+    cur.close()
+    conn.close()
 
 # --- חיבור למסד ---
 
