@@ -809,30 +809,31 @@ def update_overrides():
         return jsonify({"message": "Time removed", "overrides": overrides})
 
 
-    elif action == "edit" and time and new_time:
+   elif action == "edit" and time and new_time:
         if time == new_time:
             return jsonify({"message": "No changes made"})
 
-        if "edit" not in overrides[date]:
-            overrides[date]["edit"] = []
+        # ודא שהיום קיים במבנה
+        if date not in overrides:
+            overrides[date] = {"add": [], "remove": []}
 
-        # מחיקה של עריכות קודמות מהשעה הזו
-        overrides[date]["edit"] = [item for item in overrides[date]["edit"] if item.get("from") != time]
+        # הסרת השעה הישנה מכל הרשימות
+        if "add" in overrides[date] and time in overrides[date]["add"]:
+            overrides[date]["add"].remove(time)
+        if "remove" in overrides[date] and time in overrides[date]["remove"]:
+            overrides[date]["remove"].remove(time)
+        if "edit" in overrides[date]:
+            overrides[date]["edit"] = [
+                e for e in overrides[date]["edit"] if e.get("from") != time and e.get("to") != time
+            ]
+            if not overrides[date]["edit"]:
+                overrides[date].pop("edit", None)
 
-        # הוספה של העריכה החדשה
-        overrides[date]["edit"].append({"from": time, "to": new_time})
-
-        # הוספה ל-remove של השעה הישנה
+       # הוספת השעה החדשה ל-remove (כדי שתוצג כאפורה)
         if "remove" not in overrides[date]:
             overrides[date]["remove"] = []
-        if time not in overrides[date]["remove"]:
-            overrides[date]["remove"].append(time)
-
-        # הוספה ל-add של השעה החדשה
-        if "add" not in overrides[date]:
-            overrides[date]["add"] = []
-        if new_time not in overrides[date]["add"]:
-            overrides[date]["add"].append(new_time)
+        if new_time not in overrides[date]["remove"]:
+            overrides[date]["remove"].append(new_time)
 
         save_overrides(business_name, overrides)
         return jsonify({"message": "Time edited", "overrides": overrides})
