@@ -116,19 +116,25 @@ def load_overrides(business_name):
         return {}
     business_id = row[0]
 
-    cur.execute("SELECT date, start_time FROM overrides WHERE business_id = %s", (business_id,))
+    cur.execute("SELECT date, start_time, type FROM overrides WHERE business_id = %s", (business_id,))
     rows = cur.fetchall()
     cur.close()
     conn.close()
 
     overrides = {}
-    for date_val, start_time in rows:
+    for date_val, start_time, typ in rows:
         if not start_time or not date_val:
             continue
         date_str = date_val.strftime("%Y-%m-%d")
         time_str = start_time.strftime("%H:%M")
-        overrides.setdefault(date_str, []).append(time_str)
-
+        if date_str not in overrides:
+            overrides[date_str] = {"booked": [], "add": [], "remove": []}
+        if typ == "booked":
+            overrides[date_str]["booked"].append(time_str)
+        elif typ == "add":
+            overrides[date_str]["add"].append(time_str)
+        elif typ == "remove":
+            overrides[date_str]["remove"].append(time_str)
     return overrides
 
 
@@ -146,31 +152,19 @@ def save_overrides(business_name, overrides_data):
     # מוחקים את כל השורות הקיימות עבור העסק
     cur.execute("DELETE FROM overrides WHERE business_id = %s", (business_id,))
 
-    # עכשיו מכניסים רק את השעות האמיתיות (booked + add)
+    # עכשיו מכניסים את כל סוגי השעות לפי סוג
     for date_str, info in overrides_data.items():
-        times_to_insert = []
-        if isinstance(info, dict):
-            # times שנרשמו כ-booked או שנוספו כ-add
-            for key in ["booked", "add"]:
-                for item in info.get(key, []):
-                    if isinstance(item, dict):
-                        time_val = item.get("time")
-                    else:
-                        time_val = item
-                    if time_val:
-                        times_to_insert.append(time_val)
-        elif isinstance(info, list):
-            times_to_insert = info  # אם זה רשימה רגילה של שעות
-
-        for time in times_to_insert:
-            cur.execute(
-                "INSERT INTO overrides (business_id, date, start_time, end_time) VALUES (%s, %s, %s, %s)",
-                (business_id, date_str, time, time)
-            )
+        for key in ["booked", "add", "remove"]:
+            for time_val in info.get(key, []):
+                cur.execute(
+                    "INSERT INTO overrides (business_id, date, start_time, end_time, type) VALUES (%s, %s, %s, %s, %s)",
+                    (business_id, date_str, time_val, time_val, key)
+                )
 
     conn.commit()
     cur.close()
     conn.close()
+
 
 
 def load_appointments(business_name):
