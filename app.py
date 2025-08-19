@@ -58,7 +58,6 @@ def load_weekly_schedule(business_name):
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # שולפים את business_id
     cur.execute("SELECT id FROM businesses WHERE name = %s", (business_name,))
     row = cur.fetchone()
     if not row:
@@ -67,16 +66,15 @@ def load_weekly_schedule(business_name):
         return {}
     business_id = row[0]
 
-    # שולפים את כל השעות מהטבלה weekly_schedule
     cur.execute("SELECT day, start_time FROM weekly_schedule WHERE business_id = %s", (business_id,))
     rows = cur.fetchall()
     cur.close()
     conn.close()
 
-    # ממיינים לפי יום ומייצרים מילון '0'..'6'
     weekly_schedule = {str(i): [] for i in range(7)}
     for day, start_time in rows:
-        weekly_schedule[str(day)].append(start_time.strftime("%H:%M"))
+        if start_time is not None:
+            weekly_schedule[str(day)].append(start_time.strftime("%H:%M"))
 
     return weekly_schedule
 
@@ -86,15 +84,13 @@ def save_weekly_schedule(business_name, schedule_data):
     cur.execute("SELECT id FROM businesses WHERE name = %s", (business_name,))
     business_id = cur.fetchone()[0]
 
-    # מוחקים קודם כל את כל השעות הקיימות
     cur.execute("DELETE FROM weekly_schedule WHERE business_id = %s", (business_id,))
 
-    # מוסיפים את השעות החדשות
     for day, times in schedule_data.items():
         for time in times:
             cur.execute(
                 "INSERT INTO weekly_schedule (business_id, day, start_time, end_time) VALUES (%s, %s, %s, %s)",
-                (business_id, day, time, time)  # end_time = start_time כברירת מחדל
+                (business_id, day, time, time)
             )
 
     conn.commit()
@@ -105,7 +101,12 @@ def load_overrides(business_name):
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT id FROM businesses WHERE name = %s", (business_name,))
-    business_id = cur.fetchone()[0]
+    row = cur.fetchone()
+    if not row:
+        cur.close()
+        conn.close()
+        return {}
+    business_id = row[0]
 
     cur.execute("SELECT date, start_time, end_time FROM overrides WHERE business_id = %s", (business_id,))
     rows = cur.fetchall()
@@ -113,8 +114,12 @@ def load_overrides(business_name):
     conn.close()
 
     overrides = {}
-    for date, start_time, end_time in rows:
-        overrides.setdefault(date.strftime("%Y-%m-%d"), []).append(start_time.strftime("%H:%M"))
+    for date_val, start_time, end_time in rows:
+        if start_time is None:
+            continue
+        date_str = date_val.strftime("%Y-%m-%d") if date_val else ""
+        time_str = start_time.strftime("%H:%M")
+        overrides.setdefault(date_str, []).append(time_str)
     return overrides
 
 def save_overrides(business_name, overrides_data):
@@ -148,12 +153,12 @@ def load_appointments(business_name):
     conn.close()
 
     appointments = []
-    for client_name, phone, date, time, service, price in rows:
+    for client_name, phone, date_val, time_val, service, price in rows:
         appointments.append({
             "client_name": client_name,
             "phone": phone,
-            "date": date.strftime("%Y-%m-%d"),
-            "time": time.strftime("%H:%M"),
+            "date": date_val.strftime("%Y-%m-%d") if date_val else "",
+            "time": time_val.strftime("%H:%M") if time_val else "",
             "service": service,
             "price": price
         })
@@ -181,7 +186,12 @@ def load_bot_knowledge(business_name):
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT id FROM businesses WHERE name = %s", (business_name,))
-    business_id = cur.fetchone()[0]
+    row = cur.fetchone()
+    if not row:
+        cur.close()
+        conn.close()
+        return ""
+    business_id = row[0]
 
     cur.execute("SELECT content FROM bot_knowledge WHERE business_id = %s", (business_id,))
     row = cur.fetchone()
