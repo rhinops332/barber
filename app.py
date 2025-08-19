@@ -1037,7 +1037,10 @@ def book_appointment():
         "service": service,
         "price": services_prices[service]
     }
-    appointments.append(appointment)
+
+    date_appointments = appointments.get(date, [])
+    date_appointments.append(appointment)
+    appointments[date] = date_appointments
     save_appointments(business_name, appointments)
 
     # מעדכנים overrides
