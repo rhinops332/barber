@@ -149,23 +149,37 @@ def save_overrides(business_name, overrides_data):
         return
     business_id = row[0]
 
-    # מוחקים את כל השורות הקיימות עבור העסק
     cur.execute("DELETE FROM overrides WHERE business_id = %s", (business_id,))
 
-    # עכשיו מכניסים את כל סוגי השעות לפי סוג
     for date_str, info in overrides_data.items():
-        for key in ["booked", "add", "remove"]:
-            for time_val in info.get(key, []):
-                cur.execute(
-                    "INSERT INTO overrides (business_id, date, start_time, end_time, type) VALUES (%s, %s, %s, %s, %s)",
-                    (business_id, date_str, time_val, time_val, key)
-                )
+        times_to_insert = []
+
+        # אם יש עריכה, שמור את השעה החדשה במקום השעה הישנה
+        if isinstance(info, dict):
+            for key in ["add", "booked"]:
+                for item in info.get(key, []):
+                    if isinstance(item, dict):
+                        time_val = item.get("time")
+                    else:
+                        time_val = item
+                    if time_val:
+                        times_to_insert.append(time_val)
+            if "edit" in info:
+                for item in info["edit"]:
+                    if item.get("to"):
+                        times_to_insert.append(item["to"])
+        elif isinstance(info, list):
+            times_to_insert = info
+
+        for time in times_to_insert:
+            cur.execute(
+                "INSERT INTO overrides (business_id, date, start_time, end_time) VALUES (%s, %s, %s, %s)",
+                (business_id, date_str, time, time)
+            )
 
     conn.commit()
     cur.close()
     conn.close()
-
-
 
 def load_appointments(business_name):
     conn = get_db_connection()
@@ -769,7 +783,7 @@ def update_overrides():
     overrides = load_overrides(business_name)
 
     if date not in overrides:
-        overrides[date] = {"add": [], "remove": []}
+        overrides[date] = {"add": [], "remove": [], "edit": []}
 
     if action == "remove_many":
         times = data.get("times", [])
@@ -778,6 +792,12 @@ def update_overrides():
                 overrides[date]["remove"].append(t)
             if t in overrides[date]["add"]:
                 overrides[date]["add"].remove(t)
+            if "edit" in overrides[date]:
+                overrides[date]["edit"] = [
+                    e for e in overrides[date]["edit"] if e.get("from") != t and e.get("to") != t
+                ]
+                if not overrides[date]["edit"]:
+                    overrides[date].pop("edit", None)
         save_overrides(business_name, overrides)
         return jsonify({"message": "Multiple times removed", "overrides": overrides})
 
@@ -800,8 +820,7 @@ def update_overrides():
             overrides[date]["add"].remove(time)
         if "edit" in overrides[date]:
             overrides[date]["edit"] = [
-                e for e in overrides[date]["edit"]
-                if e.get("from") != time and e.get("to") != time
+                e for e in overrides[date]["edit"] if e.get("from") != time and e.get("to") != time
             ]
             if not overrides[date]["edit"]:
                 overrides[date].pop("edit", None)
@@ -851,8 +870,7 @@ def update_overrides():
 
             if "edit" in overrides[date]:
                 overrides[date]["edit"] = [
-                    e for e in overrides[date]["edit"]
-                    if e.get("to") != time and e.get("from") != time
+                    e for e in overrides[date]["edit"] if e.get("to") != time and e.get("from") != time
                 ]
                 if not overrides[date]["edit"]:
                     overrides[date].pop("edit", None)
