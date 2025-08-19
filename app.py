@@ -766,105 +766,94 @@ def update_overrides():
     business_name = session.get('business_name')
     if not business_name:
         return redirect("/login")
-    overrides = load_overrides(business_name)
 
-    if date not in overrides:
-        overrides[date] = {"add": [], "remove": []}
+    conn = get_db_connection()
+    cur = conn.cursor()
 
-    if action == "remove_many":
-        times = data.get("times", [])
-        for t in times:
-            if t not in overrides[date]["remove"]:
-                overrides[date]["remove"].append(t)
-            if t in overrides[date]["add"]:
-                overrides[date]["add"].remove(t)
-        save_overrides(business_name, overrides)
-        return jsonify({"message": "Multiple times removed", "overrides": overrides})
+    # מזהים את העסק
+    cur.execute("SELECT id FROM businesses WHERE name = %s", (business_name,))
+    row = cur.fetchone()
+    if not row:
+        cur.close()
+        conn.close()
+        return jsonify({"error": "Business not found"}), 404
+    business_id = row[0]
 
-    elif action == "add" and time:
-        if time not in overrides[date]["add"]:
-            overrides[date]["add"].append(time)
-        if time in overrides[date]["remove"]:
-            overrides[date]["remove"].remove(time)
-        save_overrides(business_name, overrides)
-        return jsonify({"message": "Time added", "overrides": overrides})
+    # לטעון את השורות הקיימות עבור התאריך
+    cur.execute("SELECT start_time, type FROM overrides WHERE business_id=%s AND date=%s", (business_id, date))
+    rows = cur.fetchall()
+    existing = {str(r[0].strftime("%H:%M")): r[1] for r in rows}  # 'type' = add/remove/edit
+
+    if action == "add" and time:
+        if time not in existing:
+            cur.execute(
+                "INSERT INTO overrides (business_id, date, start_time, end_time, type) VALUES (%s,%s,%s,%s,'add')",
+                (business_id, date, time, time)
+            )
+        elif existing[time] == "remove":
+            # מחליפים remove ל add
+            cur.execute(
+                "UPDATE overrides SET type='add' WHERE business_id=%s AND date=%s AND start_time=%s",
+                (business_id, date, time)
+            )
 
     elif action == "remove" and time:
-        if "remove" not in overrides[date]:
-            overrides[date]["remove"] = []
-        if "add" not in overrides[date]:
-            overrides[date]["add"] = []
-        if time not in overrides[date]["remove"]:
-            overrides[date]["remove"].append(time)
-        if time in overrides[date]["add"]:
-            overrides[date]["add"].remove(time)
-        if "edit" in overrides[date]:
-            overrides[date]["edit"] = [
-                e for e in overrides[date]["edit"]
-                if e.get("from") != time and e.get("to") != time
-            ]
-            if not overrides[date]["edit"]:
-                overrides[date].pop("edit", None)
-        save_overrides(business_name, overrides)
-        return jsonify({"message": "Time removed", "overrides": overrides})
+        if time not in existing:
+            cur.execute(
+                "INSERT INTO overrides (business_id, date, start_time, end_time, type) VALUES (%s,%s,%s,%s,'remove')",
+                (business_id, date, time, time)
+            )
+        elif existing[time] == "add":
+            # מחליפים add ל remove
+            cur.execute(
+                "UPDATE overrides SET type='remove' WHERE business_id=%s AND date=%s AND start_time=%s",
+                (business_id, date, time)
+            )
 
     elif action == "edit" and time and new_time:
         if time == new_time:
             return jsonify({"message": "No changes made"})
 
-        if "edit" not in overrides[date]:
-            overrides[date]["edit"] = []
+        # אם השעה קיימת כבר, נמחק אותה ונוסיף edit
+        if time in existing:
+            cur.execute(
+                "DELETE FROM overrides WHERE business_id=%s AND date=%s AND start_time=%s",
+                (business_id, date, time)
+            )
 
-        # מחיקה של עריכות קודמות מהשעה הזו
-        overrides[date]["edit"] = [
-            item for item in overrides[date]["edit"] if item.get("from") != time
-        ]
-
-        # הוספה של העריכה החדשה בלבד
-        overrides[date]["edit"].append({
-            "from": time,
-            "to": new_time
-        })
-
-        # לא מוסיפים ל-add או remove – רק edit
-        save_overrides(business_name, overrides)
-        return jsonify({"message": "Time edited", "overrides": overrides})
+        # מוסיפים את השעה החדשה כ edit
+        cur.execute(
+            "INSERT INTO overrides (business_id, date, start_time, end_time, type) VALUES (%s,%s,%s,%s,'edit')",
+            (business_id, date, new_time, new_time)
+        )
 
     elif action == "clear" and date:
-        if date in overrides:
-            overrides.pop(date)
-        save_overrides(business_name, overrides)
-        return jsonify({"message": "Day overrides cleared", "overrides": overrides})
+        cur.execute("DELETE FROM overrides WHERE business_id=%s AND date=%s", (business_id, date))
 
     elif action == "disable_day" and date:
-        overrides[date] = {"add": [], "remove": ["__all__"]}
-        save_overrides(business_name, overrides)
-        return jsonify({"message": "Day disabled", "overrides": overrides})
+        # מוחק קודם
+        cur.execute("DELETE FROM overrides WHERE business_id=%s AND date=%s", (business_id, date))
+        cur.execute(
+            "INSERT INTO overrides (business_id, date, start_time, end_time, type) VALUES (%s,%s,'00:00','23:59','remove')",
+            (business_id, date)
+        )
 
     elif action == "revert" and date and time:
-        if date in overrides:
-            if "add" in overrides[date] and time in overrides[date]["add"]:
-                overrides[date]["add"].remove(time)
-
-            if "remove" in overrides[date] and time in overrides[date]["remove"]:
-                overrides[date]["remove"].remove(time)
-
-            if "edit" in overrides[date]:
-                overrides[date]["edit"] = [
-                    e for e in overrides[date]["edit"]
-                    if e.get("to") != time and e.get("from") != time
-                ]
-                if not overrides[date]["edit"]:
-                    overrides[date].pop("edit", None)
-
-            if not overrides[date].get("add") and not overrides[date].get("remove") and not overrides[date].get("edit"):
-                overrides.pop(date)
-
-        save_overrides(business_name, overrides)
-        return jsonify({"message": "Time reverted", "overrides": overrides})
+        cur.execute(
+            "DELETE FROM overrides WHERE business_id=%s AND date=%s AND start_time=%s",
+            (business_id, date, time)
+        )
 
     else:
+        cur.close()
+        conn.commit()
+        conn.close()
         return jsonify({"error": "Invalid action or missing parameters"}), 400
+
+    cur.close()
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Override updated"})
 
 
 @app.route("/overrides_toggle_day", methods=["POST"])
