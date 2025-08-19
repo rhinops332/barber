@@ -1064,7 +1064,6 @@ def book_appointment():
         "cancel_endpoint": "/cancel_appointment"
     })
 
-})
 
 @app.route('/cancel_appointment', methods=['POST'])
 def cancel_appointment():
