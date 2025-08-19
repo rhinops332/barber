@@ -169,15 +169,15 @@ def load_appointments(business_name):
     business_id = row[0]
 
     # עדכן כאן לפי שמות עמודות אמיתיים במסד שלך
-    cur.execute("SELECT client_name, phone, date, start_time, service, price FROM appointments WHERE business_id = %s", (business_id,))
+    cur.execute("SELECT name, phone, date, start_time, service, price FROM appointments WHERE business_id = %s", (business_id,))
     rows = cur.fetchall()
     cur.close()
     conn.close()
 
     appointments = []
-    for client_name, phone, date_val, time_val, service, price in rows:
+    for name, phone, date_val, time_val, service, price in rows:
         appointments.append({
-            "client_name": client_name or "",
+            "name": name or "",
             "phone": phone or "",
             "date": date_val.strftime("%Y-%m-%d") if date_val else "",
             "time": time_val.strftime("%H:%M") if time_val else "",
@@ -202,8 +202,8 @@ def save_appointments(business_name, appointments_data):
 
     for appt in appointments_data:
         cur.execute(
-            "INSERT INTO appointments (business_id, client_name, phone, date, start_time, service, price) VALUES (%s,%s,%s,%s,%s,%s,%s)",
-            (business_id, appt.get('client_name'), appt.get('phone'), appt.get('date'), appt.get('time'), appt.get('service'), appt.get('price'))
+            "INSERT INTO appointments (business_id, name, phone, date, start_time, service, price) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+            (business_id, appt.get('name'), appt.get('phone'), appt.get('date'), appt.get('time'), appt.get('service'), appt.get('price'))
         )
 
     conn.commit()
