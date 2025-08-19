@@ -204,7 +204,6 @@ def load_appointments(business_name):
         })
     return appointments
 
-
 def save_appointments(business_name, appointments_data):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -218,11 +217,20 @@ def save_appointments(business_name, appointments_data):
 
     cur.execute("DELETE FROM appointments WHERE business_id = %s", (business_id,))
 
-    for appt in appointments_data:
-        cur.execute(
-            "INSERT INTO appointments (business_id, name, phone, date, time, service, price) VALUES (%s,%s,%s,%s,%s,%s,%s)",
-            (business_id, appt.get('name'), appt.get('phone'), appt.get('date'), appt.get('time'), appt.get('service'), appt.get('price'))
-        )
+    for date_str, appts in appointments_data.items():  # <-- חייב לעבור לפי תאריכים
+        for appt in appts:
+            cur.execute(
+                "INSERT INTO appointments (business_id, name, phone, date, time, service, price) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+                (
+                    business_id,
+                    appt.get('name'),
+                    appt.get('phone'),
+                    date_str,  # <-- תאריך הוא המפתח
+                    appt.get('time'),
+                    appt.get('service'),
+                    appt.get('price')
+                )
+            )
 
     conn.commit()
     cur.close()
