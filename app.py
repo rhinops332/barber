@@ -808,8 +808,7 @@ def update_overrides():
         save_overrides(business_name, overrides)
         return jsonify({"message": "Time removed", "overrides": overrides})
 
-
-   elif action == "edit" and time and new_time:
+    elif action == "edit" and time and new_time:
         if time == new_time:
             return jsonify({"message": "No changes made"})
 
@@ -824,12 +823,13 @@ def update_overrides():
             overrides[date]["remove"].remove(time)
         if "edit" in overrides[date]:
             overrides[date]["edit"] = [
-                e for e in overrides[date]["edit"] if e.get("from") != time and e.get("to") != time
+                e for e in overrides[date]["edit"]
+                if e.get("from") != time and e.get("to") != time
             ]
             if not overrides[date]["edit"]:
                 overrides[date].pop("edit", None)
 
-       # הוספת השעה החדשה ל-remove (כדי שתוצג כאפורה)
+        # הוספת השעה החדשה ל-remove (כדי שתוצג כאפורה)
         if "remove" not in overrides[date]:
             overrides[date]["remove"] = []
         if new_time not in overrides[date]["remove"]:
@@ -838,8 +838,6 @@ def update_overrides():
         save_overrides(business_name, overrides)
         return jsonify({"message": "Time edited", "overrides": overrides})
 
-
-    
     elif action == "clear" and date:
         if date in overrides:
             overrides.pop(date)
