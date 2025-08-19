@@ -165,22 +165,24 @@ def load_appointments(business_name):
     if not row:
         cur.close()
         conn.close()
-        return []
+        return {}
     business_id = row[0]
 
-    # עדכן כאן לפי שמות עמודות אמיתיים במסד שלך
     cur.execute("SELECT name, phone, date, time, service, price FROM appointments WHERE business_id = %s", (business_id,))
     rows = cur.fetchall()
     cur.close()
     conn.close()
 
-    appointments = []
+    appointments = {}
     for name, phone, date_val, time_val, service, price in rows:
-        appointments.append({
+        if not date_val or not time_val:
+            continue
+        date_str = date_val.strftime("%Y-%m-%d")
+        time_str = time_val.strftime("%H:%M")
+        appointments.setdefault(date_str, []).append({
             "name": name or "",
             "phone": phone or "",
-            "date": date_val.strftime("%Y-%m-%d") if date_val else "",
-            "time": time_val.strftime("%H:%M") if time_val else "",
+            "time": time_str,
             "service": service or "",
             "price": price or 0
         })
