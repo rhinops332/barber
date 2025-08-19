@@ -143,10 +143,26 @@ def save_overrides(business_name, overrides_data):
         return
     business_id = row[0]
 
+    # מוחקים את כל השורות הקיימות עבור העסק
     cur.execute("DELETE FROM overrides WHERE business_id = %s", (business_id,))
 
-    for date_str, times in overrides_data.items():
-        for time in times:
+    # עכשיו מכניסים רק את השעות האמיתיות (booked + add)
+    for date_str, info in overrides_data.items():
+        times_to_insert = []
+        if isinstance(info, dict):
+            # times שנרשמו כ-booked או שנוספו כ-add
+            for key in ["booked", "add"]:
+                for item in info.get(key, []):
+                    if isinstance(item, dict):
+                        time_val = item.get("time")
+                    else:
+                        time_val = item
+                    if time_val:
+                        times_to_insert.append(time_val)
+        elif isinstance(info, list):
+            times_to_insert = info  # אם זה רשימה רגילה של שעות
+
+        for time in times_to_insert:
             cur.execute(
                 "INSERT INTO overrides (business_id, date, start_time, end_time) VALUES (%s, %s, %s, %s)",
                 (business_id, date_str, time, time)
@@ -996,21 +1012,15 @@ def book_appointment():
     if not is_slot_available(business_name, date, time):
         return jsonify({"error": "This time slot is not available"}), 400
 
-    # Load appointments and convert list to dict by date
-    appointments_list = load_appointments(business_name)
-    appointments = {}
-    for appt in appointments_list:
-        d = appt["date"]
-        appointments.setdefault(d, []).append(appt)
+    appointments = load_appointments(business_name)
+    # ממירה את הרשימה של תורים למילון לפי תאריך
+    booked = get_booked_times(appointments)
+    date_appointments = booked.get(date, [])
 
-    date_appointments = appointments.get(date, [])
+    if time in date_appointments:
+        return jsonify({"error": "This time slot is already booked"}), 400
 
-    # Check if slot is already booked
-    for appt in date_appointments:
-        if appt["time"] == time:
-            return jsonify({"error": "This time slot is already booked"}), 400
-
-    # Add new appointment
+    # מוסיפים תור חדש
     appointment = {
         "name": name,
         "phone": phone,
@@ -1019,21 +1029,14 @@ def book_appointment():
         "service": service,
         "price": services_prices[service]
     }
-    date_appointments.append(appointment)
-    appointments[date] = date_appointments
+    appointments.append(appointment)
+    save_appointments(business_name, appointments)
 
-    # Flatten dict back to list for saving
-    flattened_appointments = []
-    for apps_list in appointments.values():
-        flattened_appointments.extend(apps_list)
-
-    save_appointments(business_name, flattened_appointments)
-
-    # Update overrides
+    # מעדכנים overrides
     overrides = load_overrides(business_name)
     if date not in overrides:
-        overrides[date] = {"add": [], "remove": [], "edit": [], "booked": []}
-    elif "booked" not in overrides[date]:
+        overrides[date] = {"booked": [], "add": [], "remove": []}
+    if "booked" not in overrides[date]:
         overrides[date]["booked"] = []
 
     overrides[date]["booked"].append({
@@ -1042,14 +1045,15 @@ def book_appointment():
         "phone": phone,
         "service": service
     })
-    if time not in overrides[date]["remove"]:
-        overrides[date]["remove"].append(time)
+    # הסרת זמן מ-add אם קיים
     if time in overrides[date]["add"]:
         overrides[date]["add"].remove(time)
+    # הוספת זמן ל-remove אם לא קיים
+    if time not in overrides[date]["remove"]:
+        overrides[date]["remove"].append(time)
 
     save_overrides(business_name, overrides)
 
-    # Send confirmation email
     try:
         send_email(name, phone, date, time, service, services_prices[service])
     except Exception as e:
@@ -1063,7 +1067,6 @@ def book_appointment():
         "can_cancel": True,
         "cancel_endpoint": "/cancel_appointment"
     })
-
 
 @app.route('/cancel_appointment', methods=['POST'])
 def cancel_appointment():
