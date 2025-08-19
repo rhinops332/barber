@@ -310,7 +310,7 @@ def login():
             return redirect('/host_command')
 
         # בדיקה של עסק רגיל
-        business_name, email, phone = get_business_details(username, password)
+        business_name, email, phone, business_id = get_business_details(username, password)
         if business_name:
             session['username'] = username
             session['is_host'] = False
