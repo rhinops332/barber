@@ -815,25 +815,18 @@ def update_overrides():
         if "edit" not in overrides[date]:
             overrides[date]["edit"] = []
 
+        # מחיקה של עריכות קודמות מהשעה הזו
         overrides[date]["edit"] = [
             item for item in overrides[date]["edit"] if item.get("from") != time
         ]
 
+        # הוספה של העריכה החדשה בלבד
         overrides[date]["edit"].append({
             "from": time,
             "to": new_time
         })
 
-        if "remove" not in overrides[date]:
-            overrides[date]["remove"] = []
-        if time not in overrides[date]["remove"]:
-            overrides[date]["remove"].append(time)
-
-        if "add" not in overrides[date]:
-            overrides[date]["add"] = []
-        if new_time not in overrides[date]["add"]:
-            overrides[date]["add"].append(new_time)
-
+        # לא מוסיפים ל-add או remove – רק edit
         save_overrides(business_name, overrides)
         return jsonify({"message": "Time edited", "overrides": overrides})
 
