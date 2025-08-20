@@ -127,15 +127,30 @@ def load_overrides(business_name):
             continue
         date_str = date_val.strftime("%Y-%m-%d")
         time_str = start_time.strftime("%H:%M")
+
+        # יצירת מילון עם כל המפתחות תמיד
         if date_str not in overrides:
-            overrides[date_str] = {"booked": [], "add": [], "remove": []}
+            overrides[date_str] = {
+                "booked": [],
+                "add": [],
+                "remove": [],
+                "edit_from": [],
+                "edit_to": []
+            }
+
         if typ == "booked":
             overrides[date_str]["booked"].append(time_str)
         elif typ == "add":
             overrides[date_str]["add"].append(time_str)
         elif typ == "remove":
             overrides[date_str]["remove"].append(time_str)
+        elif typ == "edit_from":
+            overrides[date_str]["edit_from"].append(time_str)
+        elif typ == "edit_to":
+            overrides[date_str]["edit_to"].append(time_str)
+
     return overrides
+
 
 def save_overrides(business_name, overrides_data):
     conn = get_db_connection()
