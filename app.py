@@ -127,28 +127,14 @@ def load_overrides(business_name):
             continue
         date_str = date_val.strftime("%Y-%m-%d")
         time_str = start_time.strftime("%H:%M")
-
-        # יצירת מילון עם כל המפתחות תמיד
         if date_str not in overrides:
-            overrides[date_str] = {
-                "booked": [],
-                "add": [],
-                "remove": [],
-                "edit_from": [],
-                "edit_to": []
-            }
-
+            overrides[date_str] = {"booked": [], "add": [], "remove": []}
         if typ == "booked":
             overrides[date_str]["booked"].append(time_str)
         elif typ == "add":
             overrides[date_str]["add"].append(time_str)
         elif typ == "remove":
             overrides[date_str]["remove"].append(time_str)
-        elif typ == "edit_from":
-            overrides[date_str]["edit_from"].append(time_str)
-        elif typ == "edit_to":
-            overrides[date_str]["edit_to"].append(time_str)
-
     return overrides
 
 
@@ -166,8 +152,8 @@ def save_overrides(business_name, overrides_data):
     # מוחקים את כל השורות הקיימות עבור העסק
     cur.execute("DELETE FROM overrides WHERE business_id = %s", (business_id,))
 
+    # עכשיו מכניסים את כל סוגי השעות לפי סוג
     for date_str, info in overrides_data.items():
-        # שמירת booked, add, remove
         for key in ["booked", "add", "remove"]:
             for time_val in info.get(key, []):
                 cur.execute(
@@ -175,24 +161,10 @@ def save_overrides(business_name, overrides_data):
                     (business_id, date_str, time_val, time_val, key)
                 )
 
-        # שמירת edit
-        for edit_item in info.get("edit", []):
-            from_time = edit_item.get("from")
-            to_time = edit_item.get("to")
-            if from_time:
-                cur.execute(
-                    "INSERT INTO overrides (business_id, date, start_time, end_time, type) VALUES (%s, %s, %s, %s, %s)",
-                    (business_id, date_str, from_time, from_time, "edit_from")
-                )
-            if to_time:
-                cur.execute(
-                    "INSERT INTO overrides (business_id, date, start_time, end_time, type) VALUES (%s, %s, %s, %s, %s)",
-                    (business_id, date_str, to_time, to_time, "edit_to")
-                )
-
     conn.commit()
     cur.close()
     conn.close()
+
 
 
 def load_appointments(business_name):
@@ -411,12 +383,9 @@ def generate_week_slots(business_name, with_sources=False):
         disabled_day = removed == ["__all__"]
 
         booked_times = bookings.get(date_str, [])
-
-        # כל השעות שנוצרו בעריכה
         edited_to_times = [edit['to'] for edit in edits]
         edited_from_times = [edit['from'] for edit in edits]
 
-        # כל השעות הכוללות: לוח + הוספות + edit_to
         all_times = sorted(set(scheduled + added + edited_to_times))
         final_times = []
 
@@ -428,14 +397,7 @@ def generate_week_slots(business_name, with_sources=False):
                     final_times.append({"time": t, "available": True})
                 continue
             if t in edited_from_times:
-                # השעה הישנה של edit, נשארת אך מסומנת כ-disabled (אפור)
-                if with_sources:
-                    final_times.append({"time": t, "available": False, "source": "edit_from"})
-                else:
-                    final_times.append({"time": t, "available": False})
                 continue
-
-            # זמינות רגילה
             available = not (disabled_day or t in removed or t in booked_times)
             if with_sources:
                 source = "base"
@@ -449,7 +411,6 @@ def generate_week_slots(business_name, with_sources=False):
             else:
                 if available:
                     final_times.append({"time": t, "available": True})
-
         week_slots[date_str] = {"day_name": day_name, "times": final_times}
     return week_slots
 
@@ -465,18 +426,15 @@ def is_slot_available(business_name, date, time):
 
 def get_source(t, scheduled, added, removed, edits, disabled_day, booked_times):
     if t in booked_times:
-        return "booked"
+        return "booked"          
     for edit in edits:
         if t == edit['to']:
-            return "edited"
-        if t == edit['from']:
-            return "edit_from"
+            return "edited"      
     if t in added and t not in scheduled:
-        return "added"
+        return "added"           
     if t in scheduled and (t in removed or disabled_day):
-        return "disabled"
-    return "base"
-  
+        return "disabled"        
+    return "base"                
 
 # --- לפני כל בקשה ---
 
@@ -810,11 +768,9 @@ def update_overrides():
         return redirect("/login")
     overrides = load_overrides(business_name)
 
-    # ודא שתמיד יש מבנה מלא
     if date not in overrides:
-        overrides[date] = {"add": [], "remove": [], "edit": []}
+        overrides[date] = {"add": [], "remove": []}
 
-    # מחיקה של כמה שעות ביחד
     if action == "remove_many":
         times = data.get("times", [])
         for t in times:
@@ -825,7 +781,6 @@ def update_overrides():
         save_overrides(business_name, overrides)
         return jsonify({"message": "Multiple times removed", "overrides": overrides})
 
-    # הוספת שעה
     elif action == "add" and time:
         if time not in overrides[date]["add"]:
             overrides[date]["add"].append(time)
@@ -834,70 +789,85 @@ def update_overrides():
         save_overrides(business_name, overrides)
         return jsonify({"message": "Time added", "overrides": overrides})
 
-    # הסרת שעה
     elif action == "remove" and time:
+        if "remove" not in overrides[date]:
+            overrides[date]["remove"] = []
+        if "add" not in overrides[date]:
+            overrides[date]["add"] = []
         if time not in overrides[date]["remove"]:
             overrides[date]["remove"].append(time)
         if time in overrides[date]["add"]:
             overrides[date]["add"].remove(time)
-        overrides[date]["edit"] = [
-            e for e in overrides[date].get("edit", [])
-            if e.get("from") != time and e.get("to") != time
-        ]
-        if not overrides[date]["edit"]:
-            overrides[date].pop("edit", None)
+        if "edit" in overrides[date]:
+            overrides[date]["edit"] = [
+                e for e in overrides[date]["edit"]
+                if e.get("from") != time and e.get("to") != time
+            ]
+            if not overrides[date]["edit"]:
+                overrides[date].pop("edit", None)
         save_overrides(business_name, overrides)
         return jsonify({"message": "Time removed", "overrides": overrides})
 
-    
     elif action == "edit" and time and new_time:
         if time == new_time:
             return jsonify({"message": "No changes made"})
 
-        # הוספת השעה הישנה ל-edit_from
-        if time not in overrides[date]["edit_from"]:
-            overrides[date]["edit_from"].append(time)
+        # ודא שהיום קיים במבנה
+        if date not in overrides:
+            overrides[date] = {"add": [], "remove": []}
 
-        # הוספת השעה החדשה ל-edit_to
-        if new_time not in overrides[date]["edit_to"]:
-            overrides[date]["edit_to"].append(new_time)
+        # הסרת השעה הישנה מכל הרשימות
+        if "add" in overrides[date] and time in overrides[date]["add"]:
+            overrides[date]["add"].remove(time)
+        if "remove" in overrides[date] and time in overrides[date]["remove"]:
+            overrides[date]["remove"].remove(time)
+        if "edit" in overrides[date]:
+            overrides[date]["edit"] = [
+                e for e in overrides[date]["edit"]
+                if e.get("from") != time and e.get("to") != time
+            ]
+            if not overrides[date]["edit"]:
+                overrides[date].pop("edit", None)
 
-        # הסרת הישנה מ-add/remove אם קיימת
-        for lst in ["add", "remove"]:
-            if time in overrides[date][lst]:
-                overrides[date][lst].remove(time)
+        # הוספת השעה החדשה ל-remove (כדי שתוצג כאפורה)
+        if "remove" not in overrides[date]:
+            overrides[date]["remove"] = []
+        if new_time not in overrides[date]["remove"]:
+            overrides[date]["remove"].append(new_time)
 
         save_overrides(business_name, overrides)
         return jsonify({"message": "Time edited", "overrides": overrides})
 
-    # מחיקת כל השינויים של יום מסוים
     elif action == "clear" and date:
         if date in overrides:
             overrides.pop(date)
         save_overrides(business_name, overrides)
         return jsonify({"message": "Day overrides cleared", "overrides": overrides})
 
-    # ביטול יום שלם
     elif action == "disable_day" and date:
         overrides[date] = {"add": [], "remove": ["__all__"]}
         save_overrides(business_name, overrides)
         return jsonify({"message": "Day disabled", "overrides": overrides})
 
-    # החזרת שעה למצבה המקורי
     elif action == "revert" and date and time:
         if date in overrides:
-            if time in overrides[date].get("add", []):
+            if "add" in overrides[date] and time in overrides[date]["add"]:
                 overrides[date]["add"].remove(time)
-            if time in overrides[date].get("remove", []):
+
+            if "remove" in overrides[date] and time in overrides[date]["remove"]:
                 overrides[date]["remove"].remove(time)
-            overrides[date]["edit"] = [
-                e for e in overrides[date].get("edit", [])
-                if e.get("to") != time and e.get("from") != time
-            ]
-            if not overrides[date]["edit"]:
-                overrides[date].pop("edit", None)
+
+            if "edit" in overrides[date]:
+                overrides[date]["edit"] = [
+                    e for e in overrides[date]["edit"]
+                    if e.get("to") != time and e.get("from") != time
+                ]
+                if not overrides[date]["edit"]:
+                    overrides[date].pop("edit", None)
+
             if not overrides[date].get("add") and not overrides[date].get("remove") and not overrides[date].get("edit"):
                 overrides.pop(date)
+
         save_overrides(business_name, overrides)
         return jsonify({"message": "Time reverted", "overrides": overrides})
 
