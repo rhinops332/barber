@@ -154,7 +154,7 @@ def save_overrides(business_name, overrides_data):
 
     # עכשיו מכניסים את כל סוגי השעות לפי סוג
     for date_str, info in overrides_data.items():
-        for key in ["booked", "add", "remove"]:
+        for key in ["booked", "add", "remove", "edit_from", "edit_to"]:
             for time_val in info.get(key, []):
                 cur.execute(
                     "INSERT INTO overrides (business_id, date, start_time, end_time, type) VALUES (%s, %s, %s, %s, %s)",
@@ -812,27 +812,18 @@ def update_overrides():
         if time == new_time:
             return jsonify({"message": "No changes made"})
 
-        if "edit" not in overrides[date]:
-            overrides[date]["edit"] = []
+        # הוספת השעה הישנה ל-edit_from
+        if time not in overrides[date]["edit_from"]:
+            overrides[date]["edit_from"].append(time)
 
-        overrides[date]["edit"] = [
-            item for item in overrides[date]["edit"] if item.get("from") != time
-        ]
+        # הוספת השעה החדשה ל-edit_to
+        if new_time not in overrides[date]["edit_to"]:
+            overrides[date]["edit_to"].append(new_time)
 
-        overrides[date]["edit"].append({
-            "from": time,
-            "to": new_time
-        })
-
-        if "remove" not in overrides[date]:
-            overrides[date]["remove"] = []
-        if time not in overrides[date]["remove"]:
-            overrides[date]["remove"].append(time)
-
-        if "add" not in overrides[date]:
-            overrides[date]["add"] = []
-        if new_time not in overrides[date]["add"]:
-            overrides[date]["add"].append(new_time)
+        # הסרת הישנה מ-add/remove אם קיימת
+        for lst in ["add", "remove"]:
+            if time in overrides[date][lst]:
+                overrides[date][lst].remove(time)
 
         save_overrides(business_name, overrides)
         return jsonify({"message": "Time edited", "overrides": overrides})
