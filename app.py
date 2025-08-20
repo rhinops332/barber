@@ -137,7 +137,6 @@ def load_overrides(business_name):
             overrides[date_str]["remove"].append(time_str)
     return overrides
 
-
 def save_overrides(business_name, overrides_data):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -152,19 +151,33 @@ def save_overrides(business_name, overrides_data):
     # מוחקים את כל השורות הקיימות עבור העסק
     cur.execute("DELETE FROM overrides WHERE business_id = %s", (business_id,))
 
-    # עכשיו מכניסים את כל סוגי השעות לפי סוג
     for date_str, info in overrides_data.items():
-        for key in ["booked", "add", "remove", "edit_from", "edit_to"]:
+        # שמירת booked, add, remove
+        for key in ["booked", "add", "remove"]:
             for time_val in info.get(key, []):
                 cur.execute(
                     "INSERT INTO overrides (business_id, date, start_time, end_time, type) VALUES (%s, %s, %s, %s, %s)",
                     (business_id, date_str, time_val, time_val, key)
                 )
 
+        # שמירת edit
+        for edit_item in info.get("edit", []):
+            from_time = edit_item.get("from")
+            to_time = edit_item.get("to")
+            if from_time:
+                cur.execute(
+                    "INSERT INTO overrides (business_id, date, start_time, end_time, type) VALUES (%s, %s, %s, %s, %s)",
+                    (business_id, date_str, from_time, from_time, "edit_from")
+                )
+            if to_time:
+                cur.execute(
+                    "INSERT INTO overrides (business_id, date, start_time, end_time, type) VALUES (%s, %s, %s, %s, %s)",
+                    (business_id, date_str, to_time, to_time, "edit_to")
+                )
+
     conn.commit()
     cur.close()
     conn.close()
-
 
 
 def load_appointments(business_name):
@@ -383,9 +396,12 @@ def generate_week_slots(business_name, with_sources=False):
         disabled_day = removed == ["__all__"]
 
         booked_times = bookings.get(date_str, [])
+
+        # כל השעות שנוצרו בעריכה
         edited_to_times = [edit['to'] for edit in edits]
         edited_from_times = [edit['from'] for edit in edits]
 
+        # כל השעות הכוללות: לוח + הוספות + edit_to
         all_times = sorted(set(scheduled + added + edited_to_times))
         final_times = []
 
@@ -397,7 +413,14 @@ def generate_week_slots(business_name, with_sources=False):
                     final_times.append({"time": t, "available": True})
                 continue
             if t in edited_from_times:
+                # השעה הישנה של edit, נשארת אך מסומנת כ-disabled (אפור)
+                if with_sources:
+                    final_times.append({"time": t, "available": False, "source": "edit_from"})
+                else:
+                    final_times.append({"time": t, "available": False})
                 continue
+
+            # זמינות רגילה
             available = not (disabled_day or t in removed or t in booked_times)
             if with_sources:
                 source = "base"
@@ -411,6 +434,7 @@ def generate_week_slots(business_name, with_sources=False):
             else:
                 if available:
                     final_times.append({"time": t, "available": True})
+
         week_slots[date_str] = {"day_name": day_name, "times": final_times}
     return week_slots
 
@@ -426,15 +450,18 @@ def is_slot_available(business_name, date, time):
 
 def get_source(t, scheduled, added, removed, edits, disabled_day, booked_times):
     if t in booked_times:
-        return "booked"          
+        return "booked"
     for edit in edits:
         if t == edit['to']:
-            return "edited"      
+            return "edited"
+        if t == edit['from']:
+            return "edit_from"
     if t in added and t not in scheduled:
-        return "added"           
+        return "added"
     if t in scheduled and (t in removed or disabled_day):
-        return "disabled"        
-    return "base"                
+        return "disabled"
+    return "base"
+  
 
 # --- לפני כל בקשה ---
 
