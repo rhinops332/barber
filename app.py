@@ -807,23 +807,30 @@ def update_overrides():
         save_overrides(business_name, overrides)
         return jsonify({"message": "Time removed", "overrides": overrides})
 
-    # עריכת שעה (כמו הוספה רגילה)
+    
     elif action == "edit" and time and new_time:
         if time == new_time:
             return jsonify({"message": "No changes made"})
 
-        # הסרת השעה הישנה מכל הרשימות
-        for key in ["add", "remove"]:
-            if time in overrides[date][key]:
-                overrides[date][key].remove(time)
+        if "edit" not in overrides[date]:
+            overrides[date]["edit"] = []
 
-        # הסרת כל עריכות ישנות עם השעה הישנה
         overrides[date]["edit"] = [
-            e for e in overrides[date].get("edit", [])
-            if e.get("from") != time
+            item for item in overrides[date]["edit"] if item.get("from") != time
         ]
 
-        # הוספת השעה החדשה ל-add (כמו הוספה רגילה)
+        overrides[date]["edit"].append({
+            "from": time,
+            "to": new_time
+        })
+
+        if "remove" not in overrides[date]:
+            overrides[date]["remove"] = []
+        if time not in overrides[date]["remove"]:
+            overrides[date]["remove"].append(time)
+
+        if "add" not in overrides[date]:
+            overrides[date]["add"] = []
         if new_time not in overrides[date]["add"]:
             overrides[date]["add"].append(new_time)
 
