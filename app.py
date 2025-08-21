@@ -244,26 +244,24 @@ def save_bot_knowledge(business_name, content):
 
 def cleanup_database():
     now = datetime.now()
-    today = now.date()
     conn = get_db_connection()
     cur = conn.cursor()
 
     # 1. מחיקת פגישות – רק אחרי שעבר יום שלם
-    cur.execute("DELETE FROM appointments WHERE date < %s", (today,))
+    cur.execute("DELETE FROM appointments WHERE date < %s", (now.date(),))
 
-    # 2. מחיקת overrides שהיום עבר
-    cur.execute("DELETE FROM overrides WHERE date < %s", (today,))
+    # 2. טיפול בשינויים (overrides)
+    # מחיקת overrides שהיום עבר
+    cur.execute("DELETE FROM overrides WHERE date < %s", (now.date(),))
 
-    # 3. הפיכת שעות שכבר עברו להיום ל'כבוי'
-    cur.execute("SELECT id, date, start_time, type FROM overrides WHERE date = %s", (today,))
+    # הפיכת שעות עברויות להיום ל'כבוי'
+    cur.execute("SELECT id, date, start_time, type FROM overrides WHERE date = %s", (now.date(),))
     rows = cur.fetchall()
     for row_id, date_val, start_time, typ in rows:
-        slot_datetime = datetime.combine(date_val, start_time)
-        if typ != "booked" and slot_datetime < now:
-            cur.execute(
-                "UPDATE overrides SET type = 'disabled' WHERE id = %s",
-                (row_id,)
-            )
+        if typ != "booked":
+            # אם השעה כבר עברה – הפוך ל'disabled'
+            if datetime.combine(date_val, start_time) < now:
+                cur.execute("UPDATE overrides SET type = 'disabled' WHERE id = %s", (row_id,))
 
     conn.commit()
     cur.close()
@@ -366,27 +364,7 @@ def generate_week_slots(business_name, with_sources=False):
     overrides = load_overrides(business_name)
     appointments = load_appointments(business_name)
     bookings = get_booked_times(appointments)
-    now = datetime.now()
-    today = now.date()
-
-    # עדכון overrides שמראות שעות שעברו להיום ל־'disabled' ב־DB
-    conn = get_db_connection()
-    cur = conn.cursor()
-    for date_str, day_override in overrides.items():
-        override_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-        if override_date < today:
-            # מחיקת כל overrides שעברו את היום
-            cur.execute("DELETE FROM overrides WHERE date = %s", (override_date,))
-        elif override_date == today:
-            # הפיכת שעות שעברו לכבוי
-            for t in day_override.get("add", []) + day_override.get("edit_to", []):
-                slot_dt = datetime.combine(override_date, datetime.strptime(t, "%H:%M").time())
-                if slot_dt < now:
-                    cur.execute("UPDATE overrides SET type='disabled' WHERE date=%s AND start_time=%s", (override_date, t))
-    conn.commit()
-    cur.close()
-    conn.close()
-
+    today = datetime.today()
     week_slots = {}
     heb_days = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
 
@@ -410,32 +388,17 @@ def generate_week_slots(business_name, with_sources=False):
         final_times = []
 
         for t in all_times:
-            slot_datetime = datetime.combine(current_date, datetime.strptime(t, "%H:%M").time())
-            # סימון שעה שעברה היום כלא זמינה
-            if current_date == today and slot_datetime < now:
-                available = False
-            else:
-                available = not (disabled_day or t in removed or t in booked_times)
-
             if t in edited_to_times:
                 if with_sources:
-                    final_times.append({"time": t, "available": available, "source": "edited"})
+                    final_times.append({"time": t, "available": True, "source": "edited"})
                 else:
-                    final_times.append({"time": t, "available": available})
+                    final_times.append({"time": t, "available": True})
                 continue
             if t in edited_from_times:
                 continue
-
+            available = not (disabled_day or t in removed or t in booked_times)
             if with_sources:
-                source = get_source(
-                    t,
-                    scheduled,
-                    added,
-                    removed,
-                    list(zip(edited_from_times, edited_to_times)),
-                    disabled_day,
-                    booked_times
-                )
+                source = get_source(t, scheduled, added, removed, list(zip(edited_from_times, edited_to_times)), disabled_day, booked_times)
                 final_times.append({"time": t, "available": available, "source": source})
             else:
                 if available:
