@@ -242,6 +242,8 @@ def save_bot_knowledge(business_name, content):
     conn.close()
 
 
+from datetime import datetime
+
 def cleanup_database():
     now = datetime.now()
     conn = get_db_connection()
@@ -255,16 +257,19 @@ def cleanup_database():
     # מחיקת overrides שהיום עבר
     cur.execute("DELETE FROM overrides WHERE date < %s", (now.date(),))
 
-    # הפיכת שעות לעברויות ל'כבוי' ביום הנוכחי
+    # הפיכת שעות עברויות להיום ל'כבוי'
     cur.execute("SELECT id, date, start_time, type FROM overrides WHERE date = %s", (now.date(),))
     rows = cur.fetchall()
     for row_id, date_val, start_time, typ in rows:
-        if typ != "booked" and start_time < now.time():
-            cur.execute("UPDATE overrides SET type = 'disabled' WHERE id = %s", (row_id,))
+        if typ != "booked":
+            # אם השעה כבר עברה – הפוך ל'disabled'
+            if datetime.combine(date_val, start_time) < now:
+                cur.execute("UPDATE overrides SET type = 'disabled' WHERE id = %s", (row_id,))
 
     conn.commit()
     cur.close()
     conn.close()
+
 
 # --- חיבור למסד ---
 
