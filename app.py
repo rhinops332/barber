@@ -260,7 +260,10 @@ def cleanup_database():
     for row_id, date_val, start_time, typ in rows:
         slot_datetime = datetime.combine(date_val, start_time)
         if typ != "booked" and slot_datetime < now:
-            cur.execute("UPDATE overrides SET type = 'disabled' WHERE id = %s", (row_id,))
+            cur.execute(
+                "UPDATE overrides SET type = 'disabled' WHERE id = %s",
+                (row_id,)
+            )
 
     conn.commit()
     cur.close()
@@ -366,11 +369,29 @@ def generate_week_slots(business_name, with_sources=False):
     now = datetime.now()
     today = now.date()
 
+    # עדכון overrides שמראות שעות שעברו להיום ל־'disabled' ב־DB
+    conn = get_db_connection()
+    cur = conn.cursor()
+    for date_str, day_override in overrides.items():
+        override_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        if override_date < today:
+            # מחיקת כל overrides שעברו את היום
+            cur.execute("DELETE FROM overrides WHERE date = %s", (override_date,))
+        elif override_date == today:
+            # הפיכת שעות שעברו לכבוי
+            for t in day_override.get("add", []) + day_override.get("edit_to", []):
+                slot_dt = datetime.combine(override_date, datetime.strptime(t, "%H:%M").time())
+                if slot_dt < now:
+                    cur.execute("UPDATE overrides SET type='disabled' WHERE date=%s AND start_time=%s", (override_date, t))
+    conn.commit()
+    cur.close()
+    conn.close()
+
     week_slots = {}
     heb_days = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
 
     for i in range(7):
-        current_date = now + timedelta(days=i)
+        current_date = today + timedelta(days=i)
         date_str = current_date.strftime("%Y-%m-%d")
         weekday = current_date.weekday()
         day_name = heb_days[weekday]
@@ -390,6 +411,7 @@ def generate_week_slots(business_name, with_sources=False):
 
         for t in all_times:
             slot_datetime = datetime.combine(current_date, datetime.strptime(t, "%H:%M").time())
+            # סימון שעה שעברה היום כלא זמינה
             if current_date == today and slot_datetime < now:
                 available = False
             else:
@@ -405,7 +427,15 @@ def generate_week_slots(business_name, with_sources=False):
                 continue
 
             if with_sources:
-                source = get_source(t, scheduled, added, removed, list(zip(edited_from_times, edited_to_times)), disabled_day, booked_times)
+                source = get_source(
+                    t,
+                    scheduled,
+                    added,
+                    removed,
+                    list(zip(edited_from_times, edited_to_times)),
+                    disabled_day,
+                    booked_times
+                )
                 final_times.append({"time": t, "available": available, "source": source})
             else:
                 if available:
@@ -437,6 +467,7 @@ def get_source(t, scheduled, added, removed, edits, disabled_day, booked_times):
     if t in scheduled and (t in removed or disabled_day):
         return "disabled"
     return "base"
+
 
 # --- לפני כל בקשה ---
 
