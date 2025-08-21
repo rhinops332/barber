@@ -246,7 +246,7 @@ def cleanup_database():
     now = datetime.now()
 
     # מחיקת פגישות שעבר זמנן
-    Appointment.query.filter(Appointment.time < now).delete()
+    appointments.query.filter(appointments.time < now).delete()
 
     # שינויים חד פעמיים
     overrides = Override.query.all()
