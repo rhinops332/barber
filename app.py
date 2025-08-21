@@ -254,12 +254,19 @@ def cleanup_database():
     # מחיקת overrides שהיום עבר
     cur.execute("DELETE FROM overrides WHERE date < %s", (now.date(),))
 
-    # הפיכת שעות עברויות להיום ל'כבוי'
+    # הפיכת שעות עברו להיום ל'כבוי'
     cur.execute("SELECT id, date, start_time, type FROM overrides WHERE date = %s", (now.date(),))
     rows = cur.fetchall()
     for row_id, date_val, start_time, typ in rows:
         if typ != "booked":
-            # אם השעה כבר עברה – הפוך ל'disabled'
+            # המרה למקרה שהשעה נשמרה כטקסט
+            if isinstance(start_time, str):
+                try:
+                    start_time = datetime.strptime(start_time, "%H:%M").time()
+                except ValueError:
+                    continue  # אם לא בפורמט נכון, דלג
+
+            # בדיקה האם השעה כבר עברה
             if datetime.combine(date_val, start_time) < now:
                 cur.execute("UPDATE overrides SET type = 'disabled' WHERE id = %s", (row_id,))
 
