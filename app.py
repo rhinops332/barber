@@ -245,32 +245,34 @@ def save_bot_knowledge(business_name, content):
 def cleanup_database():
     now = datetime.now()
 
-    # מחיקת פגישות שעבר זמנן
-    appointments.query.filter(appointments.time < now).delete()
+    conn = get_db_connection()
+    cur = conn.cursor()
 
-    # שינויים חד פעמיים
-    overrides = Override.query.all()
-    for o in overrides:
-        if o.time < now and o.date == now.date():
-            # עבר זמן השעה -> הפוך לכבוי
-            o.status = "disabled"
-        if o.date < now.date():
-            # עבר היום -> תמחק
-            db.session.delete(o)
+    # מחיקה של פגישות שעברו
+    cur.execute("DELETE FROM appointments WHERE time < %s", (now,))
+    
+    # שמירת שינויים
+    conn.commit()
+    cur.close()
+    conn.close()
 
-    db.session.commit()
+    # עכשיו טיפול ב-overrides
+    overrides = load_overrides("your_business_name")
+    for date_str, info in list(overrides.items()):
+        # כבוי עבור שעת add שעברה
+        for t in info.get("add", []):
+            slot_datetime = datetime.strptime(f"{date_str} {t}", "%Y-%m-%d %H:%M")
+            if slot_datetime < now:
+                info["remove"].append(t)
+                info["add"].remove(t)
 
-# --- חיבור למסד ---
+        # מחיקת ימים שעברו
+        day_date = datetime.strptime(date_str, "%Y-%m-%d")
+        if day_date < now:
+            overrides.pop(date_str)
 
-def get_db_connection():
-    conn = psycopg2.connect(
-        host="dpg-d2gamrndiees73dabd0g-a.frankfurt-postgres.render.com",
-        port=5432,
-        database="booking_app_tx3i",
-        user="booking_app_tx3i_user",
-        password="MRWYtWCxlO4azGBf6Iwo6AdP99aSmsxY"
-    )
-    return conn
+    save_overrides("your_business_name", overrides)
+
 
 # --- פונקציות למסד ---
 
