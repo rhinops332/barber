@@ -364,12 +364,14 @@ def generate_week_slots(business_name, with_sources=False):
     overrides = load_overrides(business_name)
     appointments = load_appointments(business_name)
     bookings = get_booked_times(appointments)
-    today = datetime.today()
+    now = datetime.now()
+    today = now.date()
+
     week_slots = {}
     heb_days = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
 
     for i in range(7):
-        current_date = today + timedelta(days=i)
+        current_date = now + timedelta(days=i)
         date_str = current_date.strftime("%Y-%m-%d")
         weekday = current_date.weekday()
         day_name = heb_days[weekday]
@@ -388,15 +390,21 @@ def generate_week_slots(business_name, with_sources=False):
         final_times = []
 
         for t in all_times:
+            slot_datetime = datetime.combine(current_date, datetime.strptime(t, "%H:%M").time())
+            if current_date == today and slot_datetime < now:
+                available = False
+            else:
+                available = not (disabled_day or t in removed or t in booked_times)
+
             if t in edited_to_times:
                 if with_sources:
-                    final_times.append({"time": t, "available": True, "source": "edited"})
+                    final_times.append({"time": t, "available": available, "source": "edited"})
                 else:
-                    final_times.append({"time": t, "available": True})
+                    final_times.append({"time": t, "available": available})
                 continue
             if t in edited_from_times:
                 continue
-            available = not (disabled_day or t in removed or t in booked_times)
+
             if with_sources:
                 source = get_source(t, scheduled, added, removed, list(zip(edited_from_times, edited_to_times)), disabled_day, booked_times)
                 final_times.append({"time": t, "available": available, "source": source})
@@ -430,7 +438,6 @@ def get_source(t, scheduled, added, removed, edits, disabled_day, booked_times):
     if t in scheduled and (t in removed or disabled_day):
         return "disabled"
     return "base"
-
 
 # --- לפני כל בקשה ---
 
