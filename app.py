@@ -247,33 +247,35 @@ def cleanup_database():
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # 1. מחיקת פגישות – רק אחרי שעבר יום שלם
+    # 1. מחיקת פגישות ישנות
     cur.execute("DELETE FROM appointments WHERE date < %s", (now.date(),))
 
-    # 2. טיפול בשינויים (overrides)
-    # מחיקת overrides שהיום עבר
+    # 2. מחיקת overrides ישנים
     cur.execute("DELETE FROM overrides WHERE date < %s", (now.date(),))
 
-    # הפיכת שעות עברו להיום ל'כבוי'
+    # 3. הפיכת שעות עברו להיום ל-'disabled'
     cur.execute("SELECT id, date, start_time, type FROM overrides WHERE date = %s", (now.date(),))
     rows = cur.fetchall()
+
     for row_id, date_val, start_time, typ in rows:
+        if not date_val or not start_time:
+            continue  # דילוג על רשומות עם ערכים חסרים
+
         if typ != "booked":
-            # המרה למקרה שהשעה נשמרה כטקסט
+            # המרה במקרה שהשעה נשמרה כטקסט
             if isinstance(start_time, str):
                 try:
                     start_time = datetime.strptime(start_time, "%H:%M").time()
                 except ValueError:
-                    continue  # אם לא בפורמט נכון, דלג
+                    continue
 
-            # בדיקה האם השעה כבר עברה
+            # אם השעה כבר עברה – עדכן ל-disabled
             if datetime.combine(date_val, start_time) < now:
                 cur.execute("UPDATE overrides SET type = 'disabled' WHERE id = %s", (row_id,))
 
     conn.commit()
     cur.close()
     conn.close()
-
 # --- חיבור למסד ---
 
 def get_db_connection():
