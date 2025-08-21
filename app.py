@@ -242,16 +242,13 @@ def save_bot_knowledge(business_name, content):
     conn.close()
 
 
-from datetime import datetime
-
 def cleanup_database():
     now = datetime.now()
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # 1. מחיקת פגישות שהזמן שלהן עבר
-    cur.execute("DELETE FROM appointments WHERE date < %s OR (date = %s AND time < %s)",
-                (now.date(), now.date(), now.time()))
+    # 1. מחיקת פגישות – רק אחרי שעבר יום שלם
+    cur.execute("DELETE FROM appointments WHERE date < %s", (now.date(),))
 
     # 2. טיפול בשינויים (overrides)
     # מחיקת overrides שהיום עבר
@@ -269,7 +266,6 @@ def cleanup_database():
     conn.commit()
     cur.close()
     conn.close()
-
 
 # --- חיבור למסד ---
 
