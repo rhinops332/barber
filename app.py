@@ -244,21 +244,27 @@ def save_bot_knowledge(business_name, content):
 
 def cleanup_database():
     now = datetime.now()
+    conn = get_db_connection()
+    cur = conn.cursor()
 
-    # מחיקת פגישות שעבר זמנן
-    appointments.query.filter(appointments.time < now).delete()
+    # 1. מחיקת פגישות שהזמן שלהן עבר
+    cur.execute("DELETE FROM appointments WHERE date < %s OR (date = %s AND time < %s)",
+                (now.date(), now.date(), now.time()))
 
-    # שינויים חד פעמיים
-    overrides = Override.query.all()
-    for o in overrides:
-        if o.time < now and o.date == now.date():
-            # עבר זמן השעה -> הפוך לכבוי
-            o.status = "disabled"
-        if o.date < now.date():
-            # עבר היום -> תמחק
-            db.session.delete(o)
+    # 2. טיפול בשינויים (overrides)
+    # מחיקת overrides שהיום עבר
+    cur.execute("DELETE FROM overrides WHERE date < %s", (now.date(),))
 
-    db.session.commit()
+    # הפיכת שעות לעברויות ל'כבוי' ביום הנוכחי
+    cur.execute("SELECT id, date, start_time, type FROM overrides WHERE date = %s", (now.date(),))
+    rows = cur.fetchall()
+    for row_id, date_val, start_time, typ in rows:
+        if typ != "booked" and start_time < now.time():
+            cur.execute("UPDATE overrides SET type = 'disabled' WHERE id = %s", (row_id,))
+
+    conn.commit()
+    cur.close()
+    conn.close()
 
 # --- חיבור למסד ---
 
