@@ -241,24 +241,24 @@ def save_bot_knowledge(business_name, content):
     cur.close()
     conn.close()
 
-def cleanup_old_data(overrides, appointments):
-    today = datetime.today().date()
 
-    # ניקוי overrides ישנים
-    overrides = {
-        date: times
-        for date, times in overrides.items()
-        if datetime.strptime(date, "%Y-%m-%d").date() >= today
-    }
+def cleanup_database():
+    now = datetime.now()
 
-    # ניקוי הזמנות ישנות
-    appointments = [
-        appt for appt in appointments
-        if datetime.strptime(appt["date"], "%Y-%m-%d").date() >= today
-    ]
+    # מחיקת פגישות שעבר זמנן
+    Appointment.query.filter(Appointment.time < now).delete()
 
-    return overrides, appointments
+    # שינויים חד פעמיים
+    overrides = Override.query.all()
+    for o in overrides:
+        if o.time < now and o.date == now.date():
+            # עבר זמן השעה -> הפוך לכבוי
+            o.status = "disabled"
+        if o.date < now.date():
+            # עבר היום -> תמחק
+            db.session.delete(o)
 
+    db.session.commit()
 
 # --- חיבור למסד ---
 
@@ -592,7 +592,8 @@ def delete_business(business_name):
 def main_admin():
     if not session.get('username') or session.get('is_host'):
         return redirect('/login')
-    
+
+    cleanup_database()
     business_name = session.get('business_name', 'עסק לא ידוע')
     return render_template('main_admin.html', business_name=business_name)
 
@@ -620,8 +621,7 @@ def admin_overrides():
         return redirect("/login")
     weekly_schedule = load_weekly_schedule(business_name)
     overrides = load_overrides(business_name)
-    overrides, appointments = cleanup_old_data(overrides, appointments)
-
+    cleanup_database()
     today = datetime.today()
     week_dates = [(today + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)]
 
@@ -651,7 +651,7 @@ def admin_appointments():
     if not business_name:
         return redirect("/login")
     appointments = load_appointments(business_name)
-    overrides, appointments = cleanup_old_data(overrides, appointments)
+    cleanup_database()
     return render_template("admin_appointments.html", appointments=appointments)
 
 @app.route("/orders")
@@ -659,6 +659,8 @@ def orders():
     business_name = session.get('business_name')
     if not business_name:
         return redirect("/login")
+
+    cleanup_database()
     week_slots = generate_week_slots(business_name)
     return render_template("orders.html", week_slots=week_slots)
 
@@ -759,7 +761,7 @@ def update_overrides():
         return redirect("/login")
     
     overrides = load_overrides(business_name)
-    overrides, appointments = cleanup_old_data(overrides, appointments)
+   
 
     if date not in overrides:
         overrides[date] = {"booked": [], "add": [], "remove": [], "edit_from": [], "edit_to": []}
@@ -866,7 +868,7 @@ def toggle_override_day():
     if not business_name:
         return redirect("/login")
     overrides = load_overrides(business_name)
-    overrides, appointments = cleanup_old_data(overrides, appointments)
+    
 
     if not enabled:
         overrides[date] = {"add": [], "remove": ["__all__"]}
@@ -944,7 +946,7 @@ def appointment_details():
     if not business_name:
         return redirect("/login")
     appointments = load_appointments(business_name)
-    overrides, appointments = cleanup_old_data(overrides, appointments)
+    
 
     if date in appointments:
         for appt in appointments[date]:
@@ -996,7 +998,7 @@ def book_appointment():
         return jsonify({"error": "This time slot is not available"}), 400
 
     appointments = load_appointments(business_name)
-    overrides, appointments = cleanup_old_data(overrides, appointments)
+    
     # ממירה את הרשימה של תורים למילון לפי תאריך
     booked = get_booked_times(appointments)
     date_appointments = booked.get(date, [])
@@ -1021,7 +1023,7 @@ def book_appointment():
 
     # מעדכנים overrides
     overrides = load_overrides(business_name)
-    overrides, appointments = cleanup_old_data(overrides, appointments)
+    
     if date not in overrides:
         overrides[date] = {"booked": [], "add": [], "remove": []}
     if "booked" not in overrides[date]:
