@@ -244,24 +244,23 @@ def save_bot_knowledge(business_name, content):
 
 def cleanup_database():
     now = datetime.now()
+    today = now.date()
     conn = get_db_connection()
     cur = conn.cursor()
 
     # 1. מחיקת פגישות – רק אחרי שעבר יום שלם
-    cur.execute("DELETE FROM appointments WHERE date < %s", (now.date(),))
+    cur.execute("DELETE FROM appointments WHERE date < %s", (today,))
 
-    # 2. טיפול בשינויים (overrides)
-    # מחיקת overrides שהיום עבר
-    cur.execute("DELETE FROM overrides WHERE date < %s", (now.date(),))
+    # 2. מחיקת overrides שהיום עבר
+    cur.execute("DELETE FROM overrides WHERE date < %s", (today,))
 
-    # הפיכת שעות עברויות להיום ל'כבוי'
-    cur.execute("SELECT id, date, start_time, type FROM overrides WHERE date = %s", (now.date(),))
+    # 3. הפיכת שעות שכבר עברו להיום ל'כבוי'
+    cur.execute("SELECT id, date, start_time, type FROM overrides WHERE date = %s", (today,))
     rows = cur.fetchall()
     for row_id, date_val, start_time, typ in rows:
-        if typ != "booked":
-            # אם השעה כבר עברה – הפוך ל'disabled'
-            if datetime.combine(date_val, start_time) < now:
-                cur.execute("UPDATE overrides SET type = 'disabled' WHERE id = %s", (row_id,))
+        slot_datetime = datetime.combine(date_val, start_time)
+        if typ != "booked" and slot_datetime < now:
+            cur.execute("UPDATE overrides SET type = 'disabled' WHERE id = %s", (row_id,))
 
     conn.commit()
     cur.close()
