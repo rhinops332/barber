@@ -242,40 +242,6 @@ def save_bot_knowledge(business_name, content):
     conn.close()
 
 
-def cleanup_database():
-    now = datetime.now()
-    conn = get_db_connection()
-    cur = conn.cursor()
-
-    # 1. מחיקת פגישות ישנות
-    cur.execute("DELETE FROM appointments WHERE date < %s", (now.date(),))
-
-    # 2. מחיקת overrides ישנים
-    cur.execute("DELETE FROM overrides WHERE date < %s", (now.date(),))
-
-    # 3. הפיכת שעות עברו להיום ל-'disabled'
-    cur.execute("SELECT id, date, start_time, type FROM overrides WHERE date = %s", (now.date(),))
-    rows = cur.fetchall()
-
-    for row_id, date_val, start_time, typ in rows:
-        if not date_val or not start_time:
-            continue  # דילוג על רשומות עם ערכים חסרים
-
-        if typ != "booked":
-            # המרה במקרה שהשעה נשמרה כטקסט
-            if isinstance(start_time, str):
-                try:
-                    start_time = datetime.strptime(start_time, "%H:%M").time()
-                except ValueError:
-                    continue
-
-            # אם השעה כבר עברה – עדכן ל-disabled
-            if datetime.combine(date_val, start_time) < now:
-                cur.execute("UPDATE overrides SET type = 'disabled' WHERE id = %s", (row_id,))
-
-    conn.commit()
-    cur.close()
-    conn.close()
 # --- חיבור למסד ---
 
 def get_db_connection():
@@ -608,8 +574,7 @@ def delete_business(business_name):
 def main_admin():
     if not session.get('username') or session.get('is_host'):
         return redirect('/login')
-
-    cleanup_database()
+    
     business_name = session.get('business_name', 'עסק לא ידוע')
     return render_template('main_admin.html', business_name=business_name)
 
@@ -637,7 +602,7 @@ def admin_overrides():
         return redirect("/login")
     weekly_schedule = load_weekly_schedule(business_name)
     overrides = load_overrides(business_name)
-    cleanup_database()
+
     today = datetime.today()
     week_dates = [(today + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)]
 
@@ -667,7 +632,6 @@ def admin_appointments():
     if not business_name:
         return redirect("/login")
     appointments = load_appointments(business_name)
-    cleanup_database()
     return render_template("admin_appointments.html", appointments=appointments)
 
 @app.route("/orders")
@@ -675,8 +639,6 @@ def orders():
     business_name = session.get('business_name')
     if not business_name:
         return redirect("/login")
-
-    cleanup_database()
     week_slots = generate_week_slots(business_name)
     return render_template("orders.html", week_slots=week_slots)
 
@@ -777,7 +739,6 @@ def update_overrides():
         return redirect("/login")
     
     overrides = load_overrides(business_name)
-   
 
     if date not in overrides:
         overrides[date] = {"booked": [], "add": [], "remove": [], "edit_from": [], "edit_to": []}
@@ -884,7 +845,6 @@ def toggle_override_day():
     if not business_name:
         return redirect("/login")
     overrides = load_overrides(business_name)
-    
 
     if not enabled:
         overrides[date] = {"add": [], "remove": ["__all__"]}
@@ -962,7 +922,6 @@ def appointment_details():
     if not business_name:
         return redirect("/login")
     appointments = load_appointments(business_name)
-    
 
     if date in appointments:
         for appt in appointments[date]:
@@ -1014,7 +973,6 @@ def book_appointment():
         return jsonify({"error": "This time slot is not available"}), 400
 
     appointments = load_appointments(business_name)
-    
     # ממירה את הרשימה של תורים למילון לפי תאריך
     booked = get_booked_times(appointments)
     date_appointments = booked.get(date, [])
@@ -1039,7 +997,6 @@ def book_appointment():
 
     # מעדכנים overrides
     overrides = load_overrides(business_name)
-    
     if date not in overrides:
         overrides[date] = {"booked": [], "add": [], "remove": []}
     if "booked" not in overrides[date]:
