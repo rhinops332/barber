@@ -23,37 +23,6 @@ services_prices = {
     "Color": 250
 }
 
-# --- פונקציית ניקוי ---
-
-def clear_database(business_name):
-    """
-    מוחקת את כל הפגישות והשינויים החד פעמיים (overrides) עבור עסק מסוים.
-    מומלץ להריץ אותה בחצות או בכל פעם שאתה רוצה לנקות ידנית.
-    """
-    conn = get_db_connection()
-    cur = conn.cursor()
-
-    # מוצאים את ה-ID של העסק
-    cur.execute("SELECT id FROM businesses WHERE name = %s", (business_name,))
-    row = cur.fetchone()
-    if not row:
-        cur.close()
-        conn.close()
-        return False
-    business_id = row[0]
-
-    # מוחקים את כל התורים
-    cur.execute("DELETE FROM appointments WHERE business_id = %s", (business_id,))
-    # מוחקים את כל השינויים החד פעמיים
-    cur.execute("DELETE FROM overrides WHERE business_id = %s", (business_id,))
-
-    conn.commit()
-    cur.close()
-    conn.close()
-    print(f"כל הנתונים נמחקו עבור העסק {business_name}")
-    return True
-
-
 # --- פונקציות עזר ---
 
 def load_weekly_schedule(business_name):
@@ -156,8 +125,10 @@ def save_overrides(business_name, overrides_data):
         return
     business_id = row[0]
 
+    # מוחקים את כל השורות הקיימות עבור העסק
     cur.execute("DELETE FROM overrides WHERE business_id = %s", (business_id,))
 
+    # מכניסים את כל סוגי השעות כולל עריכות
     for date_str, info in overrides_data.items():
         for key in ["booked", "add", "remove", "edit_from", "edit_to"]:
             for time_val in info.get(key, []):
@@ -169,6 +140,7 @@ def save_overrides(business_name, overrides_data):
     conn.commit()
     cur.close()
     conn.close()
+
 
 
 def load_appointments(business_name):
@@ -202,7 +174,6 @@ def load_appointments(business_name):
         })
     return appointments
 
-
 def save_appointments(business_name, appointments_data):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -216,7 +187,7 @@ def save_appointments(business_name, appointments_data):
 
     cur.execute("DELETE FROM appointments WHERE business_id = %s", (business_id,))
 
-    for date_str, appts in appointments_data.items():
+    for date_str, appts in appointments_data.items():  # <-- חייב לעבור לפי תאריכים
         for appt in appts:
             cur.execute(
                 "INSERT INTO appointments (business_id, name, phone, date, time, service, price) VALUES (%s,%s,%s,%s,%s,%s,%s)",
@@ -224,7 +195,7 @@ def save_appointments(business_name, appointments_data):
                     business_id,
                     appt.get('name'),
                     appt.get('phone'),
-                    date_str,
+                    date_str,  # <-- תאריך הוא המפתח
                     appt.get('time'),
                     appt.get('service'),
                     appt.get('price')
@@ -288,12 +259,14 @@ def get_db_connection():
 def create_business_in_db(business_name, username, password_hash, email="", phone=""):
     conn = get_db_connection()
     cur = conn.cursor()
+    # יצירת העסק
     cur.execute("""
         INSERT INTO businesses (name, username, password_hash, email, phone)
         VALUES (%s, %s, %s, %s, %s) RETURNING id
     """, (business_name, username, password_hash, email, phone))
     business_id = cur.fetchone()[0]
 
+    # יצירת שגרה שבועית כברירת מחדל
     default_schedule = create_default_weekly_schedule()
     for day, slots in default_schedule.items():
         for slot in slots:
@@ -302,6 +275,7 @@ def create_business_in_db(business_name, username, password_hash, email="", phon
                 VALUES (%s, %s, %s, %s)
             """, (business_id, day, slot['start_time'], slot['end_time']))
 
+    # יצירת רשומות ריקות לטבלאות אחרות
     for table in ["appointments", "overrides", "bot_knowledge"]:
         cur.execute(f"INSERT INTO {table} (business_id) VALUES (%s)", (business_id,))
 
@@ -309,7 +283,6 @@ def create_business_in_db(business_name, username, password_hash, email="", phon
     cur.close()
     conn.close()
     print(f"עסק '{business_name}' נוצר במסד עם ID = {business_id}")
-
 
 def get_business_details(username, password):
     conn = get_db_connection()
@@ -328,20 +301,21 @@ def get_business_details(username, password):
         return business_name, email, phone, business_id
     return None, None, None, None
 
-
 # --- יצירת שגרה שבועית ברירת מחדל ---
 
 def create_default_weekly_schedule():
     schedule = {}
+    # ימים 0-6
     for day in range(7):
         slots = []
         start_hour = 8
         end_hour = 20
-        blocked_start = 14
-        blocked_end = 16
+        blocked_start = 14  # שעה שמתחילים חסימה
+        blocked_end = 16    # שעה שמסתיים החסימה
         current = datetime.combine(datetime.today(), time(start_hour, 0))
         while current.time() < time(end_hour, 0):
             slot_end = (current + timedelta(minutes=30)).time()
+            # בדיקה אם התור בתוך שעות החסומות
             if not (time(blocked_start, 0) <= current.time() < time(blocked_end, 0)):
                 slots.append({
                     "start_time": current.time(),
@@ -351,7 +325,6 @@ def create_default_weekly_schedule():
         schedule[day] = slots
     return schedule
 
-
 # --- ניהול שבועי ושינויים ---
 
 def get_booked_times(appointments):
@@ -360,7 +333,6 @@ def get_booked_times(appointments):
         for appt in appts:
             bookings.setdefault(date_str, []).append(appt["time"])
     return bookings
-
 
 def generate_week_slots(business_name, with_sources=False):
     weekly_schedule = load_weekly_schedule(business_name)
@@ -433,7 +405,6 @@ def get_source(t, scheduled, added, removed, edits, disabled_day, booked_times):
     if t in scheduled and (t in removed or disabled_day):
         return "disabled"
     return "base"
-
 
 
 # --- לפני כל בקשה ---
@@ -512,8 +483,6 @@ def dashboard():
 def host_command():
     if not session.get('is_host'):
         return redirect('/login')
-
-    clear_database
     businesses = load_businesses()
     return render_template('host_command.html', businesses=businesses)
 
@@ -605,7 +574,7 @@ def delete_business(business_name):
 def main_admin():
     if not session.get('username') or session.get('is_host'):
         return redirect('/login')
-    clear_database
+    
     business_name = session.get('business_name', 'עסק לא ידוע')
     return render_template('main_admin.html', business_name=business_name)
 
