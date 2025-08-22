@@ -244,6 +244,57 @@ def save_bot_knowledge(business_name, content):
     conn.close()
 
 
+from datetime import datetime, timedelta
+
+def disable_past_hours():
+    """מכבה (disabled) כל השעות שהן כבר עברו היום בכל העסק"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    current_time_str = datetime.now().strftime("%H:%M:%S")
+
+    # לוקח את כל העסקים
+    cur.execute("SELECT id FROM businesses")
+    businesses = [row[0] for row in cur.fetchall()]
+
+    for business_id in businesses:
+        # שולף את כל השעות מה-overrides להיום
+        cur.execute("SELECT start_time, type FROM overrides WHERE business_id=%s AND date=%s", (business_id, today_str))
+        rows = cur.fetchall()
+        for start_time, typ in rows:
+            if start_time.strftime("%H:%M:%S") < current_time_str and typ != "remove":
+                # משנה את type ל-remove אם השעה כבר עברה
+                cur.execute("""
+                    UPDATE overrides
+                    SET type='remove'
+                    WHERE business_id=%s AND date=%s AND start_time=%s
+                """, (business_id, today_str, start_time))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+    print(f"[{datetime.now().strftime('%H:%M:%S')}] Past hours disabled for all businesses.")
+
+
+def clear_old_appointments():
+    """מוחק את כל ההזמנות וה-overrides שעברו 24 שעות"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cutoff = datetime.now() - timedelta(days=1)
+
+    # מחיקת appointments ישנים
+    cur.execute("DELETE FROM appointments WHERE date < %s", (cutoff.date(),))
+
+    # מחיקת overrides ישנים
+    cur.execute("DELETE FROM overrides WHERE date < %s", (cutoff.date(),))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+    print(f"[{datetime.now().strftime('%H:%M:%S')}] Old appointments and overrides cleared.")
+
 # --- חיבור למסד ---
 
 def get_db_connection():
@@ -576,7 +627,7 @@ def delete_business(business_name):
 def main_admin():
     if not session.get('username') or session.get('is_host'):
         return redirect('/login')
-   
+    disable_past_hours()
     business_name = session.get('business_name', 'עסק לא ידוע')
     return render_template('main_admin.html', business_name=business_name)
 
