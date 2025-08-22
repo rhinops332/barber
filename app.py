@@ -23,6 +23,10 @@ services_prices = {
     "Color": 250
 }
 
+def log_current_time():
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{now}]")
+
 # --- פונקציות עזר ---
 
 def load_weekly_schedule(business_name):
@@ -574,7 +578,7 @@ def delete_business(business_name):
 def main_admin():
     if not session.get('username') or session.get('is_host'):
         return redirect('/login')
-    
+    log_current_time()
     business_name = session.get('business_name', 'עסק לא ידוע')
     return render_template('main_admin.html', business_name=business_name)
 
