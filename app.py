@@ -512,6 +512,8 @@ def dashboard():
 def host_command():
     if not session.get('is_host'):
         return redirect('/login')
+
+    clear_database
     businesses = load_businesses()
     return render_template('host_command.html', businesses=businesses)
 
@@ -603,7 +605,7 @@ def delete_business(business_name):
 def main_admin():
     if not session.get('username') or session.get('is_host'):
         return redirect('/login')
-    
+    clear_database
     business_name = session.get('business_name', 'עסק לא ידוע')
     return render_template('main_admin.html', business_name=business_name)
 
