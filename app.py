@@ -250,28 +250,24 @@ def disable_past_hours():
     tz = ZoneInfo("Asia/Jerusalem")
     now = datetime.now(tz)
     today_str = now.strftime("%Y-%m-%d")
-    current_time_str = now.strftime("%H:%M")
+    current_time = now.time()  # datetime.time
 
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT name FROM businesses")
-    businesses = [row[0] for row in cur.fetchall()]
+
+    cur.execute("SELECT id, date, start_time, type FROM overrides")
+    rows = cur.fetchall()
+
+    for row_id, date_val, start_time_val, typ in rows:
+        if not date_val or not start_time_val:
+            continue
+        if date_val.strftime("%Y-%m-%d") == today_str and start_time_val < current_time and typ != "remove":
+            cur.execute("UPDATE overrides SET type='remove' WHERE id=%s", (row_id,))
+
+    conn.commit()
     cur.close()
     conn.close()
-
-    for business_name in businesses:
-        overrides = load_overrides(business_name)
-        today_override = overrides.get(today_str, {"booked": [], "add": [], "remove": [], "edit_from": [], "edit_to": []})
-
-        for t in today_override.get("add", []) + today_override.get("edit_to", []):
-            if t < current_time_str and t not in today_override["remove"]:
-                today_override["remove"].append(t)
-
-        overrides[today_str] = today_override
-        save_overrides(business_name, overrides)
-
-    print(f"[{now.strftime('%H:%M:%S')}] Past hours disabled for all businesses.")
-
+    print(f"[{now.strftime('%H:%M:%S')}] Past hours disabled for all overrides.")
 
 def clear_old_appointments():
     """מוחק את כל ההזמנות וה-overrides שעברו 24 שעות"""
