@@ -249,31 +249,27 @@ def save_bot_knowledge(business_name, content):
 def disable_past_hours():
     tz = ZoneInfo("Asia/Jerusalem")
     now = datetime.now(tz)
+    today_str = now.strftime("%Y-%m-%d")
+    current_time_str = now.strftime("%H:%M")
 
     conn = get_db_connection()
     cur = conn.cursor()
-
-    today_str = now.strftime("%Y-%m-%d")
-    current_time_str = now.strftime("%H:%M:%S")
-
-    # לוקח את כל העסקים
-    cur.execute("SELECT id FROM businesses")
+    cur.execute("SELECT name FROM businesses")
     businesses = [row[0] for row in cur.fetchall()]
-
-    for business_id in businesses:
-        cur.execute("SELECT start_time, type FROM overrides WHERE business_id=%s AND date=%s", (business_id, today_str))
-        rows = cur.fetchall()
-        for start_time, typ in rows:
-            if start_time.strftime("%H:%M:%S") < current_time_str and typ != "remove":
-                cur.execute("""
-                    UPDATE overrides
-                    SET type='remove'
-                    WHERE business_id=%s AND date=%s AND start_time=%s
-                """, (business_id, today_str, start_time))
-
-    conn.commit()
     cur.close()
     conn.close()
+
+    for business_name in businesses:
+        overrides = load_overrides(business_name)
+        today_override = overrides.get(today_str, {"booked": [], "add": [], "remove": [], "edit_from": [], "edit_to": []})
+
+        for t in today_override.get("add", []) + today_override.get("edit_to", []):
+            if t < current_time_str and t not in today_override["remove"]:
+                today_override["remove"].append(t)
+
+        overrides[today_str] = today_override
+        save_overrides(business_name, overrides)
+
     print(f"[{now.strftime('%H:%M:%S')}] Past hours disabled for all businesses.")
 
 
