@@ -246,29 +246,72 @@ def save_bot_knowledge(business_name, content):
 
 # --- ניקוי המסד ומחיקת מידע מיותר ---
 
-def disable_past_hours(business_name):
+def disable_past_hours():
     tz = ZoneInfo("Asia/Jerusalem")
     now = datetime.now(tz)
     today_str = now.strftime("%Y-%m-%d")
     current_time_str = now.strftime("%H:%M")
 
-    # טוענים את כל השינויים הקיימים לעסק
-    overrides = load_overrides(business_name)
+    conn = get_db_connection()
+    cur = conn.cursor()
 
-    # אם אין שינויים להיום, יוצרים מבנה ריק
-    today_override = overrides.get(today_str, {"booked": [], "add": [], "remove": [], "edit_from": [], "edit_to": []})
+    # לוקח את כל העסקים
+    cur.execute("SELECT id FROM businesses")
+    businesses = [row[0] for row in cur.fetchall()]
 
-    # בודקים את השעות שנמצאות ב-add או edit_to ואם עברו מוסיפים ל-remove
-    for t in today_override.get("add", []) + today_override.get("edit_to", []):
-        if t < current_time_str and t not in today_override["remove"]:
-            today_override["remove"].append(t)
+    for business_id in businesses:
+        # טוען את השגרה השבועית
+        cur.execute("SELECT day, start_time FROM weekly_schedule WHERE business_id=%s", (business_id,))
+        weekly_rows = cur.fetchall()
+        weekly_schedule = {str(i): [] for i in range(7)}
+        for day, start_time in weekly_rows:
+            if start_time:
+                weekly_schedule[str(day)].append(start_time.strftime("%H:%M"))
 
-    # שומרים חזרה את השינויים
-    overrides[today_str] = today_override
-    save_overrides(business_name, overrides)
+        # טוען את השינויים הקיימים
+        cur.execute("SELECT date, start_time, type FROM overrides WHERE business_id=%s", (business_id,))
+        override_rows = cur.fetchall()
+        overrides = {}
+        for date_val, start_time_val, typ in override_rows:
+            if not date_val or not start_time_val:
+                continue
+            date_s = date_val.strftime("%Y-%m-%d")
+            time_s = start_time_val.strftime("%H:%M")
+            if date_s not in overrides:
+                overrides[date_s] = {"booked": [], "add": [], "remove": [], "edit_from": [], "edit_to": []}
+            overrides[date_s].setdefault(typ, []).append(time_s)
 
-    print(f"[{now.strftime('%H:%M:%S')}] Past hours disabled for {business_name}.")
+        # קביעת היום הנוכחי
+        weekday = str(datetime.now(tz).weekday())
+        today_schedule = weekly_schedule.get(weekday, [])
 
+        # מיזוג כל השעות להיום
+        today_override = overrides.get(today_str, {"booked": [], "add": [], "remove": [], "edit_from": [], "edit_to": []})
+        all_today_times = set(today_schedule + today_override.get("add", []) + today_override.get("edit_to", []))
+
+        # מוסיף ל-remove כל שעה שעברה
+        for t in all_today_times:
+            if t < current_time_str and t not in today_override["remove"]:
+                today_override["remove"].append(t)
+
+        overrides[today_str] = today_override
+
+        # מוחק את כל השורות הקיימות להיום
+        cur.execute("DELETE FROM overrides WHERE business_id=%s AND date=%s", (business_id, today_str))
+
+        # מכניס את כל השינויים המעודכנים להיום
+        for key in ["booked", "add", "remove", "edit_from", "edit_to"]:
+            for time_val in today_override.get(key, []):
+                cur.execute(
+                    "INSERT INTO overrides (business_id, date, start_time, end_time, type) VALUES (%s, %s, %s, %s, %s)",
+                    (business_id, today_str, time_val, time_val, key)
+                )
+
+    conn.commit()
+    cur.close()
+    conn.close()
+    print(f"[{now.strftime('%H:%M:%S')}] Past hours disabled for all businesses.")
+    
 def clear_old_appointments():
     """מוחק את כל ההזמנות וה-overrides שעברו 24 שעות"""
     conn = get_db_connection()
@@ -620,8 +663,7 @@ def main_admin():
     if not session.get('username') or session.get('is_host'):
         return redirect('/login')
 
-    business_name = session.get('business_name')
-    disable_past_hours(business_name)
+    disable_past_hours()
     business_name = session.get('business_name', 'עסק לא ידוע')
     return render_template('main_admin.html', business_name=business_name)
 
