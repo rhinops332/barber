@@ -246,28 +246,28 @@ def save_bot_knowledge(business_name, content):
 
 # --- ניקוי המסד ומחיקת מידע מיותר ---
 
-def disable_past_hours():
+def disable_past_hours(business_name):
     tz = ZoneInfo("Asia/Jerusalem")
     now = datetime.now(tz)
     today_str = now.strftime("%Y-%m-%d")
-    current_time = now.time()  # datetime.time
+    current_time_str = now.strftime("%H:%M")
 
-    conn = get_db_connection()
-    cur = conn.cursor()
+    # טוענים את כל השינויים הקיימים לעסק
+    overrides = load_overrides(business_name)
 
-    cur.execute("SELECT id, date, start_time, type FROM overrides")
-    rows = cur.fetchall()
+    # אם אין שינויים להיום, יוצרים מבנה ריק
+    today_override = overrides.get(today_str, {"booked": [], "add": [], "remove": [], "edit_from": [], "edit_to": []})
 
-    for row_id, date_val, start_time_val, typ in rows:
-        if not date_val or not start_time_val:
-            continue
-        if date_val.strftime("%Y-%m-%d") == today_str and start_time_val < current_time and typ != "remove":
-            cur.execute("UPDATE overrides SET type='remove' WHERE id=%s", (row_id,))
+    # בודקים את השעות שנמצאות ב-add או edit_to ואם עברו מוסיפים ל-remove
+    for t in today_override.get("add", []) + today_override.get("edit_to", []):
+        if t < current_time_str and t not in today_override["remove"]:
+            today_override["remove"].append(t)
 
-    conn.commit()
-    cur.close()
-    conn.close()
-    print(f"[{now.strftime('%H:%M:%S')}] Past hours disabled for all overrides.")
+    # שומרים חזרה את השינויים
+    overrides[today_str] = today_override
+    save_overrides(business_name, overrides)
+
+    print(f"[{now.strftime('%H:%M:%S')}] Past hours disabled for {business_name}.")
 
 def clear_old_appointments():
     """מוחק את כל ההזמנות וה-overrides שעברו 24 שעות"""
@@ -619,7 +619,9 @@ def delete_business(business_name):
 def main_admin():
     if not session.get('username') or session.get('is_host'):
         return redirect('/login')
-    disable_past_hours()
+
+    business_name = session.get('business_name')
+    disable_past_hours(business_name)
     business_name = session.get('business_name', 'עסק לא ידוע')
     return render_template('main_admin.html', business_name=business_name)
 
