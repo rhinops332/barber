@@ -2,7 +2,7 @@ import os
 import requests
 import json
 from datetime import datetime, timedelta, time
-import pytz
+from zoneinfo import ZoneInfo
 from flask import Flask, request, jsonify, render_template as original_render_template, redirect, session, g
 import smtplib
 from email.message import EmailMessage
@@ -247,7 +247,7 @@ def save_bot_knowledge(business_name, content):
 # --- ניקוי המסד ומחיקת מידע מיותר ---
 
 def disable_past_hours():
-    tz = pytz.timezone("Asia/Jerusalem")  # אזור הזמן שלך
+    tz = ZoneInfo("Asia/Jerusalem")
     now = datetime.now(tz)
 
     conn = get_db_connection()
