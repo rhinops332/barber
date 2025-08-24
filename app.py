@@ -313,11 +313,12 @@ def disable_past_hours():
     print(f"[{now.strftime('%H:%M:%S')}] Past hours disabled for all businesses.")
     
 def clear_old_info():
-   
+    tz = ZoneInfo("Asia/Jerusalem")
+    now = datetime.now(tz)
+    cutoff = now - timedelta(days=1)
+
     conn = get_db_connection()
     cur = conn.cursor()
-
-    cutoff = datetime.now() - timedelta(days=1)
 
     # מחיקת appointments ישנים
     cur.execute("DELETE FROM appointments WHERE date < %s", (cutoff.date(),))
@@ -328,8 +329,7 @@ def clear_old_info():
     conn.commit()
     cur.close()
     conn.close()
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] Old appointments and overrides cleared.")
-
+    print(f"[{now.strftime('%H:%M:%S')}] Old appointments and overrides cleared.")
 # --- חיבור למסד ---
 
 def get_db_connection():
