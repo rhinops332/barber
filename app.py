@@ -1098,14 +1098,14 @@ def book_appointment():
     # טען overrides
     overrides = load_overrides(business_name)
     if date not in overrides:
-        overrides[date] = {"booked": [], "add": [], "remove": [], "edit_from": [], "edit_to": [], "booked_details": []}
+        overrides[date] = {"booked": [], "add": [], "remove": [], "edit_from": [], "edit_to": [], "booked": []}
 
     # ודא שהשעה מופיעה ב-booked כ-string
     if time not in overrides[date]["booked"]:
         overrides[date]["booked"].append(time)
 
     # שמירת פרטי ההזמנה מלאים
-    overrides[date]["booked_details"].append({
+    overrides[date]["booked"].append({
         "time": time,
         "name": name,
         "phone": phone,
