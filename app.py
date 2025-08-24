@@ -1077,7 +1077,7 @@ def book_appointment():
     # טען תורים קיימים
     appointments = load_appointments(business_name)
     date_appointments = appointments.get(date, [])
-    
+
     # בדיקה אם השעה כבר קיימת
     if any(a["time"] == time for a in date_appointments):
         return jsonify({"error": "This time slot is already booked"}), 400
@@ -1098,19 +1098,11 @@ def book_appointment():
     # טען overrides
     overrides = load_overrides(business_name)
     if date not in overrides:
-        overrides[date] = {"booked": [], "add": [], "remove": [], "edit_from": [], "edit_to": [], "booked": []}
+        overrides[date] = {"booked": [], "add": [], "remove": [], "edit_from": [], "edit_to": []}
 
     # ודא שהשעה מופיעה ב-booked כ-string
     if time not in overrides[date]["booked"]:
         overrides[date]["booked"].append(time)
-
-    # שמירת פרטי ההזמנה מלאים
-    overrides[date]["booked"].append({
-        "time": time,
-        "name": name,
-        "phone": phone,
-        "service": service
-    })
 
     # הסרת זמן מ-add אם קיים
     if time in overrides[date]["add"]:
@@ -1135,6 +1127,7 @@ def book_appointment():
         "can_cancel": True,
         "cancel_endpoint": "/cancel_appointment"
     })
+
 
 
 @app.route('/cancel_appointment', methods=['POST'])
