@@ -320,16 +320,17 @@ def clear_old_info():
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # מחיקת appointments ישנים (בהנחה שיש עמודת datetime או date+time)
+    # מחיקת appointments ישנים
+    # אם date ו-time שמורים כ-TEXT, מחברים אותם ל-timestamp
     cur.execute("""
         DELETE FROM appointments
-        WHERE (date + time) < %s
+        WHERE TO_TIMESTAMP(date || ' ' || time, 'YYYY-MM-DD HH24:MI') < %s
     """, (cutoff,))
 
     # מחיקת overrides ישנים
     cur.execute("""
         DELETE FROM overrides
-        WHERE (date + start_time) < %s
+        WHERE TO_TIMESTAMP(date || ' ' || start_time, 'YYYY-MM-DD HH24:MI') < %s
     """, (cutoff,))
 
     conn.commit()
@@ -737,6 +738,8 @@ def orders():
     business_name = session.get('business_name')
     if not business_name:
         return redirect("/login")
+
+    disable_past_hours()
     week_slots = generate_week_slots(business_name)
     return render_template("orders.html", week_slots=week_slots)
 
@@ -1035,7 +1038,6 @@ def bot_knowledge():
     if not session.get("is_admin"):
         return redirect("/login")
 
-    disable_past_hours()
 
     if request.method == "POST":
         content = request.form.get("content", "")
@@ -1072,15 +1074,15 @@ def book_appointment():
     if not is_slot_available(business_name, date, time):
         return jsonify({"error": "This time slot is not available"}), 400
 
+    # טען תורים קיימים
     appointments = load_appointments(business_name)
-    # ממירה את הרשימה של תורים למילון לפי תאריך
-    booked = get_booked_times(appointments)
-    date_appointments = booked.get(date, [])
-
-    if time in date_appointments:
+    date_appointments = appointments.get(date, [])
+    
+    # בדיקה אם השעה כבר קיימת
+    if any(a["time"] == time for a in date_appointments):
         return jsonify({"error": "This time slot is already booked"}), 400
 
-    # מוסיפים תור חדש
+    # הוספת תור חדש
     appointment = {
         "name": name,
         "phone": phone,
@@ -1089,25 +1091,27 @@ def book_appointment():
         "service": service,
         "price": services_prices[service]
     }
-
-    date_appointments = appointments.get(date, [])
     date_appointments.append(appointment)
     appointments[date] = date_appointments
     save_appointments(business_name, appointments)
 
-    # מעדכנים overrides
+    # טען overrides
     overrides = load_overrides(business_name)
     if date not in overrides:
-        overrides[date] = {"booked": [], "add": [], "remove": []}
-    if "booked" not in overrides[date]:
-        overrides[date]["booked"] = []
+        overrides[date] = {"booked": [], "add": [], "remove": [], "edit_from": [], "edit_to": [], "booked_details": []}
 
-    overrides[date]["booked"].append({
+    # ודא שהשעה מופיעה ב-booked כ-string
+    if time not in overrides[date]["booked"]:
+        overrides[date]["booked"].append(time)
+
+    # שמירת פרטי ההזמנה מלאים
+    overrides[date]["booked_details"].append({
         "time": time,
         "name": name,
         "phone": phone,
         "service": service
     })
+
     # הסרת זמן מ-add אם קיים
     if time in overrides[date]["add"]:
         overrides[date]["add"].remove(time)
@@ -1117,6 +1121,7 @@ def book_appointment():
 
     save_overrides(business_name, overrides)
 
+    # שליחת מייל (אם מוגדר)
     try:
         send_email(name, phone, date, time, service, services_prices[service])
     except Exception as e:
@@ -1130,6 +1135,7 @@ def book_appointment():
         "can_cancel": True,
         "cancel_endpoint": "/cancel_appointment"
     })
+
 
 @app.route('/cancel_appointment', methods=['POST'])
 def cancel_appointment():
