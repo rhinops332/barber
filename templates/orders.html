@@ -248,23 +248,7 @@
 </head>
 <body>
 
-<header>
-  {% if session.username %}
-    <div style="float: right; margin-top: -50px; margin-right: 10px;">
-      👤 !שלום, {{ session.username }} |
-      <a href="/logout" style="color: red; text-decoration: none;">🔓 התנתק</a>
-      {% if session.is_admin %}
-        | <a href="/main_admin" style="color: green; text-decoration: none;">🔧 ניהול</a>
-      {% endif %}
-    </div>
-  {% else %}
-    <div style="float: right; margin-top: -40px; margin-right: 10px;">
-      <a href="/login">🔐 התחברות</a>
-    </div>
-  {% endif %}
-</header>
-
-<h1>HairBoss ✂️</h1>
+<h1> {buisness_name} ✂️</h1>
 <h2>Book Your Appointment</h2>
 
 <div id="response"></div>
