@@ -312,8 +312,8 @@ def disable_past_hours():
     conn.close()
     print(f"[{now.strftime('%H:%M:%S')}] Past hours disabled for all businesses.")
     
-def clear_old_appointments():
-    """מוחק את כל ההזמנות וה-overrides שעברו 24 שעות"""
+def clear_old_info():
+   
     conn = get_db_connection()
     cur = conn.cursor()
 
@@ -717,6 +717,8 @@ def admin_appointments():
     if not session.get("is_admin"):
         return redirect("/login")
 
+    clear_old_info()
+
     business_name = session.get('business_name')
     if not business_name:
         return redirect("/login")
@@ -1025,6 +1027,8 @@ def appointment_details():
 def bot_knowledge():
     if not session.get("is_admin"):
         return redirect("/login")
+
+    disable_past_hours()
 
     if request.method == "POST":
         content = request.form.get("content", "")
