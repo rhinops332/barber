@@ -3,13 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <h1>ברוך הבא, {{ business_name }}</h1>
     <title>פאנל ניהול ראשי</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
 <body dir="rtl" class="bg-gray-100 min-h-screen">
+
+    <!-- כפתור התנתקות בצד שמאל עליון -->
+    <div class="flex justify-between items-center p-4 bg-white shadow">
+        <button onclick="location.href='/logout'" class="text-red-600 font-bold hover:underline">התנתק</button>
+        <h1 class="text-2xl font-bold text-center">{{ business_name }}</h1>
+    </div>
+
     <div class="max-w-4xl mx-auto py-12 px-4">
-        <h1 class="text-3xl font-bold mb-6 text-center">פאנל ניהול ראשי</h1>
+
+        <!-- קישור יעודי להזמנות -->
+        <div class="mb-8 text-center">
+            <label class="font-semibold mb-2 block">קישור להזמנות ללקוחות:</label>
+            <div class="flex justify-center items-center gap-2">
+                <input type="text" id="bookingLink" value="{{ booking_url }}" readonly
+                       class="p-2 border rounded w-72 text-center bg-gray-100">
+                <button onclick="copyLink()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                    העתק
+                </button>
+            </div>
+        </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <a href="/admin_routine" class="block p-6 bg-white rounded-2xl shadow hover:bg-blue-50 transition">
@@ -32,12 +49,17 @@
                 <p class="text-gray-600">צפייה, ניהול וביטול תורים</p>
             </a>
         </div>
-
-        <div class="mt-12 text-center">
-            <a href="/orders" class="text-blue-600 hover:underline">חזור לעמוד ההזמנות</a>
-            <span class="mx-2">|</span>
-            <a href="/logout" class="text-red-600 hover:underline">התנתק</a>
-        </div>
     </div>
+
+<script>
+function copyLink() {
+    const copyText = document.getElementById("bookingLink");
+    copyText.select();
+    copyText.setSelectionRange(0, 99999);
+    document.execCommand("copy");
+    alert("הקישור הועתק!");
+}
+</script>
+
 </body>
 </html>
