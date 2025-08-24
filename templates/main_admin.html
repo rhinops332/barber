@@ -8,26 +8,17 @@
 </head>
 <body dir="rtl" class="bg-gray-100 min-h-screen">
 
-    <!-- כפתור התנתקות בצד שמאל עליון -->
+    <!-- כפתור התנתקות בצד שמאל עליון ושם העסק במרכז -->
     <div class="flex justify-between items-center p-4 bg-white shadow">
         <button onclick="location.href='/logout'" class="text-red-600 font-bold hover:underline">התנתק</button>
-        <h1 class="text-2xl font-bold text-center">{{ business_name }}</h1>
+        <div class="text-center">
+            <h1 class="text-2xl font-bold">{{ business_name }}</h1>
+            <p class="text-gray-600">ניהול הזמנות</p>
+        </div>
+        <div></div> <!-- כדי שהשם יישאר במרכז גם עם כפתור שמאל -->
     </div>
 
     <div class="max-w-4xl mx-auto py-12 px-4">
-
-        <!-- קישור יעודי להזמנות -->
-        <div class="mb-8 text-center">
-            <label class="font-semibold mb-2 block">קישור להזמנות ללקוחות:</label>
-            <div class="flex justify-center items-center gap-2">
-                <input type="text" id="bookingLink" value="{{ booking_url }}" readonly
-                       class="p-2 border rounded w-72 text-center bg-gray-100">
-                <button onclick="copyLink()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                    העתק
-                </button>
-            </div>
-        </div>
-
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <a href="/admin_routine" class="block p-6 bg-white rounded-2xl shadow hover:bg-blue-50 transition">
                 <h2 class="text-xl font-semibold mb-2">שגרה שבועית</h2>
@@ -48,6 +39,18 @@
                 <h2 class="text-xl font-semibold mb-2">רשימת תורים</h2>
                 <p class="text-gray-600">צפייה, ניהול וביטול תורים</p>
             </a>
+        </div>
+
+        <!-- קישור להזמנות + כפתור העתקה -->
+        <div class="mt-12 text-center">
+            <label class="font-semibold mb-2 block">קישור להזמנות ללקוחות:</label>
+            <div class="flex justify-center items-center gap-2">
+                <input type="text" id="bookingLink" value="{{ url_for('orders') }}" readonly
+                       class="p-2 border rounded w-72 text-center bg-gray-100">
+                <button onclick="copyLink()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                    העתק
+                </button>
+            </div>
         </div>
     </div>
 
