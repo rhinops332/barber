@@ -739,6 +739,7 @@ def orders():
         return redirect("/login")
 
     disable_past_hours()
+    clear_old_info()
     week_slots = generate_week_slots(business_name)
     return render_template("orders.html", week_slots=week_slots, business_name=business_name)
 
