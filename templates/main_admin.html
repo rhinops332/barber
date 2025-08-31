@@ -15,7 +15,7 @@
             <h1 class="text-2xl font-bold">{{ business_name }}</h1>
             <p class="text-gray-600">ניהול הזמנות</p>
         </div>
-        <div></div> <!-- כדי שהשם יישאר במרכז גם עם כפתור שמאל -->
+        <div></div> <!-- שומר על מרכזיות -->
     </div>
 
     <div class="max-w-4xl mx-auto py-12 px-4">
@@ -45,7 +45,8 @@
         <div class="mt-12 text-center">
             <label class="font-semibold mb-2 block">קישור להזמנות ללקוחות:</label>
             <div class="flex justify-center items-center gap-2">
-                <input type="text" id="bookingLink" value="{{ url_for('orders') }}" readonly
+                <input type="text" id="bookingLink" 
+                       value="{{ url_for('orders', _external=True) }}" readonly
                        class="p-2 border rounded w-72 text-center bg-gray-100">
                 <button onclick="copyLink()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
                     העתק
@@ -62,10 +63,7 @@ function copyLink() {
     document.execCommand("copy");
     alert("הקישור הועתק!");
 }
-
-
 </script>
 
 </body>
-     <button onclick="location.href='/orders'" class="text-red-600 font-bold hover:underline">התנתק</button>
 </html>
