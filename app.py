@@ -27,9 +27,19 @@ services_prices = {
 def load_businesses():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT id, name FROM businesses ORDER BY name")
-    businesses = cur.fetchall()  # תחזיר רשימת טאפלים [(id1, name1), (id2, name2), ...]
+    cur.execute("SELECT id, business_name, username, password_hash, phone, email FROM businesses ORDER BY business_name")
+    rows = cur.fetchall()
     conn.close()
+    businesses = [
+        {
+            "id": r[0],
+            "business_name": r[1],
+            "username": r[2],
+            "password_hash": r[3],
+            "phone": r[4],
+            "email": r[5]
+        } for r in rows
+    ]
     return businesses
 
 # --- פונקציות עזר ---
@@ -249,6 +259,25 @@ def save_bot_knowledge(business_name, content):
     conn.commit()
     cur.close()
     conn.close()
+
+def load_businesses():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id, business_name, username, password_hash, phone, email FROM businesses ORDER BY business_name")
+    rows = cur.fetchall()
+    conn.close()
+    businesses = [
+        {
+            "id": r[0],
+            "business_name": r[1],
+            "username": r[2],
+            "password_hash": r[3],
+            "phone": r[4],
+            "email": r[5]
+        } for r in rows
+    ]
+    return businesses
+
 
 # --- ניקוי המסד ומחיקת מידע מיותר ---
 
@@ -587,6 +616,7 @@ def host_command():
     businesses = load_businesses()
     return render_template('host_command.html', businesses=businesses)
 
+# ---------------------- הוספת עסק ----------------------
 @app.route('/add_business', methods=['POST'])
 def add_business():
     if not session.get('is_host'):
@@ -598,78 +628,89 @@ def add_business():
     phone = request.form.get('phone', '').strip()
     email = request.form.get('email', '').strip()
 
-    password_hash = generate_password_hash(password)
-
-    # ולידציות בסיסיות
     if not all([business_name, username, password, phone, email]):
         return render_template('host_command.html',
                                businesses=load_businesses(),
                                error="יש למלא את כל השדות")
 
     businesses = load_businesses()
-
-    # מניעת כפילויות
-    if any(b.get("username") == username for b in businesses):
+    if any(b["username"] == username for b in businesses):
         return render_template('host_command.html',
                                businesses=businesses,
                                error="שם המשתמש כבר בשימוש")
 
-    # יצירת קבצים לתיקיית העסק
+    password_hash = generate_password_hash(password)
     try:
-        create_business_in_db(business_name, username, password_hash, email, phone)
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO businesses (business_name, username, password_hash, email, phone, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (business_name, username, password_hash, email, phone, datetime.utcnow()))
+        conn.commit()
+        conn.close()
     except Exception as e:
         return render_template('host_command.html',
-                               businesses=businesses,
-                               error=f"שגיאה ביצירת קבצי העסק: {e}")
+                               businesses=load_businesses(),
+                               error=f"שגיאה ביצירת העסק: {e}")
 
-    # הוספה לרשומת העסקים (סיסמה בהאש)
-    businesses.append({
-        "business_name": business_name,
-        "username": username,
-        "password_hash": generate_password_hash(password),
-        "phone": phone,
-        "email": email,
-        "created_at": datetime.utcnow().isoformat() + "Z"
-    })
-    save_businesses(businesses)
+    # יצירת תיקיית העסק
+    try:
+        bpath = os.path.join(BUSINESSES_ROOT, business_name)
+        os.makedirs(bpath, exist_ok=True)
+    except Exception as e:
+        return render_template('host_command.html',
+                               businesses=load_businesses(),
+                               error=f"העסק נוצר במסד, אך התיקייה לא נוצרה: {e}")
 
     return render_template('host_command.html',
-                           businesses=businesses,
+                           businesses=load_businesses(),
                            msg=f"העסק '{business_name}' נוצר בהצלחה")
 
+# ---------------------- מחיקת עסק ----------------------
 @app.route('/delete_business', methods=['POST'])
-def delete_business(business_name):
+def delete_business():
     if not session.get('is_host'):
         return redirect('/login')
 
     username = request.form.get('username', '').strip()
-    businesses = load_businesses()
-    entry = next((b for b in businesses if b.get("username") == username), None)
+    if not username:
+        return render_template('host_command.html',
+                               businesses=load_businesses(),
+                               error="לא נשלח שם משתמש למחיקה")
 
+    businesses = load_businesses()
+    entry = next((b for b in businesses if b["username"] == username), None)
     if not entry:
         return render_template('host_command.html',
                                businesses=businesses,
                                error="העסק לא נמצא")
 
-    # הסרת הרשומה
-    businesses = [b for b in businesses if b.get("username") != username]
-    save_businesses(businesses)
-
-    # מחיקת תיקיית העסק לפי שם העסק
     try:
-        bname = entry.get("business_name")
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM businesses WHERE username = %s", (username,))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        return render_template('host_command.html',
+                               businesses=load_businesses(),
+                               error=f"שגיאה במחיקת העסק מהמסד: {e}")
+
+    # מחיקת תיקיית העסק
+    try:
+        bname = entry["business_name"]
         bpath = os.path.join(BUSINESSES_ROOT, bname)
         if os.path.isdir(bpath):
             shutil.rmtree(bpath)
     except Exception as e:
         return render_template('host_command.html',
-                               businesses=businesses,
-                               error=f"העסק הוסר מהרשימה, אך מחיקת התיקייה נכשלה: {e}")
+                               businesses=load_businesses(),
+                               error=f"העסק הוסר מהמסד, אך מחיקת התיקייה נכשלה: {e}")
 
     return render_template('host_command.html',
-                           businesses=businesses,
+                           businesses=load_businesses(),
                            msg="העסק נמחק בהצלחה")
-
 
 @app.route("/main_admin")
 def main_admin():
