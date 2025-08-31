@@ -321,16 +321,15 @@ def clear_old_info():
     cur = conn.cursor()
 
     # מחיקת appointments ישנים
-    # אם date ו-time שמורים כ-TEXT, מחברים אותם ל-timestamp
     cur.execute("""
         DELETE FROM appointments
-        WHERE TO_TIMESTAMP(date || ' ' || time, 'YYYY-MM-DD HH24:MI') < %s
+        WHERE (date::text || ' ' || time::text)::timestamp < %s
     """, (cutoff,))
 
     # מחיקת overrides ישנים
     cur.execute("""
         DELETE FROM overrides
-        WHERE TO_TIMESTAMP(date || ' ' || start_time, 'YYYY-MM-DD HH24:MI') < %s
+        WHERE (date::text || ' ' || start_time::text)::timestamp < %s
     """, (cutoff,))
 
     conn.commit()
