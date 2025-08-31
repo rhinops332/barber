@@ -24,7 +24,13 @@ services_prices = {
     "Color": 250
 }
 
-
+def load_businesses():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id, name FROM businesses ORDER BY name")
+    businesses = cur.fetchall()  # תחזיר רשימת טאפלים [(id1, name1), (id2, name2), ...]
+    conn.close()
+    return businesses
 
 # --- פונקציות עזר ---
 
