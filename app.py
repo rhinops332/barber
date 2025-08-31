@@ -266,7 +266,7 @@ def save_bot_knowledge(business_name, content):
 def load_businesses():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT id, business_name, username, password_hash, phone, email FROM businesses ORDER BY business_name")
+    cur.execute("SELECT id, name, username, password_hash, phone, email FROM businesses ORDER BY business_name")
     rows = cur.fetchall()
     conn.close()
     businesses = [
@@ -619,7 +619,7 @@ def host_command():
     businesses = load_businesses()
     return render_template('host_command.html', businesses=businesses)
 
-# ---------------------- הוספת עסק ----------------------
+
 # ---------------------- הוספת עסק ----------------------
 @app.route('/add_business', methods=['POST'])
 def add_business():
