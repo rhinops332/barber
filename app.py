@@ -27,21 +27,24 @@ services_prices = {
 def load_businesses():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT id, business_name, username, password_hash, phone, email FROM businesses ORDER BY business_name")
+    cur.execute("""
+        SELECT id, name, username, password_hash, email, pjone 
+        FROM businesses 
+        ORDER BY name
+    """)
     rows = cur.fetchall()
     conn.close()
     businesses = [
         {
             "id": r[0],
-            "business_name": r[1],
+            "business_name": r[1],  # נשאיר את המפתח "business_name" ל־Python/HTML
             "username": r[2],
             "password_hash": r[3],
-            "phone": r[4],
-            "email": r[5]
+            "email": r[4],
+            "phone": r[5]  # מפתח פנימי Python
         } for r in rows
     ]
     return businesses
-
 # --- פונקציות עזר ---
 
 def load_weekly_schedule(business_name):
@@ -617,6 +620,7 @@ def host_command():
     return render_template('host_command.html', businesses=businesses)
 
 # ---------------------- הוספת עסק ----------------------
+# ---------------------- הוספת עסק ----------------------
 @app.route('/add_business', methods=['POST'])
 def add_business():
     if not session.get('is_host'):
@@ -644,7 +648,7 @@ def add_business():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-            INSERT INTO businesses (business_name, username, password_hash, email, phone, created_at)
+            INSERT INTO businesses (name, username, password_hash, email, pjone, created_at)
             VALUES (%s, %s, %s, %s, %s, %s)
         """, (business_name, username, password_hash, email, phone, datetime.utcnow()))
         conn.commit()
@@ -711,7 +715,7 @@ def delete_business():
     return render_template('host_command.html',
                            businesses=load_businesses(),
                            msg="העסק נמחק בהצלחה")
-
+    
 @app.route("/main_admin")
 def main_admin():
     if not session.get('username') or session.get('is_host'):
