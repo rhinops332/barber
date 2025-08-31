@@ -741,7 +741,7 @@ def orders():
 
     disable_past_hours()
     week_slots = generate_week_slots(business_name)
-    return render_template("orders.html", week_slots=week_slots)
+    return render_template("orders.html", week_slots=week_slots, business_name=business_name)
 
 # --- ניהול שגרה שבועית ---
 
