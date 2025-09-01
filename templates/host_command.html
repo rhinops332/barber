@@ -2,49 +2,148 @@
 <html lang="he">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ניהול עסקים - Host Command</title>
+
 <style>
-    body { font-family: Arial, sans-serif; direction: rtl; background: linear-gradient(to bottom, #f4f4f4, #e6e6e6); margin: 0; padding: 0; }
-    .container { max-width: 600px; margin: 40px auto; background: #fff; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    h1 { text-align: center; margin-bottom: 20px; color: #333; }
-    .msg { margin-bottom: 15px; padding: 10px; border-radius: 6px; background:#ecf9ec; color:#2e7d32; }
-    .err { margin-bottom: 15px; padding: 10px; border-radius: 6px; background:#fdecea; color:#c0392b; }
-    form.add-business-form { display: flex; flex-direction: column; gap: 10px; }
-    input { padding: 10px; border-radius: 6px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; }
-    button { padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
-    .btn-add { background-color: #2ecc71; color: white; margin-top: 10px; width: 100%; }
-    table { width: 100%; border-collapse: collapse; margin-top: 30px; }
-    th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: center; }
-    th { background-color: #f8f8f8; }
-    tr:hover { background-color: #f9f9f9; }
-    .btn-delete { background-color: #e74c3c; color: white; }
-    .actions { display: flex; gap: 5px; justify-content: center; }
+/* --- סגנון כללי --- */
+body {
+    font-family: Arial, sans-serif;
+    direction: rtl;
+    background: linear-gradient(to bottom, #eef2f7, #d9e0ea);
+    margin: 0;
+    padding: 0;
+}
+.container {
+    max-width: 900px;
+    margin: 40px auto;
+    background: #fff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+}
+h1 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 25px;
+}
+
+/* --- הודעות --- */
+.msg {
+    margin-bottom: 15px;
+    padding: 12px;
+    border-radius: 8px;
+    background: #ecf9ec;
+    color: #2e7d32;
+}
+.err {
+    margin-bottom: 15px;
+    padding: 12px;
+    border-radius: 8px;
+    background: #fdecea;
+    color: #c0392b;
+}
+
+/* --- טופס הוספת עסק --- */
+form.add-business-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 25px;
+}
+form.add-business-form input {
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    width: 100%;
+    box-sizing: border-box;
+}
+form.add-business-form button {
+    grid-column: 1 / -1; /* הכפתור תופס את כל השורה */
+    padding: 12px;
+    background-color: #2ecc71;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+}
+form.add-business-form button:hover {
+    background-color: #27ae60;
+}
+
+/* --- טבלת עסקים --- */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+th, td {
+    padding: 14px;
+    border-bottom: 1px solid #ddd;
+    text-align: center;
+}
+th {
+    background-color: #f1f1f1;
+    color: #333;
+}
+tr:hover {
+    background-color: #f9f9f9;
+}
+.btn-delete {
+    padding: 6px 12px;
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.btn-delete:hover {
+    background-color: #c0392b;
+}
 </style>
+
+<script>
+// --- פונקציה לאישור הוספה או מחיקה עם סיסמה ---
+function confirmAction(formId, action) {
+    let pwd = prompt("אנא הכנס סיסמה לאישור " + action, "1234");
+    if (pwd === null) return false; // ביטול
+    if (pwd !== "1234") {
+        alert("סיסמה שגויה!");
+        return false;
+    }
+    document.getElementById(formId).submit();
+}
+</script>
+
 </head>
 <body>
 
 <div class="container">
     <h1>ניהול עסקים</h1>
 
-    {% if msg %}<div class="msg">{{ msg }}</div>{% endif %}
-    {% if error %}<div class="err">{{ error }}</div>{% endif %}
+    <!-- הודעות -->
+    {% if msg %}
+        <div class="msg">{{ msg }}</div>
+    {% endif %}
+    {% if error %}
+        <div class="err">{{ error }}</div>
+    {% endif %}
 
-    <!-- טופס הוספת עסק חדש (בטור) -->
-    <form method="POST" action="/add_business" class="add-business-form" autocomplete="off" novalidate>
-        <input type="text" name="business_code" placeholder="קוד עסק (A-Z,a-z,0-9,_,-)" required>
+    <!-- טופס הוספת עסק חדש -->
+    <form method="POST" action="/add_business" class="add-business-form" id="addForm" autocomplete="off" novalidate>
         <input type="text" name="business_name" placeholder="שם העסק" required>
         <input type="text" name="username" placeholder="שם משתמש" required>
-        <input type="password" name="password" placeholder="סיסמה" required>
+        <input type="password" name="password" placeholder="סיסמה" value="1234" required>
         <input type="text" name="phone" placeholder="טלפון" required>
         <input type="email" name="email" placeholder="אימייל" required>
-        <button type="submit" class="btn-add">➕ הוסף עסק</button>
+        <button type="button" onclick="confirmAction('addForm','הוספת העסק')">➕ הוסף עסק</button>
     </form>
 
     <!-- טבלת העסקים -->
     <table>
         <thead>
             <tr>
-                <th>קוד עסק</th>
                 <th>שם עסק</th>
                 <th>שם משתמש</th>
                 <th>טלפון</th>
@@ -55,23 +154,24 @@
         <tbody>
             {% for b in businesses %}
             <tr>
-                <td>{{ b.business_code }}</td>
-                <td>{{ b.business_name }}</td>
+                <td>{{ b.name }}</td>
                 <td>{{ b.username }}</td>
                 <td>{{ b.phone }}</td>
                 <td>{{ b.email }}</td>
-                <td class="actions">
-                    <form method="POST" action="/delete_business" style="display:inline;">
+                <td>
+                    <form method="POST" action="/delete_business" id="del_{{ loop.index }}">
                         <input type="hidden" name="username" value="{{ b.username }}">
-                        <button type="submit" class="btn-delete">🗑 מחק</button>
+                        <button type="button" class="btn-delete"
+                            onclick="confirmAction('del_{{ loop.index }}','מחיקת העסק')">🗑 מחק</button>
                     </form>
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="6">אין עסקים עדיין.</td></tr>
+            <tr><td colspan="5">אין עסקים עדיין.</td></tr>
             {% endfor %}
         </tbody>
     </table>
+
 </div>
 
 </body>
