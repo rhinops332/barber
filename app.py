@@ -392,29 +392,6 @@ def get_db_connection():
 
 # --- פונקציות למסד ---
 
-def create_business_in_db(business_name, username, password_hash, email="", phone=""):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    # יצירת העסק
-    cur.execute("""
-        INSERT INTO businesses (name, username, password_hash, email, phone)
-        VALUES (%s, %s, %s, %s, %s) RETURNING id
-    """, (business_name, username, password_hash, email, phone))
-    business_id = cur.fetchone()[0]
-
-    # יצירת שגרה שבועית כברירת מחדל
-    default_schedule = create_default_weekly_schedule()
-    for day, slots in default_schedule.items():
-        for slot in slots:
-            cur.execute("""
-                INSERT INTO weekly_schedule (business_id, day, start_time, end_time)
-                VALUES (%s, %s, %s, %s)
-            """, (business_id, day, slot['start_time'], slot['end_time']))
-
-    # יצירת רשומות ריקות לטבלאות אחרות
-    for table in ["appointments", "overrides", "bot_knowledge"]:
-        cur.execute(f"INSERT INTO {table} (business_id) VALUES (%s)", (business_id,))
-
     conn.commit()
     cur.close()
     conn.close()
@@ -647,31 +624,42 @@ def add_business():
                                error="שם המשתמש כבר בשימוש")
 
     password_hash = generate_password_hash(password)
+
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+
+        # 1️⃣ יצירת העסק בטבלת businesses
         cur.execute("""
             INSERT INTO businesses (name, username, password_hash, email, phone)
             VALUES (%s, %s, %s, %s, %s)
+            RETURNING id
         """, (business_name, username, password_hash, email, phone))
+        business_id = cur.fetchone()[0]
+
+        # 2️⃣ יצירת שגרה שבועית ברירת מחדל
+        default_schedule = create_default_weekly_schedule()
+        for day, slots in default_schedule.items():
+            for slot in slots:
+                cur.execute("""
+                    INSERT INTO weekly_schedule (business_id, day, start_time, end_time)
+                    VALUES (%s, %s, %s, %s)
+                """, (business_id, day, slot['start_time'], slot['end_time']))
+
+        # 3️⃣ יצירת רשומות ריקות לשאר הטבלאות
+        for table in ["appointments", "overrides", "bot_knowledge"]:
+            cur.execute(f"INSERT INTO {table} (business_id) VALUES (%s)", (business_id,))
+
         conn.commit()
         cur.close()
         conn.close()
+
     except Exception as e:
         return render_template('host_command.html',
                                businesses=load_businesses(),
                                error=f"שגיאה ביצירת העסק: {e}")
 
-    # יצירת שגרה שבועית ברירת מחדל
-    try:
-        default_schedule = create_default_weekly_schedule()
-        save_weekly_schedule(business_name, default_schedule)
-    except Exception as e:
-        return render_template('host_command.html',
-                               businesses=load_businesses(),
-                               error=f"העסק נוצר במסד אך השגרה לא נשמרה: {e}")
-
-    # יצירת תיקיית העסק
+    # 4️⃣ יצירת תיקיית העסק
     try:
         bpath = os.path.join(BUSINESSES_ROOT, business_name)
         os.makedirs(bpath, exist_ok=True)
@@ -683,7 +671,6 @@ def add_business():
     return render_template('host_command.html',
                            businesses=load_businesses(),
                            msg=f"העסק '{business_name}' נוצר בהצלחה")
-
 
 # ---------------------- מחיקת עסק ----------------------
 @app.route('/delete_business', methods=['POST'])
