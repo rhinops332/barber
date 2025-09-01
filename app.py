@@ -651,7 +651,7 @@ def add_business():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-            INSERT INTO businesses (name, username, password_hash, email, phone, created_at)
+            INSERT INTO businesses (name, username, password_hash, email, phone)
             VALUES (%s, %s, %s, %s, %s, %s)
         """, (business_name, username, password_hash, email, phone, datetime.utcnow()))
         conn.commit()
