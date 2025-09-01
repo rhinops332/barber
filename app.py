@@ -16,6 +16,9 @@ app.secret_key = os.getenv("SECRET_KEY", "default_secret")
 
 # --- קבצים ---
 BUSINESSES_FILE = "businesses.json"
+# נתיב תיקיית כל העסקים
+BUSINESSES_ROOT = os.path.join(os.getcwd(), "businesses")
+
 
 services_prices = {
     "Men's Haircut": 80,
