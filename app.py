@@ -24,27 +24,7 @@ services_prices = {
     "Color": 250
 }
 
-def load_businesses():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("""
-        SELECT id, name, username, password_hash, email, pjone 
-        FROM businesses 
-        ORDER BY name
-    """)
-    rows = cur.fetchall()
-    conn.close()
-    businesses = [
-        {
-            "id": r[0],
-            "business_name": r[1],  # נשאיר את המפתח "business_name" ל־Python/HTML
-            "username": r[2],
-            "password_hash": r[3],
-            "email": r[4],
-            "phone": r[5]  # מפתח פנימי Python
-        } for r in rows
-    ]
-    return businesses
+
 # --- פונקציות עזר ---
 
 def load_weekly_schedule(business_name):
@@ -266,20 +246,43 @@ def save_bot_knowledge(business_name, content):
 def load_businesses():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT id, name, username, password_hash, phone, email FROM businesses ORDER BY business_name")
+    cur.execute("SELECT id, name, username, password_hash, email, phone FROM businesses")
     rows = cur.fetchall()
+    cur.close()
     conn.close()
-    businesses = [
-        {
-            "id": r[0],
-            "business_name": r[1],
-            "username": r[2],
-            "password_hash": r[3],
-            "phone": r[4],
-            "email": r[5]
-        } for r in rows
-    ]
+
+    businesses = []
+    for bid, name, username, password_hash, email, phone in rows:
+        businesses.append({
+            "id": bid,
+            "name": name,
+            "username": username,
+            "password_hash": password_hash,
+            "email": email,
+            "phone": phone
+        })
     return businesses
+
+
+def save_businesses(businesses_data):
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    # מוחקים הכל
+    cur.execute("DELETE FROM businesses")
+
+    # מכניסים מחדש (בלי id כי הוא אוטומטי)
+    for biz in businesses_data:
+        cur.execute(
+            "INSERT INTO businesses (name, username, password_hash, email, phone) VALUES (%s, %s, %s, %s, %s)",
+            (biz.get("name"), biz.get("username"),
+             biz.get("password_hash"), biz.get("email"), biz.get("phone"))
+        )
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
 
 
 # --- ניקוי המסד ומחיקת מידע מיותר ---
