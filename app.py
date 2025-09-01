@@ -651,15 +651,25 @@ def add_business():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-            INSERT INTO businesses (name, username, password_hash, email, pjone, created_at)
+            INSERT INTO businesses (name, username, password_hash, email, phone, created_at)
             VALUES (%s, %s, %s, %s, %s, %s)
         """, (business_name, username, password_hash, email, phone, datetime.utcnow()))
         conn.commit()
+        cur.close()
         conn.close()
     except Exception as e:
         return render_template('host_command.html',
                                businesses=load_businesses(),
                                error=f"שגיאה ביצירת העסק: {e}")
+
+    # יצירת שגרה שבועית ברירת מחדל
+    try:
+        default_schedule = create_default_weekly_schedule()
+        save_weekly_schedule(business_name, default_schedule)
+    except Exception as e:
+        return render_template('host_command.html',
+                               businesses=load_businesses(),
+                               error=f"העסק נוצר במסד אך השגרה לא נשמרה: {e}")
 
     # יצירת תיקיית העסק
     try:
@@ -668,11 +678,12 @@ def add_business():
     except Exception as e:
         return render_template('host_command.html',
                                businesses=load_businesses(),
-                               error=f"העסק נוצר במסד, אך התיקייה לא נוצרה: {e}")
+                               error=f"העסק נוצר במסד אך התיקייה לא נוצרה: {e}")
 
     return render_template('host_command.html',
                            businesses=load_businesses(),
                            msg=f"העסק '{business_name}' נוצר בהצלחה")
+
 
 # ---------------------- מחיקת עסק ----------------------
 @app.route('/delete_business', methods=['POST'])
@@ -698,6 +709,7 @@ def delete_business():
         cur = conn.cursor()
         cur.execute("DELETE FROM businesses WHERE username = %s", (username,))
         conn.commit()
+        cur.close()
         conn.close()
     except Exception as e:
         return render_template('host_command.html',
@@ -706,7 +718,7 @@ def delete_business():
 
     # מחיקת תיקיית העסק
     try:
-        bname = entry["business_name"]
+        bname = entry["name"]
         bpath = os.path.join(BUSINESSES_ROOT, bname)
         if os.path.isdir(bpath):
             shutil.rmtree(bpath)
@@ -718,6 +730,7 @@ def delete_business():
     return render_template('host_command.html',
                            businesses=load_businesses(),
                            msg="העסק נמחק בהצלחה")
+
     
 @app.route("/main_admin")
 def main_admin():
