@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+<meta charset="UTF-8">
+<title>הגדרות עיצוב עסק</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        direction: rtl;
+        background: #f0f2f5;
+        margin: 0;
+        padding: 0;
+    }
+    .container {
+        max-width: 700px;
+        margin: 40px auto;
+        background: #fff;
+        padding: 25px;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    h1 { text-align: center; color: #333; margin-bottom: 20px; }
+    label { display: block; margin-top: 15px; font-weight: bold; }
+    input[type="text"], textarea, select {
+        width: 100%;
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        box-sizing: border-box;
+    }
+    .color-picker { width: 50px; height: 30px; padding: 0; border: none; }
+    button { padding: 10px 16px; border-radius: 6px; border: none; cursor: pointer; margin-top: 15px; }
+    .btn-save { background-color: #2ecc71; color: white; width: 100%; font-size: 16px; }
+    .section { margin-top: 25px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background: #f9f9f9; }
+    .msg { padding: 10px; margin-bottom: 15px; border-radius: 6px; background: #ecf9ec; color: #2e7d32; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h1>הגדרות עיצוב העסק</h1>
+
+    {% if msg %}
+        <div class="msg">{{ msg }}</div>
+    {% endif %}
+
+    <form method="POST">
+        <label>כותרת ראשית:</label>
+        <input type="text" name="main_title" value="{{ settings.main_title or 'קביעת תור ל' }}">
+
+        <label>טקסט ברירת מחדל:</label>
+        <input type="text" name="default_text" value="{{ settings.default_text or '' }}">
+
+        <div class="section">
+            <h3>צבעים וצורות</h3>
+            <label>צבע כפתורי יום:</label>
+            <input type="color" name="day_color" class="color-picker" value="{{ settings.day_color or '#3498db' }}">
+
+            <label>צבע כפתורי שעה:</label>
+            <input type="color" name="hour_color" class="color-picker" value="{{ settings.hour_color or '#1abc9c' }}">
+
+            <label>צורת כפתורי יום:</label>
+            <select name="day_shape">
+                <option value="round" {% if settings.day_shape=='round' %}selected{% endif %}>עגול</option>
+                <option value="square" {% if settings.day_shape=='square' %}selected{% endif %}>ריבוע</option>
+                <option value="ellipse" {% if settings.day_shape=='ellipse' %}selected{% endif %}>אליפסה</option>
+            </select>
+
+            <label>צורת כפתורי שעה:</label>
+            <select name="hour_shape">
+                <option value="round" {% if settings.hour_shape=='round' %}selected{% endif %}>עגול</option>
+                <option value="square" {% if settings.hour_shape=='square' %}selected{% endif %}>ריבוע</option>
+                <option value="ellipse" {% if settings.hour_shape=='ellipse' %}selected{% endif %}>אליפסה</option>
+            </select>
+        </div>
+
+        <div class="section">
+            <h3>שירותים ומחירים</h3>
+            <label>רשימת שירותים ומחירים:</label>
+            <textarea name="services_text" rows="5">{{ settings.services_text or 'תספורת: 100₪\nצביעה: 150₪' }}</textarea>
+
+            <label>
+                <input type="checkbox" name="show_price" {% if settings.show_price %}checked{% endif %}>
+                הצג מחירון
+            </label>
+            <label>
+                <input type="checkbox" name="show_bot" {% if settings.show_bot %}checked{% endif %}>
+                הצג בוט
+            </label>
+        </div>
+
+        <button type="submit" class="btn-save">💾 שמור הגדרות</button>
+    </form>
+</div>
+
+</body>
+</html>
