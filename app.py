@@ -440,6 +440,49 @@ def create_default_weekly_schedule():
         schedule[day] = slots
     return schedule
 
+def create_default_business_settings(business_id, conn):
+    cur = conn.cursor()
+    # נבדוק אם כבר קיימת שורה
+    cur.execute("SELECT id FROM business_settings WHERE business_id=%s", (business_id,))
+    if cur.fetchone():
+        return  # כבר קיימת, לא עושים כלום
+
+    # מכניסים ערכי ברירת מחדל
+    cur.execute("""
+        INSERT INTO business_settings (
+            business_id,
+            body_background_color, body_text_color,
+            day_button_background, day_button_text_color, day_button_border_radius,
+            slot_button_background, slot_button_text_color, slot_button_border_radius,
+            form_background_color, form_input_background_color, form_input_text_color,
+            form_button_background, form_button_text_color,
+            booking_details_background, booking_details_text_color,
+            body_font_family, body_font_size, heading_font_size, booking_details_font_size,
+            page_title, page_subtitle,
+            booking_success_message, day_names,
+            body_max_width, body_margin, body_padding,
+            day_button_padding, slot_button_padding, form_input_padding,
+            form_button_padding, booking_details_padding
+        )
+        VALUES (
+            %s, '#f0f4ff', '#2c3e50',
+            '#3498db', 'white', '10px',
+            '#2ecc71', 'white', '6px',
+            'white', 'white', '#2c3e50',
+            '#2980b9', 'white',
+            '#ffffff', '#2c3e50',
+            'Arial, sans-serif', '16px', '24px', '16px',
+            'Welcome', 'Book Your Appointment',
+            'Your appointment has been booked successfully!',
+            '["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]',
+            '700px', '30px auto', '20px',
+            '12px 0', '8px 14px', '10px',
+            '12px', '15px'
+        )
+    """, (business_id,))
+    conn.commit()
+
+
 # --- ניהול שבועי ושינויים ---
 
 def get_booked_times(appointments):
@@ -648,6 +691,9 @@ def add_business():
                     VALUES (%s, %s, %s, %s)
                 """, (business_id, day, slot['start_time'], slot['end_time']))
 
+        # 2.1️⃣ יצירת שורה ב-business_settings עם ערכי ברירת מחדל
+        create_default_business_settings(business_id, conn)
+
         # 3️⃣ יצירת רשומות ריקות לשאר הטבלאות
         for table in ["appointments", "overrides", "bot_knowledge"]:
             cur.execute(f"INSERT INTO {table} (business_id) VALUES (%s)", (business_id,))
@@ -674,7 +720,7 @@ def add_business():
                            businesses=load_businesses(),
                            msg=f"העסק '{business_name}' נוצר בהצלחה")
 
-# ---------------------- מחיקת עסק ----------------------
+
 @app.route('/delete_business', methods=['POST'])
 def delete_business():
     if not session.get('is_host'):
@@ -696,6 +742,8 @@ def delete_business():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        # אם אין ON DELETE CASCADE, נמחוק גם שורה ב-business_settings
+        cur.execute("DELETE FROM business_settings WHERE business_id = %s", (entry["id"],))
         cur.execute("DELETE FROM businesses WHERE username = %s", (username,))
         conn.commit()
         cur.close()
@@ -719,7 +767,6 @@ def delete_business():
     return render_template('host_command.html',
                            businesses=load_businesses(),
                            msg="העסק נמחק בהצלחה")
-
     
 @app.route("/main_admin")
 def main_admin():
