@@ -286,103 +286,6 @@ def save_businesses(businesses_data):
     cur.close()
     conn.close()
 
-def load_ui_settings(business_id):
-    """טוען את ההגדרות של ה-UI עבור עסק מסוים"""
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("""
-        SELECT day_color, hour_color, day_shape, hour_shape,
-               services_text, show_price, show_bot,
-               main_title, default_text
-        FROM business_ui_settings
-        WHERE business_id = %s
-    """, (business_id,))
-    row = cur.fetchone()
-    cur.close()
-    conn.close()
-
-    if not row:
-        # אם אין הגדרות, מחזירים ערכים ברירת מחדל
-        return {
-            "day_color": "#2ecc71",
-            "hour_color": "#3498db",
-            "day_shape": "rounded",
-            "hour_shape": "rounded",
-            "services_text": "",
-            "show_price": True,
-            "show_bot": True,
-            "main_title": "תור ל-{business_name}",
-            "default_text": "{business_name}"
-        }
-
-    return {
-        "day_color": row[0],
-        "hour_color": row[1],
-        "day_shape": row[2],
-        "hour_shape": row[3],
-        "services_text": row[4],
-        "show_price": row[5],
-        "show_bot": row[6],
-        "main_title": row[7],
-        "default_text": row[8]
-    }
-
-
-def save_ui_settings(business_id, settings):
-    """שומר את ההגדרות של ה-UI עבור עסק מסוים"""
-    conn = get_db_connection()
-    cur = conn.cursor()
-    # בדיקה אם קיימת שורה כבר
-    cur.execute("SELECT id FROM business_ui_settings WHERE business_id = %s", (business_id,))
-    row = cur.fetchone()
-
-    if row:
-        # עדכון
-        cur.execute("""
-            UPDATE business_ui_settings
-            SET day_color=%s, hour_color=%s,
-                day_shape=%s, hour_shape=%s,
-                services_text=%s, show_price=%s,
-                show_bot=%s, main_title=%s,
-                default_text=%s
-            WHERE business_id=%s
-        """, (
-            settings.get("day_color", "#2ecc71"),
-            settings.get("hour_color", "#3498db"),
-            settings.get("day_shape", "rounded"),
-            settings.get("hour_shape", "rounded"),
-            settings.get("services_text", ""),
-            settings.get("show_price", True),
-            settings.get("show_bot", True),
-            settings.get("main_title", "תור ל-{business_name}"),
-            settings.get("default_text", "{business_name}"),
-            business_id
-        ))
-    else:
-        # הוספה ראשונית
-        cur.execute("""
-            INSERT INTO business_ui_settings
-            (business_id, day_color, hour_color, day_shape, hour_shape,
-             services_text, show_price, show_bot, main_title, default_text)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-        """, (
-            business_id,
-            settings.get("day_color", "#2ecc71"),
-            settings.get("hour_color", "#3498db"),
-            settings.get("day_shape", "rounded"),
-            settings.get("hour_shape", "rounded"),
-            settings.get("services_text", ""),
-            settings.get("show_price", True),
-            settings.get("show_bot", True),
-            settings.get("main_title", "תור ל-{business_name}"),
-            settings.get("default_text", "{business_name}")
-        ))
-
-    conn.commit()
-    cur.close()
-    conn.close()
-
-
 
 # --- ניקוי המסד ומחיקת מידע מיותר ---
 
@@ -1204,28 +1107,6 @@ def bot_knowledge():
     return render_template("bot_knowledge.html", content=content)
 
 
-
-@app.route('/business_ui/<int:business_id>', methods=['GET', 'POST'])
-def business_ui(business_id):
-    if request.method == 'POST':
-        settings = {
-            "day_color": request.form.get("day_color"),
-            "hour_color": request.form.get("hour_color"),
-            "day_shape": request.form.get("day_shape"),
-            "hour_shape": request.form.get("hour_shape"),
-            "services_text": request.form.get("services_text"),
-            "show_price": request.form.get("show_price") == "on",
-            "show_bot": request.form.get("show_bot") == "on",
-            "main_title": request.form.get("main_title"),
-            "default_text": request.form.get("default_text")
-        }
-        save_ui_settings(business_id, settings)
-        msg = "הגדרות נשמרו בהצלחה"
-    else:
-        msg = None
-
-    settings = load_ui_settings(business_id)
-    return render_template("business_ui.html", settings=settings, msg=msg, business_id=business_id)
 
 # --- ניהול הזמנות ---
 
