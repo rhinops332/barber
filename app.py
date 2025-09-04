@@ -888,6 +888,12 @@ def orders():
     week_slots = generate_week_slots(business_name)
     return render_template("orders.html", week_slots=week_slots, business_name=business_name)
 
+@app.route('/admin_design/<business_name>')
+def admin_design(business_name):
+    business = get_business_data(business_name)  
+    return render_template('admin_design.html', business=business)
+
+
 # --- ניהול שגרה שבועית ---
 
 @app.route("/weekly_schedule", methods=["POST"])
