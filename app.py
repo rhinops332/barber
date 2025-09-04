@@ -287,6 +287,36 @@ def save_businesses(businesses_data):
     conn.close()
 
 
+
+def load_business_settings(business_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM business_settings WHERE business_id = %s", (business_id,))
+    row = cur.fetchone()
+    colnames = [desc[0] for desc in cur.description]
+    cur.close()
+    conn.close()
+    if row:
+        return dict(zip(colnames, row))
+    return None
+
+
+def save_business_settings(business_id, settings):
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    # נבנה רשימת עדכונים דינמית מכל המפתחות שקיימים ב־settings
+    columns = [f"{key} = %s" for key in settings.keys()]
+    values = list(settings.values())
+
+    query = f"UPDATE business_settings SET {', '.join(columns)} WHERE business_id = %s"
+    cur.execute(query, values + [business_id])
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
 # --- ניקוי המסד ומחיקת מידע מיותר ---
 
 def disable_past_hours():
@@ -1294,6 +1324,35 @@ def cancel_appointment():
         json.dump(overrides, f, ensure_ascii=False, indent=2)
 
     return jsonify({'message': f'Appointment on {date} at {time} canceled successfully.'})
+
+
+# --- עיצוב דף ההזמנות ---
+
+@app.route('/business_settings', methods=['GET', 'POST'])
+def business_settings():
+    if not session.get('business_id'):
+        return redirect('/login')
+
+    business_id = session['business_id']
+
+    if request.method == 'POST':
+        # יוצרים dict מכל הערכים שהגיעו מהטופס
+        new_settings = {key: value.strip() for key, value in request.form.items()}
+
+        # שומרים במסד
+        save_business_settings(business_id, new_settings)
+
+        msg = "ההגדרות נשמרו בהצלחה"
+        settings = load_business_settings(business_id)
+        return render_template('business_settings.html',
+                               settings=settings,
+                               msg=msg)
+
+    # GET – נטען את ההגדרות
+    settings = load_business_settings(business_id)
+    return render_template('business_settings.html', settings=settings)
+
+
 
 # --- שליחת אימייל ---
 
