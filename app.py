@@ -720,6 +720,8 @@ def add_business():
                            businesses=load_businesses(),
                            msg=f"העסק '{business_name}' נוצר בהצלחה")
 
+# ---------------------- מחיקת עסק ----------------------
+
 
 @app.route('/delete_business', methods=['POST'])
 def delete_business():
@@ -727,46 +729,58 @@ def delete_business():
         return redirect('/login')
 
     username = request.form.get('username', '').strip()
-    if not username:
-        return render_template('host_command.html',
-                               businesses=load_businesses(),
-                               error="לא נשלח שם משתמש למחיקה")
-
-    businesses = load_businesses()
-    entry = next((b for b in businesses if b["username"] == username), None)
-    if not entry:
-        return render_template('host_command.html',
-                               businesses=businesses,
-                               error="העסק לא נמצא")
 
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        # אם אין ON DELETE CASCADE, נמחוק גם שורה ב-business_settings
-        cur.execute("DELETE FROM business_settings WHERE business_id = %s", (entry["id"],))
+
+        # נביא את ה-id של העסק (בלי בדיקות, כי אתה בטוח שהוא קיים)
+        cur.execute("SELECT id, name FROM businesses WHERE username = %s", (username,))
+        business_id, business_name = cur.fetchone()
+
+        # מחיקה מכל הטבלאות שתלויות ב-business_id
+        cur.execute("DELETE FROM appointments WHERE business_id = %s", (business_id,))
+        cur.execute("DELETE FROM weekly_schedule WHERE business_id = %s", (business_id,))
+        cur.execute("DELETE FROM overrides WHERE business_id = %s", (business_id,))
+        cur.execute("DELETE FROM bot_knowledge WHERE business_id = %s", (business_id,))
+        cur.execute("DELETE FROM users WHERE business_id = %s", (business_id,))
+        cur.execute("DELETE FROM settings WHERE business_id = %s", (business_id,))
+        cur.execute("DELETE FROM business_settings WHERE business_id = %s", (business_id,))
+
+        # מחיקה מהטבלה הראשית
         cur.execute("DELETE FROM businesses WHERE username = %s", (username,))
+
         conn.commit()
         cur.close()
         conn.close()
     except Exception as e:
-        return render_template('host_command.html',
-                               businesses=load_businesses(),
-                               error=f"שגיאה במחיקת העסק מהמסד: {e}")
+        return render_template(
+            'host_command.html',
+            businesses=load_businesses(),
+            error=f"שגיאה במחיקת העסק מהמסד: {e}"
+        )
 
     # מחיקת תיקיית העסק
     try:
-        bname = entry["name"]
-        bpath = os.path.join(BUSINESSES_ROOT, bname)
+        bpath = os.path.join(BUSINESSES_ROOT, business_name)
         if os.path.isdir(bpath):
             shutil.rmtree(bpath)
     except Exception as e:
-        return render_template('host_command.html',
-                               businesses=load_businesses(),
-                               error=f"העסק הוסר מהמסד, אך מחיקת התיקייה נכשלה: {e}")
+        return render_template(
+            'host_command.html',
+            businesses=load_businesses(),
+            error=f"העסק הוסר מהמסד, אך מחיקת התיקייה נכשלה: {e}"
+        )
 
-    return render_template('host_command.html',
-                           businesses=load_businesses(),
-                           msg="העסק נמחק בהצלחה")
+    return render_template(
+        'host_command.html',
+        businesses=load_businesses(),
+        msg="העסק נמחק בהצלחה"
+    )
+
+
+
+
     
 @app.route("/main_admin")
 def main_admin():
