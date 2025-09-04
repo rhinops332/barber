@@ -2,7 +2,7 @@ import os
 import requests
 import json
 from datetime import datetime, timedelta, time
-from zoneinfo import ZoneInfFo
+from zoneinfo import ZoneInfo
 from flask import Flask, request, jsonify, render_template as original_render_template, redirect, session, g
 import smtplib
 from email.message import EmailMessage
