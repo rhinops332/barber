@@ -1334,30 +1334,61 @@ def cancel_appointment():
 
 # --- עיצוב דף ההזמנות ---
 
-@app.route('/business_settings', methods=['GET', 'POST'])
-def business_settings():
-    if not session.get('business_id'):
-        return redirect('/login')
+@app.route("/business_settings/<int:business_id>", methods=["GET", "POST"])
+def business_settings_route(business_id):
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
 
-    business_id = session['business_id']
+    if request.method == "GET":
+        cur.execute("SELECT * FROM business_settings WHERE business_id = %s", (business_id,))
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        if not row:
+            return jsonify({"error": "Business settings not found"}), 404
+        return jsonify(row)
 
-    if request.method == 'POST':
-        # יוצרים dict מכל הערכים שהגיעו מהטופס
-        new_settings = {key: value.strip() for key, value in request.form.items()}
+    if request.method == "POST":
+        data = request.json
+        if not data:
+            cur.close()
+            conn.close()
+            return jsonify({"error": "No data provided"}), 400
 
-        # שומרים במסד
-        save_business_settings(business_id, new_settings)
+        columns = [
+            "body_background_color","body_text_color",
+            "day_button_background","day_button_text_color","day_button_border_radius",
+            "slot_button_background","slot_button_text_color","slot_button_border_radius",
+            "form_background_color","form_input_background_color","form_input_text_color",
+            "form_button_background","form_button_text_color",
+            "booking_details_background","booking_details_text_color",
+            "body_font_family","body_font_size","heading_font_size","booking_details_font_size",
+            "page_title","page_subtitle",
+            "body_max_width","body_margin","body_padding",
+            "day_button_padding","slot_button_padding","form_input_padding","form_button_padding","booking_details_padding",
+            "booking_success_message","day_names"
+        ]
 
-        msg = "ההגדרות נשמרו בהצלחה"
-        settings = load_business_settings(business_id)
-        return render_template('business_settings.html',
-                               settings=settings,
-                               msg=msg)
+        # בדיקה אם כבר קיימת שורה
+        cur.execute("SELECT 1 FROM business_settings WHERE business_id = %s", (business_id,))
+        exists = cur.fetchone()
 
-    # GET – נטען את ההגדרות
-    settings = load_business_settings(business_id)
-    return render_template('business_settings.html', settings=settings)
+        values = [data.get(col) for col in columns]
 
+        if exists:
+            # עדכון קיים
+            placeholders = ", ".join([f"{col} = %s" for col in columns])
+            cur.execute(f"UPDATE business_settings SET {placeholders} WHERE business_id = %s", values + [business_id])
+        else:
+            # יצירת שורה חדשה
+            cols_str = ", ".join(["business_id"] + columns)
+            vals_placeholders = ", ".join(["%s"] * (len(columns) + 1))
+            cur.execute(f"INSERT INTO business_settings ({cols_str}) VALUES ({vals_placeholders})", [business_id] + values)
+
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({"message": "Business settings saved successfully"})
 
 
 # --- שליחת אימייל ---
