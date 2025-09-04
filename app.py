@@ -896,8 +896,8 @@ def admin_design():
 
     
     if not business_name:
-    business = get_business_data(business_name)  
-    return render_template('admin_design.html', business=business, business_name=business_name)
+   =
+    return render_template('admin_design.html', business_name=business_name)
 
 
 # --- ניהול שגרה שבועית ---
