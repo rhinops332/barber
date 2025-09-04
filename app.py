@@ -889,9 +889,15 @@ def orders():
     return render_template("orders.html", week_slots=week_slots, business_name=business_name)
 
 @app.route('/admin_design/<business_name>')
-def admin_design(business_name):
+def admin_design():
+    business_name = session.get('business_name')
+    if not business_name:
+        return redirect("/login")
+
+    
+    if not business_name:
     business = get_business_data(business_name)  
-    return render_template('admin_design.html', business=business)
+    return render_template('admin_design.html', business=business, business_name=business_name)
 
 
 # --- ניהול שגרה שבועית ---
