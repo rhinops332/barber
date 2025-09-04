@@ -743,8 +743,6 @@ def delete_business():
         cur.execute("DELETE FROM weekly_schedule WHERE business_id = %s", (business_id,))
         cur.execute("DELETE FROM overrides WHERE business_id = %s", (business_id,))
         cur.execute("DELETE FROM bot_knowledge WHERE business_id = %s", (business_id,))
-        cur.execute("DELETE FROM users WHERE business_id = %s", (business_id,))
-        cur.execute("DELETE FROM settings WHERE business_id = %s", (business_id,))
         cur.execute("DELETE FROM business_settings WHERE business_id = %s", (business_id,))
 
         # מחיקה מהטבלה הראשית
