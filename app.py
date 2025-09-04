@@ -2,7 +2,7 @@ import os
 import requests
 import json
 from datetime import datetime, timedelta, time
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfFo
 from flask import Flask, request, jsonify, render_template as original_render_template, redirect, session, g
 import smtplib
 from email.message import EmailMessage
@@ -893,10 +893,7 @@ def admin_design():
     business_name = session.get('business_name')
     if not business_name:
         return redirect("/login")
-
-    
-    if not business_name:
-   =
+ 
     return render_template('admin_design.html', business_name=business_name)
 
 
