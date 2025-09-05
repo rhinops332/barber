@@ -1,493 +1,207 @@
-<!-- templates/admin_design_wysiwyg.html -->
 <!DOCTYPE html>
-<html lang="he">
+<html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Admin Design — {{ business_name }}</title>
-<style>
-  :root{
-    --ui-bg:#ffffff;
-    --page-bg:#f0f4ff;
-    --page-text:#2c3e50;
-    --accent:#3498db;
-    --slot:#2ecc71;
-    --radius:10px;
-    --gap:12px;
-    --font-body: "Arial, sans-serif";
-    --font-size:16px;
-  }
-
-  html,body{height:100%;margin:0;font-family:var(--font-body);background:var(--page-bg);color:var(--page-text);-webkit-font-smoothing:antialiased;}
-  .app { max-width:1200px; margin:18px auto; display:grid; grid-template-columns:420px 1fr; gap:18px; padding:16px; box-sizing:border-box; }
-  header { grid-column:1/3; display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:4px; }
-  header h1 { margin:0; font-size:20px; }
-  header .controls { display:flex; gap:8px; align-items:center; }
-
-  /* left panel (controls) */
-  .panel { background:var(--ui-bg); padding:12px; border-radius:10px; box-shadow:0 6px 18px rgba(10,20,30,0.06); max-height:calc(100vh - 120px); overflow:auto; }
-  .section { margin-bottom:14px; border-radius:8px; padding:8px; background:#fbfcfd; border:1px solid rgba(0,0,0,0.03); }
-  .section h3{ margin:6px 0 10px; font-size:14px; color:var(--accent); }
-  .row { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
-  .row label{ width:150px; font-size:13px; }
-  .row input[type="color"], .row input[type="number"], .row select, .row input[type="text"]{ flex:1; padding:6px; border-radius:6px; border:1px solid #ddd; }
-  .row input[type="range"]{ flex:1; }
-  .small { width:80px; }
-
-  .palette { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
-  .swatch { width:28px; height:28px; border-radius:6px; cursor:pointer; border:1px solid rgba(0,0,0,0.06); box-shadow:inset 0 -2px 0 rgba(0,0,0,0.06); }
-
-  button.primary { background:var(--slot); color:white; border:none; border-radius:8px; padding:8px 12px; cursor:pointer; }
-  button.ghost { background:transparent; border:1px solid #ddd; padding:6px 10px; border-radius:8px; cursor:pointer; }
-
-  /* right: preview area */
-  .preview-wrap { position:relative; }
-  #preview-stage { background:var(--page-bg); padding:24px; border-radius:12px; min-height:520px; box-shadow:0 8px 22px rgba(0,0,0,0.06); overflow:hidden; transition:background .15s,color .15s; }
-  #preview-canvas { width:100%; max-width:760px; margin:0 auto; background:var(--ui-bg); padding:18px; border-radius:12px; box-sizing:border-box; position:relative; }
-  #preview-canvas h1 { text-align:center; margin:4px 0; }
-  #preview-canvas h2 { text-align:center; margin:2px 0 12px; font-weight:400; color:rgba(44,62,80,0.8); }
-  .preview-row { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-bottom:12px; }
-
-  .element {
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-width:64px;
-    min-height:36px;
-    padding:8px 12px;
-    margin:6px;
-    border-radius:8px;
-    background:var(--accent);
-    color:#fff;
-    cursor:grab;
-    user-select:none;
-    transition:box-shadow .12s, transform .12s;
-    position:absolute;
-    transform-origin:center;
-  }
-  .element.dragging{ cursor:grabbing; opacity:0.95; transform:scale(1.02); box-shadow:0 12px 30px rgba(0,0,0,0.12); }
-  .element.selected{ outline:3px solid rgba(41,128,185,0.18); box-shadow:0 8px 20px rgba(0,0,0,0.08); }
-
-  #element-toolbar { position:sticky; top:8px; background:transparent; z-index:40; }
-
-  /* bottom status */
-  .status { margin-top:12px; display:flex; justify-content:space-between; gap:8px; align-items:center; font-size:13px; color:#666; }
-
-  /* responsive */
-  @media (max-width:980px){ .app{grid-template-columns:1fr; padding:12px;} header{flex-wrap:wrap;} }
-</style>
+  <meta charset="UTF-8">
+  <title>Design Settings</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/classic.min.css"/>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f7f9fc;
+    }
+    .draggable {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 18px;
+      margin: 10px;
+      border-radius: 8px;
+      background: #3498db;
+      color: white;
+      font-weight: bold;
+      cursor: move;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, outline 0.2s ease;
+    }
+    .draggable:active {
+      transform: scale(0.95);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .selected {
+      outline: 3px solid #ff9800;
+      transform: scale(1.05);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.25);
+    }
+    #editorPanel {
+      background: white;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    #canvas {
+      border: 2px dashed #ccc;
+      min-height: 400px;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+    }
+    input[type="text"], select {
+      border: 1px solid #ddd;
+      padding: 6px 10px;
+      border-radius: 6px;
+      margin-top: 6px;
+      margin-bottom: 12px;
+      width: 100%;
+    }
+  </style>
 </head>
-<body>
-  <div class="app">
-    <header>
-      <h1>Editor — {{ business_name }}</h1>
-      <div class="controls">
-        <button id="undoBtn" class="ghost">Undo</button>
-        <button id="redoBtn" class="ghost">Redo</button>
-        <button id="finishBtn" class="primary">Finish & Save</button>
-      </div>
-    </header>
+<body class="p-6">
 
-    <!-- left controls -->
-    <aside class="panel" id="controlsPanel">
-      <div class="section" id="globalSection">
-        <h3>Global / Page</h3>
-        <div class="row"><label>Background</label><input type="color" id="body_bg"></div>
-        <div class="row"><label>Text Color</label><input type="color" id="body_text"></div>
-        <div class="row"><label>Font family</label>
-          <select id="font_family">
-            <option value="Arial, sans-serif">Arial</option>
-            <option value="Helvetica, sans-serif">Helvetica</option>
-            <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI</option>
-            <option value="'Roboto', sans-serif">Roboto</option>
-          </select>
-        </div>
-        <div class="row"><label>Font size (px)</label><input type="number" id="font_size" class="small" min="10" max="36"></div>
-      </div>
+  <h1 class="text-2xl font-bold mb-6">🎨 עיצוב העסק</h1>
 
-      <div class="section" id="elementsSection">
-        <h3>New element</h3>
-        <div class="row">
-          <label>Type</label>
-          <select id="newType">
-            <option value="day">Day button</option>
-            <option value="slot">Slot button</option>
-            <option value="title">Title</option>
-          </select>
-        </div>
-        <div class="row">
-          <label>Label</label>
-          <input type="text" id="newLabel" placeholder="Text shown on element">
-        </div>
-        <div class="row">
-          <label></label>
-          <button id="addElement" class="primary">Add to canvas</button>
-        </div>
-      </div>
+  <div class="grid grid-cols-4 gap-6">
+    <!-- לוח עריכה -->
+    <div id="editorPanel" class="col-span-1">
+      <h2 class="text-lg font-semibold mb-4">🔧 אפשרויות עריכה</h2>
 
-      <div class="section" id="styleSection">
-        <h3>Selected element style</h3>
-        <div class="row"><label>BG Color</label><input type="color" id="sel_bg"></div>
-        <div class="row"><label>Text Color</label><input type="color" id="sel_text"></div>
-        <div class="row"><label>Radius (px)</label><input type="number" id="sel_radius" class="small" min="0" max="60"></div>
-        <div class="row"><label>Padding (px)</label><input type="number" id="sel_padding" class="small" min="0" max="60"></div>
-        <div class="row"><label>Font size (px)</label><input type="number" id="sel_fontsize" class="small" min="8" max="48"></div>
-        <div class="row"><label>Font family</label>
-          <select id="sel_font">
-            <option value="inherit">inherit</option>
-            <option value="Arial, sans-serif">Arial</option>
-            <option value="Helvetica, sans-serif">Helvetica</option>
-            <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI</option>
-            <option value="'Roboto', sans-serif">Roboto</option>
-          </select>
-        </div>
-        <div class="row"><label>Layer</label><input type="number" id="sel_z" class="small" min="0" max="999"></div>
-        <div class="row"><label></label><button id="deleteElem" class="ghost">Delete</button></div>
-      </div>
+      <label class="block mb-2">טקסט:</label>
+      <input type="text" id="elementText" placeholder="הכנס טקסט חדש">
 
-      <div class="section">
-        <h3>Palette quick-picks</h3>
-        <div class="palette" id="presetColors">
-          <div class="swatch" data-color="#2ecc71" style="background:#2ecc71"></div>
-          <div class="swatch" data-color="#3498db" style="background:#3498db"></div>
-          <div class="swatch" data-color="#e67e22" style="background:#e67e22"></div>
-          <div class="swatch" data-color="#9b59b6" style="background:#9b59b6"></div>
-          <div class="swatch" data-color="#e74c3c" style="background:#e74c3c"></div>
-          <div class="swatch" data-color="#34495e" style="background:#34495e"></div>
-        </div>
-      </div>
+      <label class="block mb-2">פונט:</label>
+      <select id="fontSelect">
+        <option value="Arial">Arial</option>
+        <option value="Tahoma">Tahoma</option>
+        <option value="Verdana">Verdana</option>
+        <option value="Courier New">Courier New</option>
+      </select>
 
-      <div class="section">
-        <h3>Layout JSON (raw)</h3>
-        <textarea id="rawLayout" style="width:100%;min-height:120px;padding:8px;border-radius:6px;border:1px solid #ddd;font-size:12px;"></textarea>
-      </div>
+      <label class="block mb-2">גודל טקסט:</label>
+      <input type="text" id="fontSize" placeholder="למשל 18px">
 
-      <div class="status">
-        <div id="saveStatus">Ready</div>
-        <div>Preview editable — drag items</div>
-      </div>
-    </aside>
+      <label class="block mb-2">צבע רקע:</label>
+      <div id="bgColorPicker"></div>
 
-    <!-- right: preview area -->
-    <main class="preview-wrap">
-      <div id="preview-stage">
-        <div id="preview-canvas">
-          <h1 id="pv_title">Sample Title</h1>
-          <h2 id="pv_subtitle">Sample Subtitle</h2>
+      <label class="block mb-2 mt-4">צבע טקסט:</label>
+      <div id="textColorPicker"></div>
 
-          <!-- elements will be placed absolutely into this container -->
-          <div id="elements-container" style="position:relative; width:100%; height:420px;"></div>
+      <button id="saveLayout" class="mt-6 w-full bg-green-600 text-white py-2 rounded-lg shadow hover:bg-green-700">💾 שמור עיצוב</button>
+    </div>
 
-          <div id="pv_booking" style="margin-top:8px; padding:10px; border-radius:8px; background:#fff; color:#2c3e50;">
-            Booking details example
-          </div>
-        </div>
-      </div>
-    </main>
+    <!-- קנבס -->
+    <div id="canvas" class="col-span-3 flex flex-col items-center justify-center">
+      <div class="draggable" data-type="day">יום בשבוע</div>
+      <div class="draggable" data-type="slot">שעה</div>
+      <div class="draggable" data-type="title">כותרת</div>
+    </div>
   </div>
 
-<script>
-/* Minimal WYSIWYG editor logic:
-   - supports adding draggable elements, selecting, styling, z-index (layer)
-   - keeps a layout model (layout.elements: [{id,type,label,x,y,w,h,style}] )
-   - serializes layout_json and sends to /business_settings on Finish
-*/
+  <script>
+    let selectedElement = null;
 
-let layout = { elements: [] };
-let history = [], historyPos = -1;
+    // הפיכת האלמנטים לגרירים
+    interact('.draggable').draggable({
+      listeners: {
+        move(event) {
+          const target = event.target;
+          const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
+          const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+          target.style.transform = `translate(${x}px, ${y}px)`;
+          target.setAttribute('data-x', x);
+          target.setAttribute('data-y', y);
+        }
+      }
+    });
 
-const elContainer = document.getElementById('elements-container');
-const rawLayout = document.getElementById('rawLayout');
-const saveStatus = document.getElementById('saveStatus');
+    // בחירת אלמנט
+    document.querySelectorAll('.draggable').forEach(el => {
+      el.addEventListener('click', () => {
+        // ננקה בחירה קודמת
+        document.querySelectorAll('.draggable').forEach(item => item.classList.remove('selected'));
+        // נגדיר אלמנט חדש כבחור
+        selectedElement = el;
+        el.classList.add('selected');
 
-function uid(prefix='e'){ return prefix + Math.random().toString(36).slice(2,9); }
+        // נעדכן ערכי טופס
+        document.getElementById('elementText').value = el.textContent;
+        document.getElementById('fontSelect').value = el.style.fontFamily || "Arial";
+        document.getElementById('fontSize').value = el.style.fontSize || "16px";
+      });
+    });
 
-function pushHistory() {
-  history = history.slice(0, historyPos+1);
-  history.push(JSON.stringify(layout));
-  historyPos++;
-  updateUndoRedo();
-}
+    // שינוי טקסט
+    document.getElementById('elementText').addEventListener('input', e => {
+      if (selectedElement) {
+        selectedElement.textContent = e.target.value;
+      }
+    });
 
-function updateUndoRedo(){
-  document.getElementById('undoBtn').disabled = historyPos <= 0;
-  document.getElementById('redoBtn').disabled = historyPos >= history.length-1;
-}
+    // שינוי פונט
+    document.getElementById('fontSelect').addEventListener('change', e => {
+      if (selectedElement) {
+        selectedElement.style.fontFamily = e.target.value;
+      }
+    });
 
-document.getElementById('undoBtn').addEventListener('click', ()=>{
-  if(historyPos>0){ historyPos--; layout = JSON.parse(history[historyPos]); renderLayout(); updateUndoRedo(); }
-});
-document.getElementById('redoBtn').addEventListener('click', ()=>{
-  if(historyPos < history.length-1){ historyPos++; layout = JSON.parse(history[historyPos]); renderLayout(); updateUndoRedo(); }
-});
+    // שינוי גודל
+    document.getElementById('fontSize').addEventListener('input', e => {
+      if (selectedElement) {
+        selectedElement.style.fontSize = e.target.value;
+      }
+    });
 
-function createElementModel(type,label){
-  return {
-    id: uid(),
-    type: type,
-    label: label || (type==='day'?'יום': type==='slot'?'שעה':'כותרת'),
-    x: 20 + Math.random()*200,
-    y: 20 + Math.random()*60,
-    w: 120,
-    h: 40,
-    z: 1,
-    style: {
-      background: type==='slot' ? getComputedStyle(document.documentElement).getPropertyValue('--slot').trim() || '#2ecc71' : getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#3498db',
-      color: '#ffffff',
-      radius: 8,
-      padding: 8,
-      fontsize: 14,
-      font: 'inherit'
-    }
-  };
-}
+    // פלטת צבע רקע
+    const bgPicker = Pickr.create({
+      el: '#bgColorPicker',
+      theme: 'classic',
+      default: '#3498db',
+      components: { preview: true, opacity: true, hue: true, interaction: { hex: true, input: true } }
+    });
+    bgPicker.on('change', (color) => {
+      if (selectedElement) {
+        selectedElement.style.backgroundColor = color.toHEXA().toString();
+      }
+    });
 
-function elToDom(item){
-  const d = document.createElement('div');
-  d.className = 'element';
-  d.dataset.id = item.id;
-  d.style.left = item.x + 'px';
-  d.style.top = item.y + 'px';
-  d.style.width = item.w + 'px';
-  d.style.height = item.h + 'px';
-  d.style.zIndex = item.z;
-  d.style.background = item.style.background;
-  d.style.color = item.style.color;
-  d.style.borderRadius = item.style.radius + 'px';
-  d.style.padding = item.style.padding + 'px';
-  d.style.fontSize = item.style.fontsize + 'px';
-  d.style.fontFamily = item.style.font;
-  d.textContent = item.label;
-  d.title = item.id;
-  d.addEventListener('pointerdown', startDrag);
-  d.addEventListener('dblclick', editLabel);
-  d.addEventListener('contextmenu', e => { e.preventDefault(); selectElement(item.id); });
-  return d;
-}
+    // פלטת צבע טקסט
+    const textPicker = Pickr.create({
+      el: '#textColorPicker',
+      theme: 'classic',
+      default: '#ffffff',
+      components: { preview: true, opacity: true, hue: true, interaction: { hex: true, input: true } }
+    });
+    textPicker.on('change', (color) => {
+      if (selectedElement) {
+        selectedElement.style.color = color.toHEXA().toString();
+      }
+    });
 
-let selectedId = null;
-function selectElement(id){
-  selectedId = id;
-  document.querySelectorAll('.element').forEach(n=>n.classList.toggle('selected', n.dataset.id===id));
-  const model = layout.elements.find(x=>x.id===id);
-  if(!model) return;
-  document.getElementById('sel_bg').value = model.style.background || '#000000';
-  document.getElementById('sel_text').value = model.style.color || '#ffffff';
-  document.getElementById('sel_radius').value = model.style.radius || 8;
-  document.getElementById('sel_padding').value = model.style.padding || 8;
-  document.getElementById('sel_fontsize').value = model.style.fontsize || 14;
-  document.getElementById('sel_font').value = model.style.font || 'inherit';
-  document.getElementById('sel_z').value = model.z || 1;
-}
+    // שמירה למסד נתונים
+    document.getElementById('saveLayout').addEventListener('click', async () => {
+      const layout = [];
+      document.querySelectorAll('.draggable').forEach(el => {
+        layout.push({
+          type: el.dataset.type,
+          text: el.textContent,
+          x: el.getAttribute('data-x') || 0,
+          y: el.getAttribute('data-y') || 0,
+          bgColor: el.style.backgroundColor,
+          textColor: el.style.color,
+          fontFamily: el.style.fontFamily,
+          fontSize: el.style.fontSize
+        });
+      });
 
-function renderLayout(){
-  elContainer.innerHTML = '';
-  layout.elements.forEach(item=>{
-    const dom = elToDom(item);
-    elContainer.appendChild(dom);
-  });
-  rawLayout.value = JSON.stringify(layout, null, 2);
-  updatePreviewFromGlobals();
-  selectElement(selectedId);
-  pushHistory();
-}
+      const res = await fetch('/business_settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ layout_json: layout })
+      });
 
-function addElement(type,label){
-  const m = createElementModel(type,label);
-  layout.elements.push(m);
-  renderLayout();
-}
-
-document.getElementById('addElement').addEventListener('click', ()=>{
-  const type = document.getElementById('newType').value;
-  const label = document.getElementById('newLabel').value || undefined;
-  addElement(type,label);
-  document.getElementById('newLabel').value = '';
-});
-
-function editLabel(e){
-  const id = e.currentTarget.dataset.id;
-  const model = layout.elements.find(x=>x.id===id);
-  const nLabel = prompt('ערוך טקסט:', model.label);
-  if(nLabel!==null){ model.label = nLabel; renderLayout(); }
-}
-
-/* Drag & drop */
-let dragState = null;
-function startDrag(e){
-  e.preventDefault();
-  const el = e.currentTarget;
-  const id = el.dataset.id;
-  const model = layout.elements.find(x=>x.id===id);
-  dragState = { id, sx: e.clientX, sy: e.clientY, ox: model.x, oy: model.y, el };
-  el.classList.add('dragging');
-  el.setPointerCapture(e.pointerId);
-  el.addEventListener('pointermove', duringDrag);
-  el.addEventListener('pointerup', endDrag);
-}
-function duringDrag(e){
-  if(!dragState) return;
-  const dx = e.clientX - dragState.sx;
-  const dy = e.clientY - dragState.sy;
-  const model = layout.elements.find(x=>x.id===dragState.id);
-  model.x = Math.max(0, dragState.ox + dx);
-  model.y = Math.max(0, dragState.oy + dy);
-  const dom = dragState.el;
-  dom.style.left = model.x + 'px'; dom.style.top = model.y + 'px';
-}
-function endDrag(e){
-  if(!dragState) return;
-  const dom = dragState.el;
-  dom.classList.remove('dragging');
-  dom.releasePointerCapture(e.pointerId);
-  dom.removeEventListener('pointermove', duringDrag);
-  dom.removeEventListener('pointerup', endDrag);
-  pushHistory();
-  rawLayout.value = JSON.stringify(layout, null, 2);
-  dragState = null;
-}
-
-/* selection / style controls */
-document.getElementById('elements-container').addEventListener('click', (ev)=>{
-  if(ev.target.classList.contains('element')){ selectElement(ev.target.dataset.id); }
-});
-
-document.getElementById('sel_bg').addEventListener('input', (e)=>{
-  if(!selectedId) return;
-  const m = layout.elements.find(x=>x.id===selectedId);
-  m.style.background = e.target.value; renderLayout();
-});
-document.getElementById('sel_text').addEventListener('input', (e)=>{
-  if(!selectedId) return;
-  const m = layout.elements.find(x=>x.id===selectedId);
-  m.style.color = e.target.value; renderLayout();
-});
-document.getElementById('sel_radius').addEventListener('input', (e)=>{
-  if(!selectedId) return;
-  const m = layout.elements.find(x=>x.id===selectedId);
-  m.style.radius = parseInt(e.target.value||0); renderLayout();
-});
-document.getElementById('sel_padding').addEventListener('input', (e)=>{
-  if(!selectedId) return;
-  const m = layout.elements.find(x=>x.id===selectedId);
-  m.style.padding = parseInt(e.target.value||0); renderLayout();
-});
-document.getElementById('sel_fontsize').addEventListener('input', (e)=>{
-  if(!selectedId) return;
-  const m = layout.elements.find(x=>x.id===selectedId);
-  m.style.fontsize = parseInt(e.target.value||12); renderLayout();
-});
-document.getElementById('sel_font').addEventListener('change', (e)=>{
-  if(!selectedId) return;
-  const m = layout.elements.find(x=>x.id===selectedId);
-  m.style.font = e.target.value; renderLayout();
-});
-document.getElementById('sel_z').addEventListener('input', (e)=>{
-  if(!selectedId) return;
-  const m = layout.elements.find(x=>x.id===selectedId);
-  m.z = parseInt(e.target.value||1); renderLayout();
-});
-document.getElementById('deleteElem').addEventListener('click', ()=>{
-  if(!selectedId) return;
-  layout.elements = layout.elements.filter(x=>x.id!==selectedId);
-  selectedId = null; renderLayout();
-});
-
-/* global settings */
-document.getElementById('body_bg').addEventListener('input', e => { document.documentElement.style.setProperty('--page-bg', e.target.value); updatePreviewFromGlobals(); });
-document.getElementById('body_text').addEventListener('input', e => { document.documentElement.style.setProperty('--page-text', e.target.value); updatePreviewFromGlobals(); });
-document.getElementById('font_family').addEventListener('change', e => { document.documentElement.style.setProperty('--font-body', e.target.value); updatePreviewFromGlobals(); });
-document.getElementById('font_size').addEventListener('input', e => { document.documentElement.style.setProperty('--font-size', e.target.value+'px'); updatePreviewFromGlobals(); });
-
-function updatePreviewFromGlobals(){
-  // page background / text / canvas background etc.
-  document.getElementById('preview-stage').style.background = getComputedStyle(document.documentElement).getPropertyValue('--page-bg').trim();
-  document.getElementById('preview-stage').style.color = getComputedStyle(document.documentElement).getPropertyValue('--page-text').trim();
-  document.getElementById('pv_title').style.fontFamily = getComputedStyle(document.documentElement).getPropertyValue('--font-body').trim();
-  document.getElementById('pv_title').style.fontSize = (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--font-size'))||16) + 'px';
-}
-
-/* quick-pick palette */
-document.getElementById('presetColors').querySelectorAll('.swatch').forEach(s=>{
-  s.addEventListener('click', e=>{
-    const c = e.target.dataset.color;
-    // apply to selected element bg if exists otherwise to body bg
-    if(selectedId){
-      const m = layout.elements.find(x=>x.id===selectedId); m.style.background = c; renderLayout();
-    } else { document.getElementById('body_bg').value = c; document.documentElement.style.setProperty('--page-bg', c); updatePreviewFromGlobals(); }
-  });
-});
-
-/* load settings from server */
-function loadSettings(){
-  fetch('/business_settings').then(r=>r.json()).then(data=>{
-    // load globals if present
-    if(data.body_background_color) document.getElementById('body_bg').value = data.body_background_color;
-    if(data.body_text_color) document.getElementById('body_text').value = data.body_text_color;
-    if(data.body_font_family) document.getElementById('font_family').value = data.body_font_family;
-    if(data.body_font_size) document.getElementById('font_size').value = parseInt(data.body_font_size) || 16;
-
-    // layout_json
-    let lj = data.layout_json || data.layout || null;
-    if(typeof lj === 'string'){
-      try { lj = JSON.parse(lj); } catch(e){ lj = null; }
-    }
-    if(lj && lj.elements){
-      layout = lj;
-    } else {
-      layout = { elements: [] };
-      // create some defaults if empty
-      layout.elements.push(createElementModel('day','Sun'));
-      layout.elements.push(createElementModel('slot','10:00'));
-      layout.elements.push(createElementModel('title','Book Appointment'));
-    }
-    renderLayout();
-    document.getElementById('rawLayout').value = JSON.stringify(layout, null, 2);
-  }).catch(err=>{
-    console.error('load settings error', err);
-    layout = { elements: [] };
-    renderLayout();
-  });
-}
-
-/* Finish & Save */
-document.getElementById('finishBtn').addEventListener('click', saveAll);
-function saveAll(){
-  // compose payload: include general fields + layout_json
-  const payload = {};
-  payload.layout_json = layout;
-  // also include a few main fields
-  payload.body_background_color = document.getElementById('body_bg').value;
-  payload.body_text_color = document.getElementById('body_text').value;
-  payload.body_font_family = document.getElementById('font_family').value;
-  payload.body_font_size = document.getElementById('font_size').value + 'px';
-
-  fetch('/business_settings', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify(payload)
-  }).then(r=>r.json()).then(j=>{
-    saveStatus.textContent = j.message || 'Saved';
-    setTimeout(()=>saveStatus.textContent='Ready', 2000);
-  }).catch(e=>{
-    saveStatus.textContent = 'Save error';
-    console.error(e);
-  });
-}
-
-/* raw edit */
-rawLayout.addEventListener('change', ()=> {
-  try{
-    const parsed = JSON.parse(rawLayout.value);
-    layout = parsed;
-    renderLayout();
-  }catch(e){
-    alert('Invalid JSON');
-  }
-});
-
-/* initialize */
-loadSettings();
-</script>
+      const data = await res.json();
+      alert(data.message || "נשמר בהצלחה!");
+    });
+  </script>
 </body>
 </html>
