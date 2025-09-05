@@ -7,55 +7,194 @@
         body {
             font-family: Arial, sans-serif;
             padding: 20px;
+            max-width: 800px;
+            margin: auto;
         }
-        label, input, button {
+        h1 {
+            margin-bottom: 20px;
+        }
+        .field {
+            margin-bottom: 15px;
+        }
+        label {
+            font-weight: bold;
             display: block;
-            margin: 10px 0;
+            margin-bottom: 5px;
         }
-        input {
-            padding: 5px;
-            width: 200px;
+        input, textarea {
+            padding: 6px;
+            width: 100%;
+            box-sizing: border-box;
         }
         button {
-            padding: 5px 10px;
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+        #status {
+            margin-top: 20px;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
-    <h1>Admin Design - שינוי צבע רקע</h1>
+    <h1>Admin Design Settings</h1>
 
-    <label for="body_bg">Body Background Color:</label>
-    <input type="text" id="body_bg" placeholder="לדוגמה: #ffffff">
+    <form id="designForm">
+        <div class="field">
+            <label>Body Background Color</label>
+            <input type="text" id="body_background_color">
+        </div>
+        <div class="field">
+            <label>Body Text Color</label>
+            <input type="text" id="body_text_color">
+        </div>
+        <div class="field">
+            <label>Day Button Background</label>
+            <input type="text" id="day_button_background">
+        </div>
+        <div class="field">
+            <label>Day Button Text Color</label>
+            <input type="text" id="day_button_text_color">
+        </div>
+        <div class="field">
+            <label>Day Button Border Radius</label>
+            <input type="text" id="day_button_border_radius">
+        </div>
+        <div class="field">
+            <label>Slot Button Background</label>
+            <input type="text" id="slot_button_background">
+        </div>
+        <div class="field">
+            <label>Slot Button Text Color</label>
+            <input type="text" id="slot_button_text_color">
+        </div>
+        <div class="field">
+            <label>Slot Button Border Radius</label>
+            <input type="text" id="slot_button_border_radius">
+        </div>
+        <div class="field">
+            <label>Form Background Color</label>
+            <input type="text" id="form_background_color">
+        </div>
+        <div class="field">
+            <label>Form Input Background</label>
+            <input type="text" id="form_input_background_color">
+        </div>
+        <div class="field">
+            <label>Form Input Text Color</label>
+            <input type="text" id="form_input_text_color">
+        </div>
+        <div class="field">
+            <label>Form Button Background</label>
+            <input type="text" id="form_button_background">
+        </div>
+        <div class="field">
+            <label>Form Button Text Color</label>
+            <input type="text" id="form_button_text_color">
+        </div>
+        <div class="field">
+            <label>Booking Details Background</label>
+            <input type="text" id="booking_details_background">
+        </div>
+        <div class="field">
+            <label>Booking Details Text Color</label>
+            <input type="text" id="booking_details_text_color">
+        </div>
+        <div class="field">
+            <label>Body Font Family</label>
+            <input type="text" id="body_font_family">
+        </div>
+        <div class="field">
+            <label>Body Font Size</label>
+            <input type="text" id="body_font_size">
+        </div>
+        <div class="field">
+            <label>Heading Font Size</label>
+            <input type="text" id="heading_font_size">
+        </div>
+        <div class="field">
+            <label>Booking Details Font Size</label>
+            <input type="text" id="booking_details_font_size">
+        </div>
+        <div class="field">
+            <label>Page Title</label>
+            <input type="text" id="page_title">
+        </div>
+        <div class="field">
+            <label>Page Subtitle</label>
+            <input type="text" id="page_subtitle">
+        </div>
+        <div class="field">
+            <label>Body Max Width</label>
+            <input type="text" id="body_max_width">
+        </div>
+        <div class="field">
+            <label>Body Margin</label>
+            <input type="text" id="body_margin">
+        </div>
+        <div class="field">
+            <label>Body Padding</label>
+            <input type="text" id="body_padding">
+        </div>
+        <div class="field">
+            <label>Day Button Padding</label>
+            <input type="text" id="day_button_padding">
+        </div>
+        <div class="field">
+            <label>Slot Button Padding</label>
+            <input type="text" id="slot_button_padding">
+        </div>
+        <div class="field">
+            <label>Form Input Padding</label>
+            <input type="text" id="form_input_padding">
+        </div>
+        <div class="field">
+            <label>Form Button Padding</label>
+            <input type="text" id="form_button_padding">
+        </div>
+        <div class="field">
+            <label>Booking Details Padding</label>
+            <input type="text" id="booking_details_padding">
+        </div>
+        <div class="field">
+            <label>Booking Success Message</label>
+            <textarea id="booking_success_message"></textarea>
+        </div>
+        <div class="field">
+            <label>Day Names</label>
+            <input type="text" id="day_names">
+        </div>
 
-    <button id="saveBtn">שמור</button>
+        <button type="button" id="saveBtn">שמור</button>
+    </form>
 
     <p id="status"></p>
 
     <script>
-        // קבל את שם העסק מה־Flask
-        const businessName = "{{ business_name }}";
-
-        // בעת טעינת הדף - שליפה מהשרת
+        // טעינת נתונים מהשרת
         fetch("/business_settings")
             .then(res => res.json())
             .then(data => {
-                if(data.body_background_color) {
-                    document.getElementById("body_bg").value = data.body_background_color;
-                }
+                Object.keys(data).forEach(key => {
+                    if (document.getElementById(key)) {
+                        document.getElementById(key).value = data[key] || "";
+                    }
+                });
             });
 
         // שמירה
         document.getElementById("saveBtn").addEventListener("click", () => {
-            const color = document.getElementById("body_bg").value;
+            const fields = document.querySelectorAll("#designForm input, #designForm textarea");
+            let payload = {};
+            fields.forEach(field => {
+                payload[field.id] = field.value;
+            });
 
             fetch("/business_settings", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    body_background_color: color
-                })
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
             })
             .then(res => res.json())
             .then(data => {
