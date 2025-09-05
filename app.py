@@ -1359,11 +1359,13 @@ def business_settings_route():
     if request.method == "GET":
         cur.execute("SELECT * FROM business_settings WHERE business_id = %s", (business_id,))
         settings = cur.fetchone()
-        cur.close()
-        conn.close()
         if not settings:
+            cur.close()
+            conn.close()
             return jsonify({"error": "Business settings not found"}), 404
         colnames = [desc[0] for desc in cur.description]
+        cur.close()
+        conn.close()
         return jsonify(dict(zip(colnames, settings)))
 
     if request.method == "POST":
@@ -1391,7 +1393,17 @@ def business_settings_route():
         cur.execute("SELECT 1 FROM business_settings WHERE business_id = %s", (business_id,))
         exists = cur.fetchone()
 
-        values = [data.get(col) for col in columns]
+        values = []
+        for col in columns:
+            val = data.get(col)
+            if col == "day_names":
+                if isinstance(val, str):  
+                    # מפרק פסיקים לרשימה
+                    val = [d.strip() for d in val.split(",")]
+                if isinstance(val, list):
+                    # הופך ל־JSON חוקי
+                    val = json.dumps(val)
+            values.append(val)
 
         if exists:
             placeholders = ", ".join([f"{col} = %s" for col in columns])
@@ -1405,7 +1417,6 @@ def business_settings_route():
         cur.close()
         conn.close()
         return jsonify({"message": "Business settings saved successfully"})
-
 
 # --- שליחת אימייל ---
 
