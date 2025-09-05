@@ -895,9 +895,6 @@ def admin_design():
     business_name = session.get('business_name')
     if not business_name:
         return redirect("/login")
-
-    print("DEBUG: business_name =", business_name)  # <-- בדיקה קצרה
-
     return render_template("admin_design.html", business_name=business_name)
 
 
@@ -1344,26 +1341,30 @@ def cancel_appointment():
 
 @app.route("/business_settings", methods=["GET", "POST"])
 def business_settings_route():
-    # קבל את שם המשתמש והסיסמה מה-session (או דרך איך שאתה שומר אותם)
-    username = session.get('username')
-    password = session.get('password')
+    business_name = session.get('business_name')
+    if not business_name:
+        return jsonify({"error": "Business not logged in"}), 403
 
-    # קבל את הפרטים של העסק
-    business_name, email, phone, business_id = get_business_details(username, password)
-    if not business_id:
-        return jsonify({"error": "Business not found"}), 404
-
+    # קבל את ה־business_id לפי שם העסק
     conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM businesses WHERE name = %s", (business_name,))
+    row = cur.fetchone()
+    if not row:
+        cur.close()
+        conn.close()
+        return jsonify({"error": "Business not found"}), 404
+    business_id = row[0]
 
     if request.method == "GET":
         cur.execute("SELECT * FROM business_settings WHERE business_id = %s", (business_id,))
-        row = cur.fetchone()
+        settings = cur.fetchone()
         cur.close()
         conn.close()
-        if not row:
+        if not settings:
             return jsonify({"error": "Business settings not found"}), 404
-        return jsonify(row)
+        colnames = [desc[0] for desc in cur.description]
+        return jsonify(dict(zip(colnames, settings)))
 
     if request.method == "POST":
         data = request.json
@@ -1393,11 +1394,9 @@ def business_settings_route():
         values = [data.get(col) for col in columns]
 
         if exists:
-            # עדכון קיים
             placeholders = ", ".join([f"{col} = %s" for col in columns])
             cur.execute(f"UPDATE business_settings SET {placeholders} WHERE business_id = %s", values + [business_id])
         else:
-            # יצירת שורה חדשה
             cols_str = ", ".join(["business_id"] + columns)
             vals_placeholders = ", ".join(["%s"] * (len(columns) + 1))
             cur.execute(f"INSERT INTO business_settings ({cols_str}) VALUES ({vals_placeholders})", [business_id] + values)
