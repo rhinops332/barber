@@ -479,40 +479,49 @@ def create_default_business_settings(business_id, conn):
     if cur.fetchone():
         return  # כבר קיימת, לא עושים כלום
 
-    # מכניסים ערכי ברירת מחדל
+    # ערכי ברירת מחדל
+    default_day_names = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]
+    default_layout = {}  # ריק, ניתן למלא בעתיד עם layout כפתורים
+
     cur.execute("""
         INSERT INTO business_settings (
             business_id,
             body_background_color, body_text_color,
-            day_button_background, day_button_text_color, day_button_border_radius,
-            slot_button_background, slot_button_text_color, slot_button_border_radius,
             form_background_color, form_input_background_color, form_input_text_color,
             form_button_background, form_button_text_color,
             booking_details_background, booking_details_text_color,
-            body_font_family, body_font_size, heading_font_size, booking_details_font_size,
-            page_title, page_subtitle,
-            booking_success_message, day_names,
+            body_font_family, body_font_size,
+            heading_font_family, heading_font_size,
+            booking_details_font_family, booking_details_font_size,
+            day_button_background, day_button_text_color, day_button_border_radius, day_button_padding,
+            slot_button_background, slot_button_text_color, slot_button_border_radius, slot_button_padding,
             body_max_width, body_margin, body_padding,
-            day_button_padding, slot_button_padding, form_input_padding,
-            form_button_padding, booking_details_padding
+            form_input_padding, form_button_padding, booking_details_padding,
+            page_title, page_subtitle,
+            booking_success_message, day_names, layout_json
         )
         VALUES (
-            %s, '#f0f4ff', '#2c3e50',
-            '#3498db', 'white', '10px',
-            '#2ecc71', 'white', '6px',
+            %s,
+            '#f0f4ff', '#2c3e50',
             'white', 'white', '#2c3e50',
             '#2980b9', 'white',
             '#ffffff', '#2c3e50',
-            'Arial, sans-serif', '16px', '24px', '16px',
+            'Arial, sans-serif', '16px',
+            'Arial, sans-serif', '24px',
+            'Arial, sans-serif', '16px',
+            '#3498db', 'white', '10px', '12px 0',
+            '#2ecc71', 'white', '6px', '8px 14px',
+            '700px', '30px auto', '20px',
+            '10px', '12px', '15px',
             'Welcome', 'Book Your Appointment',
             'Your appointment has been booked successfully!',
-            '["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]',
-            '700px', '30px auto', '20px',
-            '12px 0', '8px 14px', '10px',
-            '12px', '15px'
+            %s, %s
         )
-    """, (business_id,))
+    """, (business_id, json.dumps(default_day_names), json.dumps(default_layout)))
+
     conn.commit()
+    cur.close()
+
 
 
 # --- ניהול שבועי ושינויים ---
@@ -1345,7 +1354,6 @@ def business_settings_route():
     if not business_name:
         return jsonify({"error": "Business not logged in"}), 403
 
-    # קבל את ה־business_id לפי שם העסק
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT id FROM businesses WHERE name = %s", (business_name,))
@@ -1364,9 +1372,15 @@ def business_settings_route():
             conn.close()
             return jsonify({"error": "Business settings not found"}), 404
         colnames = [desc[0] for desc in cur.description]
+        settings_dict = dict(zip(colnames, settings))
+        # פירוק JSON לשדות קריאים
+        if settings_dict.get("day_names"):
+            settings_dict["day_names"] = json.loads(settings_dict["day_names"])
+        if settings_dict.get("layout_json"):
+            settings_dict["layout_json"] = json.loads(settings_dict["layout_json"])
         cur.close()
         conn.close()
-        return jsonify(dict(zip(colnames, settings)))
+        return jsonify(settings_dict)
 
     if request.method == "POST":
         data = request.json
@@ -1377,16 +1391,16 @@ def business_settings_route():
 
         columns = [
             "body_background_color","body_text_color",
-            "day_button_background","day_button_text_color","day_button_border_radius",
-            "slot_button_background","slot_button_text_color","slot_button_border_radius",
+            "day_button_background","day_button_text_color","day_button_border_radius","day_button_padding",
+            "slot_button_background","slot_button_text_color","slot_button_border_radius","slot_button_padding",
             "form_background_color","form_input_background_color","form_input_text_color",
             "form_button_background","form_button_text_color",
             "booking_details_background","booking_details_text_color",
-            "body_font_family","body_font_size","heading_font_size","booking_details_font_size",
+            "body_font_family","body_font_size","heading_font_family","heading_font_size","booking_details_font_family","booking_details_font_size",
             "page_title","page_subtitle",
             "body_max_width","body_margin","body_padding",
-            "day_button_padding","slot_button_padding","form_input_padding","form_button_padding","booking_details_padding",
-            "booking_success_message","day_names"
+            "form_input_padding","form_button_padding","booking_details_padding",
+            "booking_success_message","day_names","layout_json"
         ]
 
         # בדיקה אם כבר קיימת שורה
@@ -1396,13 +1410,13 @@ def business_settings_route():
         values = []
         for col in columns:
             val = data.get(col)
-            if col == "day_names":
-                if isinstance(val, str):  
-                    # מפרק פסיקים לרשימה
-                    val = [d.strip() for d in val.split(",")]
-                if isinstance(val, list):
-                    # הופך ל־JSON חוקי
-                    val = json.dumps(val)
+            if col in ["day_names", "layout_json"]:
+                if isinstance(val, str):
+                    try:
+                        val = json.loads(val)
+                    except:
+                        val = [d.strip() for d in val.split(",")] if col=="day_names" else {}
+                val = json.dumps(val)
             values.append(val)
 
         if exists:
@@ -1417,6 +1431,7 @@ def business_settings_route():
         cur.close()
         conn.close()
         return jsonify({"message": "Business settings saved successfully"})
+
 
 # --- שליחת אימייל ---
 
