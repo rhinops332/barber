@@ -895,7 +895,11 @@ def admin_design():
     business_name = session.get('business_name')
     if not business_name:
         return redirect("/login")
+
+    print("DEBUG: business_name =", business_name)  # <-- בדיקה קצרה
+
     return render_template("admin_design.html", business_name=business_name)
+
 
 
 # --- ניהול שגרה שבועית ---
