@@ -1,15 +1,26 @@
-<!-- templates/test_business_settings.html -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Test Business Settings</title>
+    <meta charset="UTF-8">
+    <title>Design Settings - {{ business_name }}</title>
 </head>
 <body>
-    <h2>שנה צבע רקע גוף</h2>
-    <form method="POST" action="/business_settings/1">
-        <label for="body_background_color">Body Background Color:</label>
-        <input type="text" id="body_background_color" name="body_background_color" placeholder="לדוגמה: #ffffff">
-        <button type="submit">שמור</button>
+    <h1>Design Settings for {{ business_name }}</h1>
+
+    <form method="POST" action="/business_settings">
+        <label>Body Background Color: <input type="text" name="body_background_color"></label><br>
+        <label>Body Text Color: <input type="text" name="body_text_color"></label><br>
+        <label>Day Button Background: <input type="text" name="day_button_background"></label><br>
+        <label>Day Button Text Color: <input type="text" name="day_button_text_color"></label><br>
+        <label>Slot Button Background: <input type="text" name="slot_button_background"></label><br>
+        <label>Slot Button Text Color: <input type="text" name="slot_button_text_color"></label><br>
+        <label>Form Background: <input type="text" name="form_background_color"></label><br>
+        <label>Booking Details Background: <input type="text" name="booking_details_background"></label><br>
+        <label>Page Title: <input type="text" name="page_title"></label><br>
+        <label>Page Subtitle: <input type="text" name="page_subtitle"></label><br>
+        <label>Booking Success Message: <input type="text" name="booking_success_message"></label><br>
+
+        <button type="submit">Save</button>
     </form>
 </body>
 </html>
