@@ -892,8 +892,10 @@ def orders():
 
 @app.route("/admin_design")
 def admin_design():
-    return render_template("admin_design.html")
-
+    business_name = session.get('business_name')
+    if not business_name:
+        return redirect("/login")
+    return render_template("admin_design.html", business_name=business_name)
 
 
 # --- ניהול שגרה שבועית ---
@@ -1336,8 +1338,17 @@ def cancel_appointment():
 
 # --- עיצוב דף ההזמנות ---
 
-@app.route("/business_settings/<int:business_id>", methods=["GET", "POST"])
-def business_settings_route(business_id):
+@app.route("/business_settings", methods=["GET", "POST"])
+def business_settings_route():
+    # קבל את שם המשתמש והסיסמה מה-session (או דרך איך שאתה שומר אותם)
+    username = session.get('username')
+    password = session.get('password')
+
+    # קבל את הפרטים של העסק
+    business_name, email, phone, business_id = get_business_details(username, password)
+    if not business_id:
+        return jsonify({"error": "Business not found"}), 404
+
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
 
