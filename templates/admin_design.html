@@ -1,123 +1,33 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Business Settings Editor</title>
-<style>
-  body { font-family: Arial, sans-serif; max-width: 900px; margin: 20px auto; padding: 20px; }
-  h1 { text-align: center; margin-bottom: 20px; }
-  form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  label { display: flex; flex-direction: column; font-weight: bold; }
-  input, select, textarea { padding: 8px; border-radius: 6px; border: 1px solid #ccc; width: 100%; }
-  button { padding: 10px; border: none; border-radius: 6px; background: #2980b9; color: white; cursor: pointer; grid-column: 1 / -1; }
-  button:hover { background: #1f6391; }
-  #preview { margin-top: 30px; padding: 20px; border: 1px solid #ccc; border-radius: 10px; background: #f0f4ff; }
-  .color-input { width: 100px; }
-</style>
+    <meta charset="UTF-8">
+    <title>בדיקת Business Settings</title>
 </head>
 <body>
+    <h1>עדכון כותרת עמוד</h1>
 
-<h1>Edit Business Settings</h1>
+    <label for="page_title">כותרת חדשה:</label>
+    <input type="text" id="page_title">
+    <button onclick="saveSettings()">שמור</button>
 
-<form id="settingsForm">
-  <label>Page Title: <input type="text" name="page_title" /></label>
-  <label>Page Subtitle: <input type="text" name="page_subtitle" /></label>
+    <p id="status"></p>
 
-  <label>Body Background Color: <input type="color" class="color-input" name="body_background_color" /></label>
-  <label>Body Text Color: <input type="color" class="color-input" name="body_text_color" /></label>
+    <script>
+        const businessId = 1; // שים כאן ID אמיתי מהטבלה שלך
 
-  <label>Day Button Background: <input type="color" class="color-input" name="day_button_background" /></label>
-  <label>Day Button Text Color: <input type="color" class="color-input" name="day_button_text_color" /></label>
-  <label>Day Button Border Radius: <input type="text" name="day_button_border_radius" placeholder="e.g., 10px" /></label>
-  <label>Slot Button Background: <input type="color" class="color-input" name="slot_button_background" /></label>
-  <label>Slot Button Text Color: <input type="color" class="color-input" name="slot_button_text_color" /></label>
-  <label>Slot Button Border Radius: <input type="text" name="slot_button_border_radius" placeholder="e.g., 6px" /></label>
+        async function saveSettings() {
+            const title = document.getElementById("page_title").value;
 
-  <label>Form Background: <input type="color" class="color-input" name="form_background_color" /></label>
-  <label>Form Input Background: <input type="color" class="color-input" name="form_input_background_color" /></label>
-  <label>Form Input Text Color: <input type="color" class="color-input" name="form_input_text_color" /></label>
-  <label>Form Button Background: <input type="color" class="color-input" name="form_button_background" /></label>
-  <label>Form Button Text Color: <input type="color" class="color-input" name="form_button_text_color" /></label>
+            const res = await fetch(`/business_settings/${businessId}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ page_title: title })
+            });
 
-  <label>Booking Details Background: <input type="color" class="color-input" name="booking_details_background" /></label>
-  <label>Booking Details Text Color: <input type="color" class="color-input" name="booking_details_text_color" /></label>
-
-  <label>Body Font Family: <input type="text" name="body_font_family" placeholder="e.g., Arial, sans-serif" /></label>
-  <label>Body Font Size: <input type="text" name="body_font_size" placeholder="e.g., 16px" /></label>
-  <label>Heading Font Size: <input type="text" name="heading_font_size" placeholder="e.g., 24px" /></label>
-  <label>Booking Details Font Size: <input type="text" name="booking_details_font_size" placeholder="e.g., 16px" /></label>
-
-  <label>Body Max Width: <input type="text" name="body_max_width" placeholder="e.g., 700px" /></label>
-  <label>Body Margin: <input type="text" name="body_margin" placeholder="e.g., 20px auto" /></label>
-  <label>Body Padding: <input type="text" name="body_padding" placeholder="e.g., 20px" /></label>
-
-  <label>Day Button Padding: <input type="text" name="day_button_padding" placeholder="e.g., 12px" /></label>
-  <label>Slot Button Padding: <input type="text" name="slot_button_padding" placeholder="e.g., 8px" /></label>
-  <label>Form Input Padding: <input type="text" name="form_input_padding" placeholder="e.g., 8px" /></label>
-  <label>Form Button Padding: <input type="text" name="form_button_padding" placeholder="e.g., 10px" /></label>
-  <label>Booking Details Padding: <input type="text" name="booking_details_padding" placeholder="e.g., 10px" /></label>
-
-  <label>Booking Success Message: <textarea name="booking_success_message" rows="2"></textarea></label>
-  <label>Day Names (JSON): <textarea name="day_names" rows="2" placeholder='["ראשון","שני","שלישי",...]'></textarea></label>
-
-  <button type="submit">Save Settings</button>
-</form>
-
-<div id="preview">
-  <h2 id="preview-title">Page Title</h2>
-  <p id="preview-subtitle">Page Subtitle</p>
-  <div id="preview-booking" style="padding:10px; background:#2ecc71; color:white; border-radius:6px; display:inline-block;">Example Slot</div>
-</div>
-
-<script>
-const form = document.getElementById("settingsForm");
-const previewTitle = document.getElementById("preview-title");
-const previewSubtitle = document.getElementById("preview-subtitle");
-const previewBooking = document.getElementById("preview-booking");
-
-// מטעין הגדרות קיימות מהשרת
-async function loadSettings(business_id) {
-  const res = await fetch(`/business_settings/${business_id}`);
-  const data = await res.json();
-  for (let key in data) {
-    if (form.elements[key]) {
-      form.elements[key].value = data[key] || "";
-    }
-  }
-  updatePreview();
-}
-
-// עדכון preview מיידי
-function updatePreview() {
-  previewTitle.textContent = form.elements["page_title"].value || "Page Title";
-  previewSubtitle.textContent = form.elements["page_subtitle"].value || "Page Subtitle";
-  document.body.style.backgroundColor = form.elements["body_background_color"].value || "#fff";
-  document.body.style.color = form.elements["body_text_color"].value || "#000";
-  previewBooking.style.backgroundColor = form.elements["slot_button_background"].value || "#2ecc71";
-  previewBooking.style.color = form.elements["slot_button_text_color"].value || "#fff";
-  previewBooking.style.borderRadius = form.elements["slot_button_border_radius"].value || "6px";
-}
-
-form.addEventListener("input", updatePreview);
-
-form.addEventListener("submit", async e => {
-  e.preventDefault();
-  const business_id = 1; // החלף למזהה הרלוונטי
-  const payload = {};
-  for (let el of form.elements) {
-    if (el.name) payload[el.name] = el.value;
-  }
-  const res = await fetch(`/business_settings/${business_id}`, {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify(payload)
-  });
-  const data = await res.json();
-  if(data.message) alert("Settings saved!");
-});
-loadSettings(1);
-</script>
-
+            const data = await res.json();
+            document.getElementById("status").innerText = JSON.stringify(data);
+        }
+    </script>
 </body>
 </html>
