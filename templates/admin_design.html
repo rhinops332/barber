@@ -1,210 +1,263 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Admin Design</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            max-width: 800px;
-            margin: auto;
-        }
-        h1 {
-            margin-bottom: 20px;
-        }
-        .field {
-            margin-bottom: 15px;
-        }
-        label {
-            font-weight: bold;
-            display: block;
-            margin-bottom: 5px;
-        }
-        input, textarea {
-            padding: 6px;
-            width: 100%;
-            box-sizing: border-box;
-        }
-        button {
-            margin-top: 20px;
-            padding: 10px 20px;
-            font-size: 16px;
-        }
-        #status {
-            margin-top: 20px;
-            font-weight: bold;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HairBoss - Admin Design</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    max-width: 900px;
+    margin: 30px auto;
+    padding: 20px;
+    background: #f0f4ff;
+    color: #2c3e50;
+  }
+  h1, h2 {
+    text-align: center;
+    margin: 0 0 20px;
+  }
+  .section {
+    margin-bottom: 25px;
+    padding: 15px;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+  .section h3 {
+    margin-bottom: 10px;
+    color: #2980b9;
+  }
+  .control-group {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    gap: 12px;
+  }
+  .control-group label {
+    min-width: 180px;
+  }
+  .control-group input[type="color"],
+  .control-group input[type="number"],
+  .control-group select {
+    flex-grow: 1;
+    padding: 6px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+  }
+  button#save-btn {
+    display: block;
+    width: 150px;
+    margin: 20px auto;
+    padding: 10px;
+    font-weight: bold;
+    border-radius: 8px;
+    border: none;
+    background: #27ae60;
+    color: white;
+    cursor: pointer;
+  }
+  button#save-btn:hover {
+    background: #1e8449;
+  }
+
+  /* Live Preview Styles */
+  #preview {
+    margin-top: 30px;
+    padding: 20px;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 0 12px rgba(0,0,0,0.15);
+  }
+  #preview h1, #preview h2 {
+    text-align: center;
+  }
+  .preview-btn {
+    padding: 10px 20px;
+    margin: 5px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    color: white;
+    background: #3498db;
+    transition: 0.2s;
+  }
+</style>
 </head>
 <body>
-    <h1>Admin Design Settings</h1>
 
-    <form id="designForm">
-        <div class="field">
-            <label>Body Background Color</label>
-            <input type="text" id="body_background_color">
-        </div>
-        <div class="field">
-            <label>Body Text Color</label>
-            <input type="text" id="body_text_color">
-        </div>
-        <div class="field">
-            <label>Day Button Background</label>
-            <input type="text" id="day_button_background">
-        </div>
-        <div class="field">
-            <label>Day Button Text Color</label>
-            <input type="text" id="day_button_text_color">
-        </div>
-        <div class="field">
-            <label>Day Button Border Radius</label>
-            <input type="text" id="day_button_border_radius">
-        </div>
-        <div class="field">
-            <label>Slot Button Background</label>
-            <input type="text" id="slot_button_background">
-        </div>
-        <div class="field">
-            <label>Slot Button Text Color</label>
-            <input type="text" id="slot_button_text_color">
-        </div>
-        <div class="field">
-            <label>Slot Button Border Radius</label>
-            <input type="text" id="slot_button_border_radius">
-        </div>
-        <div class="field">
-            <label>Form Background Color</label>
-            <input type="text" id="form_background_color">
-        </div>
-        <div class="field">
-            <label>Form Input Background</label>
-            <input type="text" id="form_input_background_color">
-        </div>
-        <div class="field">
-            <label>Form Input Text Color</label>
-            <input type="text" id="form_input_text_color">
-        </div>
-        <div class="field">
-            <label>Form Button Background</label>
-            <input type="text" id="form_button_background">
-        </div>
-        <div class="field">
-            <label>Form Button Text Color</label>
-            <input type="text" id="form_button_text_color">
-        </div>
-        <div class="field">
-            <label>Booking Details Background</label>
-            <input type="text" id="booking_details_background">
-        </div>
-        <div class="field">
-            <label>Booking Details Text Color</label>
-            <input type="text" id="booking_details_text_color">
-        </div>
-        <div class="field">
-            <label>Body Font Family</label>
-            <input type="text" id="body_font_family">
-        </div>
-        <div class="field">
-            <label>Body Font Size</label>
-            <input type="text" id="body_font_size">
-        </div>
-        <div class="field">
-            <label>Heading Font Size</label>
-            <input type="text" id="heading_font_size">
-        </div>
-        <div class="field">
-            <label>Booking Details Font Size</label>
-            <input type="text" id="booking_details_font_size">
-        </div>
-        <div class="field">
-            <label>Page Title</label>
-            <input type="text" id="page_title">
-        </div>
-        <div class="field">
-            <label>Page Subtitle</label>
-            <input type="text" id="page_subtitle">
-        </div>
-        <div class="field">
-            <label>Body Max Width</label>
-            <input type="text" id="body_max_width">
-        </div>
-        <div class="field">
-            <label>Body Margin</label>
-            <input type="text" id="body_margin">
-        </div>
-        <div class="field">
-            <label>Body Padding</label>
-            <input type="text" id="body_padding">
-        </div>
-        <div class="field">
-            <label>Day Button Padding</label>
-            <input type="text" id="day_button_padding">
-        </div>
-        <div class="field">
-            <label>Slot Button Padding</label>
-            <input type="text" id="slot_button_padding">
-        </div>
-        <div class="field">
-            <label>Form Input Padding</label>
-            <input type="text" id="form_input_padding">
-        </div>
-        <div class="field">
-            <label>Form Button Padding</label>
-            <input type="text" id="form_button_padding">
-        </div>
-        <div class="field">
-            <label>Booking Details Padding</label>
-            <input type="text" id="booking_details_padding">
-        </div>
-        <div class="field">
-            <label>Booking Success Message</label>
-            <textarea id="booking_success_message"></textarea>
-        </div>
-        <div class="field">
-            <label>Day Names</label>
-            <input type="text" id="day_names">
-        </div>
+<h1>{{ business_name }}</h1>
+<h2>Admin Design Panel</h2>
 
-        <button type="button" id="saveBtn">שמור</button>
-    </form>
+<div class="section">
+  <h3>Body</h3>
+  <div class="control-group">
+    <label for="body-bg">Background Color:</label>
+    <input type="color" id="body-bg">
+  </div>
+  <div class="control-group">
+    <label for="body-text">Text Color:</label>
+    <input type="color" id="body-text">
+  </div>
+  <div class="control-group">
+    <label for="body-font-size">Font Size (px):</label>
+    <input type="number" id="body-font-size" min="10" max="50">
+  </div>
+</div>
 
-    <p id="status"></p>
+<div class="section">
+  <h3>Day Buttons</h3>
+  <div class="control-group">
+    <label for="day-bg">Button Background:</label>
+    <input type="color" id="day-bg">
+  </div>
+  <div class="control-group">
+    <label for="day-text">Button Text Color:</label>
+    <input type="color" id="day-text">
+  </div>
+  <div class="control-group">
+    <label for="day-radius">Border Radius (px):</label>
+    <input type="number" id="day-radius" min="0" max="50">
+  </div>
+  <div class="control-group">
+    <label for="day-padding">Padding (px):</label>
+    <input type="number" id="day-padding" min="0" max="50">
+  </div>
+</div>
 
-    <script>
-        // טעינת נתונים מהשרת
-        fetch("/business_settings")
-            .then(res => res.json())
-            .then(data => {
-                Object.keys(data).forEach(key => {
-                    if (document.getElementById(key)) {
-                        document.getElementById(key).value = data[key] || "";
-                    }
-                });
-            });
+<div class="section">
+  <h3>Slot Buttons</h3>
+  <div class="control-group">
+    <label for="slot-bg">Button Background:</label>
+    <input type="color" id="slot-bg">
+  </div>
+  <div class="control-group">
+    <label for="slot-text">Button Text Color:</label>
+    <input type="color" id="slot-text">
+  </div>
+  <div class="control-group">
+    <label for="slot-radius">Border Radius (px):</label>
+    <input type="number" id="slot-radius" min="0" max="50">
+  </div>
+  <div class="control-group">
+    <label for="slot-padding">Padding (px):</label>
+    <input type="number" id="slot-padding" min="0" max="50">
+  </div>
+</div>
 
-        // שמירה
-        document.getElementById("saveBtn").addEventListener("click", () => {
-            const fields = document.querySelectorAll("#designForm input, #designForm textarea");
-            let payload = {};
-            fields.forEach(field => {
-                payload[field.id] = field.value;
-            });
+<div class="section">
+  <h3>Booking Details</h3>
+  <div class="control-group">
+    <label for="booking-bg">Background Color:</label>
+    <input type="color" id="booking-bg">
+  </div>
+  <div class="control-group">
+    <label for="booking-text">Text Color:</label>
+    <input type="color" id="booking-text">
+  </div>
+  <div class="control-group">
+    <label for="booking-padding">Padding (px):</label>
+    <input type="number" id="booking-padding" min="0" max="50">
+  </div>
+</div>
 
-            fetch("/business_settings", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
-            })
-            .then(res => res.json())
-            .then(data => {
-                document.getElementById("status").innerText = data.message || data.error;
-            })
-            .catch(err => {
-                document.getElementById("status").innerText = "שגיאה בשמירה";
-                console.error(err);
-            });
-        });
-    </script>
+<button id="save-btn">Save Settings</button>
+
+<h2>Live Preview</h2>
+<div id="preview">
+  <h1>Sample Title</h1>
+  <h2>Sample Subtitle</h2>
+  <div>
+    <button class="preview-btn">Day 1</button>
+    <button class="preview-btn">Day 2</button>
+  </div>
+  <div>
+    <button class="preview-btn">Slot 10:00</button>
+    <button class="preview-btn">Slot 10:30</button>
+  </div>
+  <div id="booking-details">
+    Booking Details Example
+  </div>
+</div>
+
+<script>
+  // מיפוי בין input ל-keys ב-business_settings
+  const settingsMap = {
+    "body-bg": "body_background_color",
+    "body-text": "body_text_color",
+    "body-font-size": "body_font_size",
+    "day-bg": "day_button_background",
+    "day-text": "day_button_text_color",
+    "day-radius": "day_button_border_radius",
+    "day-padding": "day_button_padding",
+    "slot-bg": "slot_button_background",
+    "slot-text": "slot_button_text_color",
+    "slot-radius": "slot_button_border_radius",
+    "slot-padding": "slot_button_padding",
+    "booking-bg": "booking_details_background",
+    "booking-text": "booking_details_text_color",
+    "booking-padding": "booking_details_padding"
+  };
+
+  // Apply live preview
+  function applyPreview() {
+    document.body.style.backgroundColor = document.getElementById("body-bg").value;
+    document.body.style.color = document.getElementById("body-text").value;
+    document.body.style.fontSize = document.getElementById("body-font-size").value + "px";
+
+    const dayBtns = document.querySelectorAll(".preview-btn");
+    dayBtns.forEach((btn,i)=>{
+      if(i<2){
+        btn.style.backgroundColor = document.getElementById("day-bg").value;
+        btn.style.color = document.getElementById("day-text").value;
+        btn.style.borderRadius = document.getElementById("day-radius").value + "px";
+        btn.style.padding = document.getElementById("day-padding").value + "px";
+      } else {
+        btn.style.backgroundColor = document.getElementById("slot-bg").value;
+        btn.style.color = document.getElementById("slot-text").value;
+        btn.style.borderRadius = document.getElementById("slot-radius").value + "px";
+        btn.style.padding = document.getElementById("slot-padding").value + "px";
+      }
+    });
+
+    const booking = document.getElementById("booking-details");
+    booking.style.backgroundColor = document.getElementById("booking-bg").value;
+    booking.style.color = document.getElementById("booking-text").value;
+    booking.style.padding = document.getElementById("booking-padding").value + "px";
+  }
+
+  // Load current settings
+  fetch("/business_settings")
+    .then(res=>res.json())
+    .then(data=>{
+      for(const id in settingsMap){
+        if(data[settingsMap[id]]!==undefined){
+          document.getElementById(id).value = data[settingsMap[id]];
+        }
+      }
+      applyPreview();
+    });
+
+  // Add event listeners for live update
+  Object.keys(settingsMap).forEach(id=>{
+    document.getElementById(id).addEventListener("input", applyPreview);
+  });
+
+  // Save settings
+  document.getElementById("save-btn").addEventListener("click", ()=>{
+    const payload = {};
+    for(const id in settingsMap){
+      payload[settingsMap[id]] = document.getElementById(id).value;
+    }
+    fetch("/business_settings", {
+      method:"POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(payload)
+    }).then(res=>res.json()).then(res=>{
+      alert(res.message || "Settings saved!");
+    });
+  });
+</script>
+
 </body>
 </html>
