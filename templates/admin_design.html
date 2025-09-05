@@ -1,33 +1,15 @@
+<!-- templates/test_business_settings.html -->
 <!DOCTYPE html>
-<html lang="he">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>בדיקת Business Settings</title>
+    <title>Test Business Settings</title>
 </head>
 <body>
-    <h1>עדכון כותרת עמוד</h1>
-
-    <label for="page_title">כותרת חדשה:</label>
-    <input type="text" id="page_title">
-    <button onclick="saveSettings()">שמור</button>
-
-    <p id="status"></p>
-
-    <script>
-        const businessId = 1; // שים כאן ID אמיתי מהטבלה שלך
-
-        async function saveSettings() {
-            const title = document.getElementById("page_title").value;
-
-            const res = await fetch(`/business_settings/${businessId}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ page_title: title })
-            });
-
-            const data = await res.json();
-            document.getElementById("status").innerText = JSON.stringify(data);
-        }
-    </script>
+    <h2>שנה צבע רקע גוף</h2>
+    <form method="POST" action="/business_settings/1">
+        <label for="body_background_color">Body Background Color:</label>
+        <input type="text" id="body_background_color" name="body_background_color" placeholder="לדוגמה: #ffffff">
+        <button type="submit">שמור</button>
+    </form>
 </body>
 </html>
