@@ -1,207 +1,165 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <title>Design Settings</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js"></script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/classic.min.css"/>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f7f9fc;
-    }
-    .draggable {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 12px 18px;
-      margin: 10px;
-      border-radius: 8px;
-      background: #3498db;
-      color: white;
-      font-weight: bold;
-      cursor: move;
-      transition: transform 0.2s ease, box-shadow 0.2s ease, outline 0.2s ease;
-    }
-    .draggable:active {
-      transform: scale(0.95);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-    .selected {
-      outline: 3px solid #ff9800;
-      transform: scale(1.05);
-      box-shadow: 0 6px 14px rgba(0,0,0,0.25);
-    }
-    #editorPanel {
-      background: white;
-      padding: 15px;
-      border-radius: 12px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    #canvas {
-      border: 2px dashed #ccc;
-      min-height: 400px;
-      padding: 20px;
-      background: white;
-      border-radius: 12px;
-    }
-    input[type="text"], select {
-      border: 1px solid #ddd;
-      padding: 6px 10px;
-      border-radius: 6px;
-      margin-top: 6px;
-      margin-bottom: 12px;
-      width: 100%;
-    }
-  </style>
-</head>
-<body class="p-6">
-
-  <h1 class="text-2xl font-bold mb-6">🎨 עיצוב העסק</h1>
-
-  <div class="grid grid-cols-4 gap-6">
-    <!-- לוח עריכה -->
-    <div id="editorPanel" class="col-span-1">
-      <h2 class="text-lg font-semibold mb-4">🔧 אפשרויות עריכה</h2>
-
-      <label class="block mb-2">טקסט:</label>
-      <input type="text" id="elementText" placeholder="הכנס טקסט חדש">
-
-      <label class="block mb-2">פונט:</label>
-      <select id="fontSelect">
-        <option value="Arial">Arial</option>
-        <option value="Tahoma">Tahoma</option>
-        <option value="Verdana">Verdana</option>
-        <option value="Courier New">Courier New</option>
-      </select>
-
-      <label class="block mb-2">גודל טקסט:</label>
-      <input type="text" id="fontSize" placeholder="למשל 18px">
-
-      <label class="block mb-2">צבע רקע:</label>
-      <div id="bgColorPicker"></div>
-
-      <label class="block mb-2 mt-4">צבע טקסט:</label>
-      <div id="textColorPicker"></div>
-
-      <button id="saveLayout" class="mt-6 w-full bg-green-600 text-white py-2 rounded-lg shadow hover:bg-green-700">💾 שמור עיצוב</button>
-    </div>
-
-    <!-- קנבס -->
-    <div id="canvas" class="col-span-3 flex flex-col items-center justify-center">
-      <div class="draggable" data-type="day">יום בשבוע</div>
-      <div class="draggable" data-type="slot">שעה</div>
-      <div class="draggable" data-type="title">כותרת</div>
-    </div>
-  </div>
-
-  <script>
-    let selectedElement = null;
-
-    // הפיכת האלמנטים לגרירים
-    interact('.draggable').draggable({
-      listeners: {
-        move(event) {
-          const target = event.target;
-          const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
-          const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
-          target.style.transform = `translate(${x}px, ${y}px)`;
-          target.setAttribute('data-x', x);
-          target.setAttribute('data-y', y);
+    <meta charset="UTF-8">
+    <title>עורך עיצוב</title>
+    <style>
+        body {
+            background-color: {{ settings.body_background_color }};
+            color: {{ settings.body_text_color }};
+            font-family: {{ settings.body_font_family }};
+            font-size: {{ settings.body_font_size }};
+            margin: {{ settings.body_margin }};
+            padding: {{ settings.body_padding }};
+            max-width: {{ settings.body_max_width }};
         }
-      }
-    });
+        h1 {
+            font-family: {{ settings.heading_font_family }};
+            font-size: {{ settings.heading_font_size }};
+        }
+        h2 {
+            font-family: {{ settings.heading_font_family }};
+            font-size: calc({{ settings.heading_font_size }} - 4px);
+        }
+        .day-button {
+            background-color: {{ settings.day_button_background }};
+            color: {{ settings.day_button_text_color }};
+            border-radius: {{ settings.day_button_border_radius }};
+            padding: {{ settings.day_button_padding }};
+            cursor: pointer;
+            margin: 6px;
+        }
+        .slot-button {
+            background-color: {{ settings.slot_button_background }};
+            color: {{ settings.slot_button_text_color }};
+            border-radius: {{ settings.slot_button_border_radius }};
+            padding: {{ settings.slot_button_padding }};
+            cursor: pointer;
+            margin: 6px;
+        }
+        .editor-panel {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: #fff;
+            border: 1px solid #ccc;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            display: none;
+            z-index: 1000;
+        }
+        .editor-panel.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1 id="page-title" contenteditable="true">{{ settings.page_title }}</h1>
+    <h2 id="page-subtitle" contenteditable="true">{{ settings.page_subtitle }}</h2>
 
-    // בחירת אלמנט
-    document.querySelectorAll('.draggable').forEach(el => {
-      el.addEventListener('click', () => {
-        // ננקה בחירה קודמת
-        document.querySelectorAll('.draggable').forEach(item => item.classList.remove('selected'));
-        // נגדיר אלמנט חדש כבחור
-        selectedElement = el;
-        el.classList.add('selected');
+    <!-- כפתור יום אחד -->
+    <button id="day-button" class="day-button">יום</button>
 
-        // נעדכן ערכי טופס
-        document.getElementById('elementText').value = el.textContent;
-        document.getElementById('fontSelect').value = el.style.fontFamily || "Arial";
-        document.getElementById('fontSize').value = el.style.fontSize || "16px";
-      });
-    });
+    <!-- כפתור שעה אחד -->
+    <button id="slot-button" class="slot-button">10:00</button>
 
-    // שינוי טקסט
-    document.getElementById('elementText').addEventListener('input', e => {
-      if (selectedElement) {
-        selectedElement.textContent = e.target.value;
-      }
-    });
+    <!-- פאנל עריכה -->
+    <div id="editor-panel" class="editor-panel">
+        <h3>עריכת אלמנט</h3>
+        <label>צבע רקע: <input type="color" id="bg-color"></label><br>
+        <label>צבע טקסט: <input type="color" id="text-color"></label><br>
+        <label>פונט: <input type="text" id="font-family"></label><br>
+        <label>גודל טקסט: <input type="text" id="font-size"></label><br>
+        <label>Border Radius: <input type="text" id="border-radius"></label><br>
+        <label>Padding: <input type="text" id="padding"></label><br>
+        <button onclick="saveChanges()">שמור</button>
+    </div>
 
-    // שינוי פונט
-    document.getElementById('fontSelect').addEventListener('change', e => {
-      if (selectedElement) {
-        selectedElement.style.fontFamily = e.target.value;
-      }
-    });
+    <script>
+        let selectedElement = null;
+        let selectedType = null;
 
-    // שינוי גודל
-    document.getElementById('fontSize').addEventListener('input', e => {
-      if (selectedElement) {
-        selectedElement.style.fontSize = e.target.value;
-      }
-    });
+        function openEditor(element, type) {
+            selectedElement = element;
+            selectedType = type;
 
-    // פלטת צבע רקע
-    const bgPicker = Pickr.create({
-      el: '#bgColorPicker',
-      theme: 'classic',
-      default: '#3498db',
-      components: { preview: true, opacity: true, hue: true, interaction: { hex: true, input: true } }
-    });
-    bgPicker.on('change', (color) => {
-      if (selectedElement) {
-        selectedElement.style.backgroundColor = color.toHEXA().toString();
-      }
-    });
+            // לטעון ערכים מהסטייל הנוכחי
+            document.getElementById('bg-color').value = rgbToHex(window.getComputedStyle(element).backgroundColor);
+            document.getElementById('text-color').value = rgbToHex(window.getComputedStyle(element).color);
+            document.getElementById('font-family').value = window.getComputedStyle(element).fontFamily;
+            document.getElementById('font-size').value = window.getComputedStyle(element).fontSize;
+            document.getElementById('border-radius').value = window.getComputedStyle(element).borderRadius;
+            document.getElementById('padding').value = window.getComputedStyle(element).padding;
 
-    // פלטת צבע טקסט
-    const textPicker = Pickr.create({
-      el: '#textColorPicker',
-      theme: 'classic',
-      default: '#ffffff',
-      components: { preview: true, opacity: true, hue: true, interaction: { hex: true, input: true } }
-    });
-    textPicker.on('change', (color) => {
-      if (selectedElement) {
-        selectedElement.style.color = color.toHEXA().toString();
-      }
-    });
+            document.getElementById('editor-panel').classList.add('active');
+        }
 
-    // שמירה למסד נתונים
-    document.getElementById('saveLayout').addEventListener('click', async () => {
-      const layout = [];
-      document.querySelectorAll('.draggable').forEach(el => {
-        layout.push({
-          type: el.dataset.type,
-          text: el.textContent,
-          x: el.getAttribute('data-x') || 0,
-          y: el.getAttribute('data-y') || 0,
-          bgColor: el.style.backgroundColor,
-          textColor: el.style.color,
-          fontFamily: el.style.fontFamily,
-          fontSize: el.style.fontSize
+        function saveChanges() {
+            if (!selectedElement || !selectedType) return;
+
+            let bg = document.getElementById('bg-color').value;
+            let color = document.getElementById('text-color').value;
+            let fontFamily = document.getElementById('font-family').value;
+            let fontSize = document.getElementById('font-size').value;
+            let borderRadius = document.getElementById('border-radius').value;
+            let padding = document.getElementById('padding').value;
+
+            if (selectedType === 'title' || selectedType === 'subtitle') {
+                selectedElement.style.color = color;
+                selectedElement.style.fontFamily = fontFamily;
+                selectedElement.style.fontSize = fontSize;
+            } else {
+                selectedElement.style.backgroundColor = bg;
+                selectedElement.style.color = color;
+                selectedElement.style.fontFamily = fontFamily;
+                selectedElement.style.fontSize = fontSize;
+                selectedElement.style.borderRadius = borderRadius;
+                selectedElement.style.padding = padding;
+            }
+
+            // שמירה במסד
+            fetch('/design_settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: selectedType,
+                    background: bg,
+                    color: color,
+                    font_family: fontFamily,
+                    font_size: fontSize,
+                    border_radius: borderRadius,
+                    padding: padding,
+                    text: (selectedType === 'title' || selectedType === 'subtitle') ? selectedElement.innerText : null
+                })
+            }).then(res => res.json()).then(data => {
+                console.log("Saved:", data);
+            });
+
+            document.getElementById('editor-panel').classList.remove('active');
+        }
+
+        function rgbToHex(rgb) {
+            let result = rgb.match(/\d+/g);
+            return result ? "#" + result.slice(0, 3).map(x => {
+                let hex = parseInt(x).toString(16);
+                return hex.length === 1 ? "0" + hex : hex;
+            }).join("") : rgb;
+        }
+
+        // מאזינים
+        document.getElementById('page-title').addEventListener('click', function() {
+            openEditor(this, 'title');
         });
-      });
-
-      const res = await fetch('/business_settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ layout_json: layout })
-      });
-
-      const data = await res.json();
-      alert(data.message || "נשמר בהצלחה!");
-    });
-  </script>
+        document.getElementById('page-subtitle').addEventListener('click', function() {
+            openEditor(this, 'subtitle');
+        });
+        document.getElementById('day-button').addEventListener('click', function() {
+            openEditor(this, 'day_button');
+        });
+        document.getElementById('slot-button').addEventListener('click', function() {
+            openEditor(this, 'slot_button');
+        });
+    </script>
 </body>
 </html>
