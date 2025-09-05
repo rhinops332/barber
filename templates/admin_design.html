@@ -1,263 +1,493 @@
+<!-- templates/admin_design_wysiwyg.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HairBoss - Admin Design</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Admin Design — {{ business_name }}</title>
 <style>
-  body {
-    font-family: Arial, sans-serif;
-    max-width: 900px;
-    margin: 30px auto;
-    padding: 20px;
-    background: #f0f4ff;
-    color: #2c3e50;
-  }
-  h1, h2 {
-    text-align: center;
-    margin: 0 0 20px;
-  }
-  .section {
-    margin-bottom: 25px;
-    padding: 15px;
-    border-radius: 10px;
-    background: #fff;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-  }
-  .section h3 {
-    margin-bottom: 10px;
-    color: #2980b9;
-  }
-  .control-group {
-    display: flex;
-    align-items: center;
-    margin-bottom: 10px;
-    gap: 12px;
-  }
-  .control-group label {
-    min-width: 180px;
-  }
-  .control-group input[type="color"],
-  .control-group input[type="number"],
-  .control-group select {
-    flex-grow: 1;
-    padding: 6px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-  }
-  button#save-btn {
-    display: block;
-    width: 150px;
-    margin: 20px auto;
-    padding: 10px;
-    font-weight: bold;
-    border-radius: 8px;
-    border: none;
-    background: #27ae60;
-    color: white;
-    cursor: pointer;
-  }
-  button#save-btn:hover {
-    background: #1e8449;
+  :root{
+    --ui-bg:#ffffff;
+    --page-bg:#f0f4ff;
+    --page-text:#2c3e50;
+    --accent:#3498db;
+    --slot:#2ecc71;
+    --radius:10px;
+    --gap:12px;
+    --font-body: "Arial, sans-serif";
+    --font-size:16px;
   }
 
-  /* Live Preview Styles */
-  #preview {
-    margin-top: 30px;
-    padding: 20px;
-    border-radius: 12px;
-    background: #fff;
-    box-shadow: 0 0 12px rgba(0,0,0,0.15);
+  html,body{height:100%;margin:0;font-family:var(--font-body);background:var(--page-bg);color:var(--page-text);-webkit-font-smoothing:antialiased;}
+  .app { max-width:1200px; margin:18px auto; display:grid; grid-template-columns:420px 1fr; gap:18px; padding:16px; box-sizing:border-box; }
+  header { grid-column:1/3; display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:4px; }
+  header h1 { margin:0; font-size:20px; }
+  header .controls { display:flex; gap:8px; align-items:center; }
+
+  /* left panel (controls) */
+  .panel { background:var(--ui-bg); padding:12px; border-radius:10px; box-shadow:0 6px 18px rgba(10,20,30,0.06); max-height:calc(100vh - 120px); overflow:auto; }
+  .section { margin-bottom:14px; border-radius:8px; padding:8px; background:#fbfcfd; border:1px solid rgba(0,0,0,0.03); }
+  .section h3{ margin:6px 0 10px; font-size:14px; color:var(--accent); }
+  .row { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+  .row label{ width:150px; font-size:13px; }
+  .row input[type="color"], .row input[type="number"], .row select, .row input[type="text"]{ flex:1; padding:6px; border-radius:6px; border:1px solid #ddd; }
+  .row input[type="range"]{ flex:1; }
+  .small { width:80px; }
+
+  .palette { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+  .swatch { width:28px; height:28px; border-radius:6px; cursor:pointer; border:1px solid rgba(0,0,0,0.06); box-shadow:inset 0 -2px 0 rgba(0,0,0,0.06); }
+
+  button.primary { background:var(--slot); color:white; border:none; border-radius:8px; padding:8px 12px; cursor:pointer; }
+  button.ghost { background:transparent; border:1px solid #ddd; padding:6px 10px; border-radius:8px; cursor:pointer; }
+
+  /* right: preview area */
+  .preview-wrap { position:relative; }
+  #preview-stage { background:var(--page-bg); padding:24px; border-radius:12px; min-height:520px; box-shadow:0 8px 22px rgba(0,0,0,0.06); overflow:hidden; transition:background .15s,color .15s; }
+  #preview-canvas { width:100%; max-width:760px; margin:0 auto; background:var(--ui-bg); padding:18px; border-radius:12px; box-sizing:border-box; position:relative; }
+  #preview-canvas h1 { text-align:center; margin:4px 0; }
+  #preview-canvas h2 { text-align:center; margin:2px 0 12px; font-weight:400; color:rgba(44,62,80,0.8); }
+  .preview-row { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-bottom:12px; }
+
+  .element {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:64px;
+    min-height:36px;
+    padding:8px 12px;
+    margin:6px;
+    border-radius:8px;
+    background:var(--accent);
+    color:#fff;
+    cursor:grab;
+    user-select:none;
+    transition:box-shadow .12s, transform .12s;
+    position:absolute;
+    transform-origin:center;
   }
-  #preview h1, #preview h2 {
-    text-align: center;
-  }
-  .preview-btn {
-    padding: 10px 20px;
-    margin: 5px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    color: white;
-    background: #3498db;
-    transition: 0.2s;
-  }
+  .element.dragging{ cursor:grabbing; opacity:0.95; transform:scale(1.02); box-shadow:0 12px 30px rgba(0,0,0,0.12); }
+  .element.selected{ outline:3px solid rgba(41,128,185,0.18); box-shadow:0 8px 20px rgba(0,0,0,0.08); }
+
+  #element-toolbar { position:sticky; top:8px; background:transparent; z-index:40; }
+
+  /* bottom status */
+  .status { margin-top:12px; display:flex; justify-content:space-between; gap:8px; align-items:center; font-size:13px; color:#666; }
+
+  /* responsive */
+  @media (max-width:980px){ .app{grid-template-columns:1fr; padding:12px;} header{flex-wrap:wrap;} }
 </style>
 </head>
 <body>
+  <div class="app">
+    <header>
+      <h1>Editor — {{ business_name }}</h1>
+      <div class="controls">
+        <button id="undoBtn" class="ghost">Undo</button>
+        <button id="redoBtn" class="ghost">Redo</button>
+        <button id="finishBtn" class="primary">Finish & Save</button>
+      </div>
+    </header>
 
-<h1>{{ business_name }}</h1>
-<h2>Admin Design Panel</h2>
+    <!-- left controls -->
+    <aside class="panel" id="controlsPanel">
+      <div class="section" id="globalSection">
+        <h3>Global / Page</h3>
+        <div class="row"><label>Background</label><input type="color" id="body_bg"></div>
+        <div class="row"><label>Text Color</label><input type="color" id="body_text"></div>
+        <div class="row"><label>Font family</label>
+          <select id="font_family">
+            <option value="Arial, sans-serif">Arial</option>
+            <option value="Helvetica, sans-serif">Helvetica</option>
+            <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI</option>
+            <option value="'Roboto', sans-serif">Roboto</option>
+          </select>
+        </div>
+        <div class="row"><label>Font size (px)</label><input type="number" id="font_size" class="small" min="10" max="36"></div>
+      </div>
 
-<div class="section">
-  <h3>Body</h3>
-  <div class="control-group">
-    <label for="body-bg">Background Color:</label>
-    <input type="color" id="body-bg">
-  </div>
-  <div class="control-group">
-    <label for="body-text">Text Color:</label>
-    <input type="color" id="body-text">
-  </div>
-  <div class="control-group">
-    <label for="body-font-size">Font Size (px):</label>
-    <input type="number" id="body-font-size" min="10" max="50">
-  </div>
-</div>
+      <div class="section" id="elementsSection">
+        <h3>New element</h3>
+        <div class="row">
+          <label>Type</label>
+          <select id="newType">
+            <option value="day">Day button</option>
+            <option value="slot">Slot button</option>
+            <option value="title">Title</option>
+          </select>
+        </div>
+        <div class="row">
+          <label>Label</label>
+          <input type="text" id="newLabel" placeholder="Text shown on element">
+        </div>
+        <div class="row">
+          <label></label>
+          <button id="addElement" class="primary">Add to canvas</button>
+        </div>
+      </div>
 
-<div class="section">
-  <h3>Day Buttons</h3>
-  <div class="control-group">
-    <label for="day-bg">Button Background:</label>
-    <input type="color" id="day-bg">
-  </div>
-  <div class="control-group">
-    <label for="day-text">Button Text Color:</label>
-    <input type="color" id="day-text">
-  </div>
-  <div class="control-group">
-    <label for="day-radius">Border Radius (px):</label>
-    <input type="number" id="day-radius" min="0" max="50">
-  </div>
-  <div class="control-group">
-    <label for="day-padding">Padding (px):</label>
-    <input type="number" id="day-padding" min="0" max="50">
-  </div>
-</div>
+      <div class="section" id="styleSection">
+        <h3>Selected element style</h3>
+        <div class="row"><label>BG Color</label><input type="color" id="sel_bg"></div>
+        <div class="row"><label>Text Color</label><input type="color" id="sel_text"></div>
+        <div class="row"><label>Radius (px)</label><input type="number" id="sel_radius" class="small" min="0" max="60"></div>
+        <div class="row"><label>Padding (px)</label><input type="number" id="sel_padding" class="small" min="0" max="60"></div>
+        <div class="row"><label>Font size (px)</label><input type="number" id="sel_fontsize" class="small" min="8" max="48"></div>
+        <div class="row"><label>Font family</label>
+          <select id="sel_font">
+            <option value="inherit">inherit</option>
+            <option value="Arial, sans-serif">Arial</option>
+            <option value="Helvetica, sans-serif">Helvetica</option>
+            <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI</option>
+            <option value="'Roboto', sans-serif">Roboto</option>
+          </select>
+        </div>
+        <div class="row"><label>Layer</label><input type="number" id="sel_z" class="small" min="0" max="999"></div>
+        <div class="row"><label></label><button id="deleteElem" class="ghost">Delete</button></div>
+      </div>
 
-<div class="section">
-  <h3>Slot Buttons</h3>
-  <div class="control-group">
-    <label for="slot-bg">Button Background:</label>
-    <input type="color" id="slot-bg">
-  </div>
-  <div class="control-group">
-    <label for="slot-text">Button Text Color:</label>
-    <input type="color" id="slot-text">
-  </div>
-  <div class="control-group">
-    <label for="slot-radius">Border Radius (px):</label>
-    <input type="number" id="slot-radius" min="0" max="50">
-  </div>
-  <div class="control-group">
-    <label for="slot-padding">Padding (px):</label>
-    <input type="number" id="slot-padding" min="0" max="50">
-  </div>
-</div>
+      <div class="section">
+        <h3>Palette quick-picks</h3>
+        <div class="palette" id="presetColors">
+          <div class="swatch" data-color="#2ecc71" style="background:#2ecc71"></div>
+          <div class="swatch" data-color="#3498db" style="background:#3498db"></div>
+          <div class="swatch" data-color="#e67e22" style="background:#e67e22"></div>
+          <div class="swatch" data-color="#9b59b6" style="background:#9b59b6"></div>
+          <div class="swatch" data-color="#e74c3c" style="background:#e74c3c"></div>
+          <div class="swatch" data-color="#34495e" style="background:#34495e"></div>
+        </div>
+      </div>
 
-<div class="section">
-  <h3>Booking Details</h3>
-  <div class="control-group">
-    <label for="booking-bg">Background Color:</label>
-    <input type="color" id="booking-bg">
-  </div>
-  <div class="control-group">
-    <label for="booking-text">Text Color:</label>
-    <input type="color" id="booking-text">
-  </div>
-  <div class="control-group">
-    <label for="booking-padding">Padding (px):</label>
-    <input type="number" id="booking-padding" min="0" max="50">
-  </div>
-</div>
+      <div class="section">
+        <h3>Layout JSON (raw)</h3>
+        <textarea id="rawLayout" style="width:100%;min-height:120px;padding:8px;border-radius:6px;border:1px solid #ddd;font-size:12px;"></textarea>
+      </div>
 
-<button id="save-btn">Save Settings</button>
+      <div class="status">
+        <div id="saveStatus">Ready</div>
+        <div>Preview editable — drag items</div>
+      </div>
+    </aside>
 
-<h2>Live Preview</h2>
-<div id="preview">
-  <h1>Sample Title</h1>
-  <h2>Sample Subtitle</h2>
-  <div>
-    <button class="preview-btn">Day 1</button>
-    <button class="preview-btn">Day 2</button>
+    <!-- right: preview area -->
+    <main class="preview-wrap">
+      <div id="preview-stage">
+        <div id="preview-canvas">
+          <h1 id="pv_title">Sample Title</h1>
+          <h2 id="pv_subtitle">Sample Subtitle</h2>
+
+          <!-- elements will be placed absolutely into this container -->
+          <div id="elements-container" style="position:relative; width:100%; height:420px;"></div>
+
+          <div id="pv_booking" style="margin-top:8px; padding:10px; border-radius:8px; background:#fff; color:#2c3e50;">
+            Booking details example
+          </div>
+        </div>
+      </div>
+    </main>
   </div>
-  <div>
-    <button class="preview-btn">Slot 10:00</button>
-    <button class="preview-btn">Slot 10:30</button>
-  </div>
-  <div id="booking-details">
-    Booking Details Example
-  </div>
-</div>
 
 <script>
-  // מיפוי בין input ל-keys ב-business_settings
-  const settingsMap = {
-    "body-bg": "body_background_color",
-    "body-text": "body_text_color",
-    "body-font-size": "body_font_size",
-    "day-bg": "day_button_background",
-    "day-text": "day_button_text_color",
-    "day-radius": "day_button_border_radius",
-    "day-padding": "day_button_padding",
-    "slot-bg": "slot_button_background",
-    "slot-text": "slot_button_text_color",
-    "slot-radius": "slot_button_border_radius",
-    "slot-padding": "slot_button_padding",
-    "booking-bg": "booking_details_background",
-    "booking-text": "booking_details_text_color",
-    "booking-padding": "booking_details_padding"
-  };
+/* Minimal WYSIWYG editor logic:
+   - supports adding draggable elements, selecting, styling, z-index (layer)
+   - keeps a layout model (layout.elements: [{id,type,label,x,y,w,h,style}] )
+   - serializes layout_json and sends to /business_settings on Finish
+*/
 
-  // Apply live preview
-  function applyPreview() {
-    document.body.style.backgroundColor = document.getElementById("body-bg").value;
-    document.body.style.color = document.getElementById("body-text").value;
-    document.body.style.fontSize = document.getElementById("body-font-size").value + "px";
+let layout = { elements: [] };
+let history = [], historyPos = -1;
 
-    const dayBtns = document.querySelectorAll(".preview-btn");
-    dayBtns.forEach((btn,i)=>{
-      if(i<2){
-        btn.style.backgroundColor = document.getElementById("day-bg").value;
-        btn.style.color = document.getElementById("day-text").value;
-        btn.style.borderRadius = document.getElementById("day-radius").value + "px";
-        btn.style.padding = document.getElementById("day-padding").value + "px";
-      } else {
-        btn.style.backgroundColor = document.getElementById("slot-bg").value;
-        btn.style.color = document.getElementById("slot-text").value;
-        btn.style.borderRadius = document.getElementById("slot-radius").value + "px";
-        btn.style.padding = document.getElementById("slot-padding").value + "px";
-      }
-    });
+const elContainer = document.getElementById('elements-container');
+const rawLayout = document.getElementById('rawLayout');
+const saveStatus = document.getElementById('saveStatus');
 
-    const booking = document.getElementById("booking-details");
-    booking.style.backgroundColor = document.getElementById("booking-bg").value;
-    booking.style.color = document.getElementById("booking-text").value;
-    booking.style.padding = document.getElementById("booking-padding").value + "px";
-  }
+function uid(prefix='e'){ return prefix + Math.random().toString(36).slice(2,9); }
 
-  // Load current settings
-  fetch("/business_settings")
-    .then(res=>res.json())
-    .then(data=>{
-      for(const id in settingsMap){
-        if(data[settingsMap[id]]!==undefined){
-          document.getElementById(id).value = data[settingsMap[id]];
-        }
-      }
-      applyPreview();
-    });
+function pushHistory() {
+  history = history.slice(0, historyPos+1);
+  history.push(JSON.stringify(layout));
+  historyPos++;
+  updateUndoRedo();
+}
 
-  // Add event listeners for live update
-  Object.keys(settingsMap).forEach(id=>{
-    document.getElementById(id).addEventListener("input", applyPreview);
-  });
+function updateUndoRedo(){
+  document.getElementById('undoBtn').disabled = historyPos <= 0;
+  document.getElementById('redoBtn').disabled = historyPos >= history.length-1;
+}
 
-  // Save settings
-  document.getElementById("save-btn").addEventListener("click", ()=>{
-    const payload = {};
-    for(const id in settingsMap){
-      payload[settingsMap[id]] = document.getElementById(id).value;
+document.getElementById('undoBtn').addEventListener('click', ()=>{
+  if(historyPos>0){ historyPos--; layout = JSON.parse(history[historyPos]); renderLayout(); updateUndoRedo(); }
+});
+document.getElementById('redoBtn').addEventListener('click', ()=>{
+  if(historyPos < history.length-1){ historyPos++; layout = JSON.parse(history[historyPos]); renderLayout(); updateUndoRedo(); }
+});
+
+function createElementModel(type,label){
+  return {
+    id: uid(),
+    type: type,
+    label: label || (type==='day'?'יום': type==='slot'?'שעה':'כותרת'),
+    x: 20 + Math.random()*200,
+    y: 20 + Math.random()*60,
+    w: 120,
+    h: 40,
+    z: 1,
+    style: {
+      background: type==='slot' ? getComputedStyle(document.documentElement).getPropertyValue('--slot').trim() || '#2ecc71' : getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#3498db',
+      color: '#ffffff',
+      radius: 8,
+      padding: 8,
+      fontsize: 14,
+      font: 'inherit'
     }
-    fetch("/business_settings", {
-      method:"POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify(payload)
-    }).then(res=>res.json()).then(res=>{
-      alert(res.message || "Settings saved!");
-    });
-  });
-</script>
+  };
+}
 
+function elToDom(item){
+  const d = document.createElement('div');
+  d.className = 'element';
+  d.dataset.id = item.id;
+  d.style.left = item.x + 'px';
+  d.style.top = item.y + 'px';
+  d.style.width = item.w + 'px';
+  d.style.height = item.h + 'px';
+  d.style.zIndex = item.z;
+  d.style.background = item.style.background;
+  d.style.color = item.style.color;
+  d.style.borderRadius = item.style.radius + 'px';
+  d.style.padding = item.style.padding + 'px';
+  d.style.fontSize = item.style.fontsize + 'px';
+  d.style.fontFamily = item.style.font;
+  d.textContent = item.label;
+  d.title = item.id;
+  d.addEventListener('pointerdown', startDrag);
+  d.addEventListener('dblclick', editLabel);
+  d.addEventListener('contextmenu', e => { e.preventDefault(); selectElement(item.id); });
+  return d;
+}
+
+let selectedId = null;
+function selectElement(id){
+  selectedId = id;
+  document.querySelectorAll('.element').forEach(n=>n.classList.toggle('selected', n.dataset.id===id));
+  const model = layout.elements.find(x=>x.id===id);
+  if(!model) return;
+  document.getElementById('sel_bg').value = model.style.background || '#000000';
+  document.getElementById('sel_text').value = model.style.color || '#ffffff';
+  document.getElementById('sel_radius').value = model.style.radius || 8;
+  document.getElementById('sel_padding').value = model.style.padding || 8;
+  document.getElementById('sel_fontsize').value = model.style.fontsize || 14;
+  document.getElementById('sel_font').value = model.style.font || 'inherit';
+  document.getElementById('sel_z').value = model.z || 1;
+}
+
+function renderLayout(){
+  elContainer.innerHTML = '';
+  layout.elements.forEach(item=>{
+    const dom = elToDom(item);
+    elContainer.appendChild(dom);
+  });
+  rawLayout.value = JSON.stringify(layout, null, 2);
+  updatePreviewFromGlobals();
+  selectElement(selectedId);
+  pushHistory();
+}
+
+function addElement(type,label){
+  const m = createElementModel(type,label);
+  layout.elements.push(m);
+  renderLayout();
+}
+
+document.getElementById('addElement').addEventListener('click', ()=>{
+  const type = document.getElementById('newType').value;
+  const label = document.getElementById('newLabel').value || undefined;
+  addElement(type,label);
+  document.getElementById('newLabel').value = '';
+});
+
+function editLabel(e){
+  const id = e.currentTarget.dataset.id;
+  const model = layout.elements.find(x=>x.id===id);
+  const nLabel = prompt('ערוך טקסט:', model.label);
+  if(nLabel!==null){ model.label = nLabel; renderLayout(); }
+}
+
+/* Drag & drop */
+let dragState = null;
+function startDrag(e){
+  e.preventDefault();
+  const el = e.currentTarget;
+  const id = el.dataset.id;
+  const model = layout.elements.find(x=>x.id===id);
+  dragState = { id, sx: e.clientX, sy: e.clientY, ox: model.x, oy: model.y, el };
+  el.classList.add('dragging');
+  el.setPointerCapture(e.pointerId);
+  el.addEventListener('pointermove', duringDrag);
+  el.addEventListener('pointerup', endDrag);
+}
+function duringDrag(e){
+  if(!dragState) return;
+  const dx = e.clientX - dragState.sx;
+  const dy = e.clientY - dragState.sy;
+  const model = layout.elements.find(x=>x.id===dragState.id);
+  model.x = Math.max(0, dragState.ox + dx);
+  model.y = Math.max(0, dragState.oy + dy);
+  const dom = dragState.el;
+  dom.style.left = model.x + 'px'; dom.style.top = model.y + 'px';
+}
+function endDrag(e){
+  if(!dragState) return;
+  const dom = dragState.el;
+  dom.classList.remove('dragging');
+  dom.releasePointerCapture(e.pointerId);
+  dom.removeEventListener('pointermove', duringDrag);
+  dom.removeEventListener('pointerup', endDrag);
+  pushHistory();
+  rawLayout.value = JSON.stringify(layout, null, 2);
+  dragState = null;
+}
+
+/* selection / style controls */
+document.getElementById('elements-container').addEventListener('click', (ev)=>{
+  if(ev.target.classList.contains('element')){ selectElement(ev.target.dataset.id); }
+});
+
+document.getElementById('sel_bg').addEventListener('input', (e)=>{
+  if(!selectedId) return;
+  const m = layout.elements.find(x=>x.id===selectedId);
+  m.style.background = e.target.value; renderLayout();
+});
+document.getElementById('sel_text').addEventListener('input', (e)=>{
+  if(!selectedId) return;
+  const m = layout.elements.find(x=>x.id===selectedId);
+  m.style.color = e.target.value; renderLayout();
+});
+document.getElementById('sel_radius').addEventListener('input', (e)=>{
+  if(!selectedId) return;
+  const m = layout.elements.find(x=>x.id===selectedId);
+  m.style.radius = parseInt(e.target.value||0); renderLayout();
+});
+document.getElementById('sel_padding').addEventListener('input', (e)=>{
+  if(!selectedId) return;
+  const m = layout.elements.find(x=>x.id===selectedId);
+  m.style.padding = parseInt(e.target.value||0); renderLayout();
+});
+document.getElementById('sel_fontsize').addEventListener('input', (e)=>{
+  if(!selectedId) return;
+  const m = layout.elements.find(x=>x.id===selectedId);
+  m.style.fontsize = parseInt(e.target.value||12); renderLayout();
+});
+document.getElementById('sel_font').addEventListener('change', (e)=>{
+  if(!selectedId) return;
+  const m = layout.elements.find(x=>x.id===selectedId);
+  m.style.font = e.target.value; renderLayout();
+});
+document.getElementById('sel_z').addEventListener('input', (e)=>{
+  if(!selectedId) return;
+  const m = layout.elements.find(x=>x.id===selectedId);
+  m.z = parseInt(e.target.value||1); renderLayout();
+});
+document.getElementById('deleteElem').addEventListener('click', ()=>{
+  if(!selectedId) return;
+  layout.elements = layout.elements.filter(x=>x.id!==selectedId);
+  selectedId = null; renderLayout();
+});
+
+/* global settings */
+document.getElementById('body_bg').addEventListener('input', e => { document.documentElement.style.setProperty('--page-bg', e.target.value); updatePreviewFromGlobals(); });
+document.getElementById('body_text').addEventListener('input', e => { document.documentElement.style.setProperty('--page-text', e.target.value); updatePreviewFromGlobals(); });
+document.getElementById('font_family').addEventListener('change', e => { document.documentElement.style.setProperty('--font-body', e.target.value); updatePreviewFromGlobals(); });
+document.getElementById('font_size').addEventListener('input', e => { document.documentElement.style.setProperty('--font-size', e.target.value+'px'); updatePreviewFromGlobals(); });
+
+function updatePreviewFromGlobals(){
+  // page background / text / canvas background etc.
+  document.getElementById('preview-stage').style.background = getComputedStyle(document.documentElement).getPropertyValue('--page-bg').trim();
+  document.getElementById('preview-stage').style.color = getComputedStyle(document.documentElement).getPropertyValue('--page-text').trim();
+  document.getElementById('pv_title').style.fontFamily = getComputedStyle(document.documentElement).getPropertyValue('--font-body').trim();
+  document.getElementById('pv_title').style.fontSize = (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--font-size'))||16) + 'px';
+}
+
+/* quick-pick palette */
+document.getElementById('presetColors').querySelectorAll('.swatch').forEach(s=>{
+  s.addEventListener('click', e=>{
+    const c = e.target.dataset.color;
+    // apply to selected element bg if exists otherwise to body bg
+    if(selectedId){
+      const m = layout.elements.find(x=>x.id===selectedId); m.style.background = c; renderLayout();
+    } else { document.getElementById('body_bg').value = c; document.documentElement.style.setProperty('--page-bg', c); updatePreviewFromGlobals(); }
+  });
+});
+
+/* load settings from server */
+function loadSettings(){
+  fetch('/business_settings').then(r=>r.json()).then(data=>{
+    // load globals if present
+    if(data.body_background_color) document.getElementById('body_bg').value = data.body_background_color;
+    if(data.body_text_color) document.getElementById('body_text').value = data.body_text_color;
+    if(data.body_font_family) document.getElementById('font_family').value = data.body_font_family;
+    if(data.body_font_size) document.getElementById('font_size').value = parseInt(data.body_font_size) || 16;
+
+    // layout_json
+    let lj = data.layout_json || data.layout || null;
+    if(typeof lj === 'string'){
+      try { lj = JSON.parse(lj); } catch(e){ lj = null; }
+    }
+    if(lj && lj.elements){
+      layout = lj;
+    } else {
+      layout = { elements: [] };
+      // create some defaults if empty
+      layout.elements.push(createElementModel('day','Sun'));
+      layout.elements.push(createElementModel('slot','10:00'));
+      layout.elements.push(createElementModel('title','Book Appointment'));
+    }
+    renderLayout();
+    document.getElementById('rawLayout').value = JSON.stringify(layout, null, 2);
+  }).catch(err=>{
+    console.error('load settings error', err);
+    layout = { elements: [] };
+    renderLayout();
+  });
+}
+
+/* Finish & Save */
+document.getElementById('finishBtn').addEventListener('click', saveAll);
+function saveAll(){
+  // compose payload: include general fields + layout_json
+  const payload = {};
+  payload.layout_json = layout;
+  // also include a few main fields
+  payload.body_background_color = document.getElementById('body_bg').value;
+  payload.body_text_color = document.getElementById('body_text').value;
+  payload.body_font_family = document.getElementById('font_family').value;
+  payload.body_font_size = document.getElementById('font_size').value + 'px';
+
+  fetch('/business_settings', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  }).then(r=>r.json()).then(j=>{
+    saveStatus.textContent = j.message || 'Saved';
+    setTimeout(()=>saveStatus.textContent='Ready', 2000);
+  }).catch(e=>{
+    saveStatus.textContent = 'Save error';
+    console.error(e);
+  });
+}
+
+/* raw edit */
+rawLayout.addEventListener('change', ()=> {
+  try{
+    const parsed = JSON.parse(rawLayout.value);
+    layout = parsed;
+    renderLayout();
+  }catch(e){
+    alert('Invalid JSON');
+  }
+});
+
+/* initialize */
+loadSettings();
+</script>
 </body>
 </html>
