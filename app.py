@@ -293,7 +293,7 @@ def save_businesses(businesses_data):
 def load_business_settings(business_id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM business_settings WHERE business_id = %s", (business_id,))
+    cur.execute("SELECT * FROM design_settings WHERE business_id = %s", (business_id,))
     row = cur.fetchone()
     colnames = [desc[0] for desc in cur.description]
     cur.close()
@@ -311,7 +311,7 @@ def save_business_settings(business_id, settings):
     columns = [f"{key} = %s" for key in settings.keys()]
     values = list(settings.values())
 
-    query = f"UPDATE business_settings SET {', '.join(columns)} WHERE business_id = %s"
+    query = f"UPDATE design_settings SET {', '.join(columns)} WHERE business_id = %s"
     cur.execute(query, values + [business_id])
 
     conn.commit()
@@ -475,7 +475,7 @@ def create_default_weekly_schedule():
 def create_default_business_settings(business_id, conn):
     cur = conn.cursor()
     # נבדוק אם כבר קיימת שורה
-    cur.execute("SELECT id FROM business_settings WHERE business_id=%s", (business_id,))
+    cur.execute("SELECT id FROM design_settings WHERE business_id=%s", (business_id,))
     if cur.fetchone():
         return  # כבר קיימת, לא עושים כלום
 
@@ -484,7 +484,7 @@ def create_default_business_settings(business_id, conn):
     default_layout = {}  # ריק, ניתן למלא בעתיד עם layout כפתורים
 
     cur.execute("""
-        INSERT INTO business_settings (
+        INSERT INTO design_settings (
             business_id,
             body_background_color, body_text_color,
             form_background_color, form_input_background_color, form_input_text_color,
@@ -784,7 +784,7 @@ def delete_business():
         cur.execute("DELETE FROM weekly_schedule WHERE business_id = %s", (business_id,))
         cur.execute("DELETE FROM overrides WHERE business_id = %s", (business_id,))
         cur.execute("DELETE FROM bot_knowledge WHERE business_id = %s", (business_id,))
-        cur.execute("DELETE FROM business_settings WHERE business_id = %s", (business_id,))
+        cur.execute("DELETE FROM design_settings WHERE business_id = %s", (business_id,))
 
         # מחיקה מהטבלה הראשית
         cur.execute("DELETE FROM businesses WHERE username = %s", (username,))
@@ -1365,7 +1365,7 @@ def business_settings_route():
     business_id = row[0]
 
     if request.method == "GET":
-        cur.execute("SELECT * FROM business_settings WHERE business_id = %s", (business_id,))
+        cur.execute("SELECT * FROM design_settings WHERE business_id = %s", (business_id,))
         settings = cur.fetchone()
         if not settings:
             cur.close()
@@ -1404,7 +1404,7 @@ def business_settings_route():
         ]
 
         # בדיקה אם כבר קיימת שורה
-        cur.execute("SELECT 1 FROM business_settings WHERE business_id = %s", (business_id,))
+        cur.execute("SELECT 1 FROM design_settings WHERE business_id = %s", (business_id,))
         exists = cur.fetchone()
 
         values = []
@@ -1421,11 +1421,11 @@ def business_settings_route():
 
         if exists:
             placeholders = ", ".join([f"{col} = %s" for col in columns])
-            cur.execute(f"UPDATE business_settings SET {placeholders} WHERE business_id = %s", values + [business_id])
+            cur.execute(f"UPDATE design_settings SET {placeholders} WHERE business_id = %s", values + [business_id])
         else:
             cols_str = ", ".join(["business_id"] + columns)
             vals_placeholders = ", ".join(["%s"] * (len(columns) + 1))
-            cur.execute(f"INSERT INTO business_settings ({cols_str}) VALUES ({vals_placeholders})", [business_id] + values)
+            cur.execute(f"INSERT INTO design_settings ({cols_str}) VALUES ({vals_placeholders})", [business_id] + values)
 
         conn.commit()
         cur.close()
