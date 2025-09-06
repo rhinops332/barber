@@ -1,165 +1,184 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>עורך עיצוב</title>
-    <style>
-        body {
-            background-color: {{ settings.body_background_color }};
-            color: {{ settings.body_text_color }};
-            font-family: {{ settings.body_font_family }};
-            font-size: {{ settings.body_font_size }};
-            margin: {{ settings.body_margin }};
-            padding: {{ settings.body_padding }};
-            max-width: {{ settings.body_max_width }};
-        }
-        h1 {
-            font-family: {{ settings.heading_font_family }};
-            font-size: {{ settings.heading_font_size }};
-        }
-        h2 {
-            font-family: {{ settings.heading_font_family }};
-            font-size: calc({{ settings.heading_font_size }} - 4px);
-        }
-        .day-button {
-            background-color: {{ settings.day_button_background }};
-            color: {{ settings.day_button_text_color }};
-            border-radius: {{ settings.day_button_border_radius }};
-            padding: {{ settings.day_button_padding }};
-            cursor: pointer;
-            margin: 6px;
-        }
-        .slot-button {
-            background-color: {{ settings.slot_button_background }};
-            color: {{ settings.slot_button_text_color }};
-            border-radius: {{ settings.slot_button_border_radius }};
-            padding: {{ settings.slot_button_padding }};
-            cursor: pointer;
-            margin: 6px;
-        }
-        .editor-panel {
-            position: fixed;
-            top: 10px;
-            left: 10px;
-            background: #fff;
-            border: 1px solid #ccc;
-            padding: 15px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            display: none;
-            z-index: 1000;
-        }
-        .editor-panel.active {
-            display: block;
-        }
-    </style>
+<meta charset="UTF-8">
+<title>Design Preview</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/classic.min.css"/>
+<style>
+  body { font-family: Arial, sans-serif; background: #f7f9fc; padding: 20px; }
+  #container { display: flex; gap: 20px; }
+  #controls { width: 250px; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+  #canvas { flex: 1; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+  .draggable { display: inline-flex; align-items:center; justify-content:center; padding:10px; margin:5px; color:white; font-weight:bold; cursor:pointer; transition:0.2s; }
+  .selected { outline: 3px solid #ff9800; transform: scale(1.05); }
+  .day-btn { width: 100%; text-align:center; }
+  .slot-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:5px; margin-top:5px; }
+</style>
 </head>
 <body>
-    <h1 id="page-title" contenteditable="true">{{ settings.page_title }}</h1>
-    <h2 id="page-subtitle" contenteditable="true">{{ settings.page_subtitle }}</h2>
 
-    <!-- כפתור יום אחד -->
-    <button id="day-button" class="day-button">יום</button>
+<h1 id="mainTitle">Heading</h1>
+<h2 id="subTitle">Subheading</h2>
 
-    <!-- כפתור שעה אחד -->
-    <button id="slot-button" class="slot-button">10:00</button>
+<div id="container">
+  <!-- Controls Panel -->
+  <div id="controls">
+    <h3 class="mb-2 font-bold">בחר אלמנט</h3>
+    <select id="elementSelect">
+      <option value="">---</option>
+      <option value="day">Day</option>
+      <option value="slot">Hour</option>
+      <option value="title">Heading</option>
+      <option value="subtitle">Subheading</option>
+    </select>
 
-    <!-- פאנל עריכה -->
-    <div id="editor-panel" class="editor-panel">
-        <h3>עריכת אלמנט</h3>
-        <label>צבע רקע: <input type="color" id="bg-color"></label><br>
-        <label>צבע טקסט: <input type="color" id="text-color"></label><br>
-        <label>פונט: <input type="text" id="font-family"></label><br>
-        <label>גודל טקסט: <input type="text" id="font-size"></label><br>
-        <label>Border Radius: <input type="text" id="border-radius"></label><br>
-        <label>Padding: <input type="text" id="padding"></label><br>
-        <button onclick="saveChanges()">שמור</button>
+    <label class="block mt-3">צבע רקע:</label>
+    <div id="bgPicker"></div>
+
+    <label class="block mt-3">צבע טקסט:</label>
+    <div id="textPicker"></div>
+
+    <label class="block mt-3">צורת כפתור:</label>
+    <select id="shapeSelect">
+      <option value="8px">Rounded</option>
+      <option value="50px">Pill</option>
+      <option value="0px">Square</option>
+    </select>
+
+    <button id="saveLayout" class="mt-6 w-full bg-green-600 text-white py-2 rounded-lg shadow hover:bg-green-700">💾 שמור עיצוב</button>
+  </div>
+
+  <!-- Canvas Preview -->
+  <div id="canvas">
+    <div id="daysContainer">
+      <!-- 7 Days -->
+      <div class="draggable day-btn" data-type="day">DAY 1</div>
+      <div class="draggable day-btn" data-type="day">DAY 2</div>
+      <div class="draggable day-btn" data-type="day">DAY 3</div>
+      <div class="draggable day-btn" data-type="day">DAY 4</div>
+      <div class="draggable day-btn" data-type="day">DAY 5</div>
+      <div class="draggable day-btn" data-type="day">DAY 6</div>
+      <div class="draggable day-btn" data-type="day">DAY 7</div>
     </div>
 
-    <script>
-        let selectedElement = null;
-        let selectedType = null;
+    <!-- Slots -->
+    <div id="slotsContainer">
+      <div class="slot-grid">
+        <!-- 20 Hours -->
+        <div class="draggable slot-btn" data-type="slot">HOUR 1</div>
+        <div class="draggable slot-btn" data-type="slot">HOUR 2</div>
+        <div class="draggable slot-btn" data-type="slot">HOUR 3</div>
+        <div class="draggable slot-btn" data-type="slot">HOUR 4</div>
+        <div class="draggable slot-btn" data-type="slot">HOUR 5</div>
+        <div class="draggable slot-btn" data-type="slot">HOUR 6</div>
+        <div class="draggable slot-btn" data-type="slot">HOUR 7</div>
+        <div class="draggable slot-btn" data-type="slot">HOUR 8</div>
+        <div class="draggable slot-btn" data-type="slot">HOUR 9</div>
+        <div class="draggable slot-btn" data-type="slot">HOUR 10</div>
+        <div class="draggable slot-btn" data-type="slot">HOUR 11</div>
+        <div class="draggable slot-btn" data-type="slot">HOUR 12</div>
+        <div class="draggable slot-btn" data-type="slot">HOUR 13</div>
+        <div class="draggable slot-btn" data-type="slot">HOUR 14</div>
+        <div class="draggable slot-btn" data-type="slot">HOUR 15</div>
+        <div class="draggable slot-btn" data-type="slot">HOUR 16</div>
+        <div class="draggable slot-btn" data-type="slot">HOUR 17</div>
+        <div class="draggable slot-btn" data-type="slot">HOUR 18</div>
+        <div class="draggable slot-btn" data-type="slot">HOUR 19</div>
+        <div class="draggable slot-btn" data-type="slot">HOUR 20</div>
+      </div>
+    </div>
+  </div>
+</div>
 
-        function openEditor(element, type) {
-            selectedElement = element;
-            selectedType = type;
+<script>
+let selectedType = null;
 
-            // לטעון ערכים מהסטייל הנוכחי
-            document.getElementById('bg-color').value = rgbToHex(window.getComputedStyle(element).backgroundColor);
-            document.getElementById('text-color').value = rgbToHex(window.getComputedStyle(element).color);
-            document.getElementById('font-family').value = window.getComputedStyle(element).fontFamily;
-            document.getElementById('font-size').value = window.getComputedStyle(element).fontSize;
-            document.getElementById('border-radius').value = window.getComputedStyle(element).borderRadius;
-            document.getElementById('padding').value = window.getComputedStyle(element).padding;
+// Pickr instances
+const bgPicker = Pickr.create({
+  el: '#bgPicker',
+  theme: 'classic',
+  default: '#3498db',
+  components: { preview:true, interaction:{hex:true,input:true} }
+});
+const textPicker = Pickr.create({
+  el: '#textPicker',
+  theme: 'classic',
+  default: '#ffffff',
+  components: { preview:true, interaction:{hex:true,input:true} }
+});
 
-            document.getElementById('editor-panel').classList.add('active');
-        }
+// אלמנט נבחר
+function applyLiveChanges() {
+  if(!selectedType) return;
+  if(selectedType === "day"){
+    document.querySelectorAll('.day-btn').forEach(el=>{
+      el.style.backgroundColor = bgPicker.getColor().toHEXA().toString();
+      el.style.color = textPicker.getColor().toHEXA().toString();
+      el.style.borderRadius = document.getElementById('shapeSelect').value;
+    });
+  }
+  if(selectedType === "slot"){
+    document.querySelectorAll('.slot-btn').forEach(el=>{
+      el.style.backgroundColor = bgPicker.getColor().toHEXA().toString();
+      el.style.borderRadius = document.getElementById('shapeSelect').value;
+    });
+  }
+  if(selectedType === "title"){
+    document.getElementById('mainTitle').style.backgroundColor = bgPicker.getColor().toHEXA().toString();
+  }
+  if(selectedType === "subtitle"){
+    document.getElementById('subTitle').style.backgroundColor = bgPicker.getColor().toHEXA().toString();
+  }
+}
 
-        function saveChanges() {
-            if (!selectedElement || !selectedType) return;
+// בחירת אלמנט
+document.getElementById('elementSelect').addEventListener('change', e=>{
+  selectedType = e.target.value;
+  applyLiveChanges();
+});
 
-            let bg = document.getElementById('bg-color').value;
-            let color = document.getElementById('text-color').value;
-            let fontFamily = document.getElementById('font-family').value;
-            let fontSize = document.getElementById('font-size').value;
-            let borderRadius = document.getElementById('border-radius').value;
-            let padding = document.getElementById('padding').value;
+// שינוי צבעים live
+bgPicker.on('change', applyLiveChanges);
+textPicker.on('change', applyLiveChanges);
 
-            if (selectedType === 'title' || selectedType === 'subtitle') {
-                selectedElement.style.color = color;
-                selectedElement.style.fontFamily = fontFamily;
-                selectedElement.style.fontSize = fontSize;
-            } else {
-                selectedElement.style.backgroundColor = bg;
-                selectedElement.style.color = color;
-                selectedElement.style.fontFamily = fontFamily;
-                selectedElement.style.fontSize = fontSize;
-                selectedElement.style.borderRadius = borderRadius;
-                selectedElement.style.padding = padding;
-            }
+// שינוי צורת כפתור live
+document.getElementById('shapeSelect').addEventListener('change', applyLiveChanges);
 
-            // שמירה במסד
-            fetch('/design_settings', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type: selectedType,
-                    background: bg,
-                    color: color,
-                    font_family: fontFamily,
-                    font_size: fontSize,
-                    border_radius: borderRadius,
-                    padding: padding,
-                    text: (selectedType === 'title' || selectedType === 'subtitle') ? selectedElement.innerText : null
-                })
-            }).then(res => res.json()).then(data => {
-                console.log("Saved:", data);
-            });
+// שמירה למסד
+document.getElementById('saveLayout').addEventListener('click', async ()=>{
+  const layout = {
+    mainTitle: document.getElementById('mainTitle').textContent,
+    subTitle: document.getElementById('subTitle').textContent,
+    days: [],
+    slots: []
+  };
+  document.querySelectorAll('.day-btn').forEach(el=>{
+    layout.days.push({
+      text: el.textContent,
+      bgColor: el.style.backgroundColor,
+      textColor: el.style.color,
+      borderRadius: el.style.borderRadius
+    });
+  });
+  document.querySelectorAll('.slot-btn').forEach(el=>{
+    layout.slots.push({
+      text: el.textContent,
+      bgColor: el.style.backgroundColor,
+      borderRadius: el.style.borderRadius
+    });
+  });
 
-            document.getElementById('editor-panel').classList.remove('active');
-        }
+  const res = await fetch('/business_settings', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({layout_json: layout})
+  });
+  const data = await res.json();
+  alert(data.message || "נשמר בהצלחה!");
+});
+</script>
 
-        function rgbToHex(rgb) {
-            let result = rgb.match(/\d+/g);
-            return result ? "#" + result.slice(0, 3).map(x => {
-                let hex = parseInt(x).toString(16);
-                return hex.length === 1 ? "0" + hex : hex;
-            }).join("") : rgb;
-        }
-
-        // מאזינים
-        document.getElementById('page-title').addEventListener('click', function() {
-            openEditor(this, 'title');
-        });
-        document.getElementById('page-subtitle').addEventListener('click', function() {
-            openEditor(this, 'subtitle');
-        });
-        document.getElementById('day-button').addEventListener('click', function() {
-            openEditor(this, 'day_button');
-        });
-        document.getElementById('slot-button').addEventListener('click', function() {
-            openEditor(this, 'slot_button');
-        });
-    </script>
 </body>
 </html>
