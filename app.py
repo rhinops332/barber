@@ -904,23 +904,32 @@ def orders():
 
 @app.route("/admin_design")
 def admin_design():
-    business_id = session.get('business_id')  # עדיף להשתמש ב-ID במקום שם
     business_name = session.get('business_name')
     if not business_name:
         return redirect("/login")
 
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM design_settings WHERE business_id=%s", (business_id,))
+
+    # שליפת business_id לפי שם העסק
+    cur.execute("SELECT id FROM businesses WHERE name=%s", (business_name,))
     row = cur.fetchone()
+    if not row:
+        conn.close()
+        return "Business not found", 404
+    business_id = row[0]
+
+    # שליפת הגדרות עיצוב
+    cur.execute("SELECT * FROM design_settings WHERE business_id=%s", (business_id,))
+    settings_row = cur.fetchone()
     conn.close()
 
-    if not row:
+    if not settings_row:
         return "No design settings found for this business", 404
 
-    # רשימת העמודות כפי שהגדרת בטבלה
+    # רשימת עמודות כפי שהגדרת בטבלה
     columns = [
-        "business_id","day_button_shape","day_button_color","day_button_size",
+        "day_button_shape","day_button_color","day_button_size",
         "day_button_text_size","day_button_text_color","day_button_font_family",
         "slot_button_shape","slot_button_color","slot_button_size","slot_button_text_size",
         "slot_button_text_color","slot_button_font_family",
@@ -930,11 +939,12 @@ def admin_design():
         "body_background_color"
     ]
 
-    # ממיר את השורה למילון עם שמות העמודות
-    design_settings = {col: row[idx+1] for idx, col in enumerate(columns)}  # +1 כי row[0] = id
-    design_settings['business_name'] = business_name  # מוסיף גם את שם העסק
+    # המרת השורה למילון
+    design_settings = {col: settings_row[idx] for idx, col in enumerate(columns)}
+    design_settings['business_name'] = business_name
 
     return render_template("admin_design.html", **design_settings)
+
 
 
 
