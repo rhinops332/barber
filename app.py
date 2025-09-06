@@ -472,7 +472,7 @@ def create_default_weekly_schedule():
         schedule[day] = slots
     return schedule
 
-def create_default_design_settings(business_id, conn):
+def create_default_business_settings(business_id, conn):
     cur = conn.cursor()
     # נבדוק אם כבר קיימת שורה
     cur.execute("SELECT id FROM design_settings WHERE business_id=%s", (business_id,))
