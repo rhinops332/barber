@@ -472,52 +472,55 @@ def create_default_weekly_schedule():
         schedule[day] = slots
     return schedule
 
-def create_default_business_settings(business_id, conn):
+def create_default_design_settings(business_id, conn):
     cur = conn.cursor()
     # נבדוק אם כבר קיימת שורה
     cur.execute("SELECT id FROM design_settings WHERE business_id=%s", (business_id,))
     if cur.fetchone():
+        cur.close()
         return  # כבר קיימת, לא עושים כלום
 
-    # ערכי ברירת מחדל
-    default_day_names = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]
-    default_layout = {}  # ריק, ניתן למלא בעתיד עם layout כפתורים
-
+    # ערכי ברירת מחדל מתוך ה-CSS
     cur.execute("""
         INSERT INTO design_settings (
             business_id,
-            body_background_color, body_text_color,
-            form_background_color, form_input_background_color, form_input_text_color,
-            form_button_background, form_button_text_color,
-            booking_details_background, booking_details_text_color,
-            body_font_family, body_font_size,
-            heading_font_family, heading_font_size,
-            booking_details_font_family, booking_details_font_size,
-            day_button_background, day_button_text_color, day_button_border_radius, day_button_padding,
-            slot_button_background, slot_button_text_color, slot_button_border_radius, slot_button_padding,
-            body_max_width, body_margin, body_padding,
-            form_input_padding, form_button_padding, booking_details_padding,
-            page_title, page_subtitle,
-            booking_success_message, day_names, layout_json
+            -- כפתורי יום
+            day_button_shape, day_button_color, day_button_size,
+            day_button_text_size, day_button_text_color, day_button_font_family,
+
+            -- כפתורי שעה
+            slot_button_shape, slot_button_color, slot_button_size,
+            slot_button_text_size, slot_button_text_color, slot_button_font_family,
+
+            -- כותרות
+            heading_font_family, subheading_font_family,
+            heading_font_size, subheading_font_size,
+            heading_color, subheading_color,
+            heading_text, subheading_text,
+
+            -- רקע כללי
+            body_background_color
         )
         VALUES (
             %s,
-            '#f0f4ff', '#2c3e50',
-            'white', 'white', '#2c3e50',
-            '#2980b9', 'white',
-            '#ffffff', '#2c3e50',
-            'Arial, sans-serif', '16px',
-            'Arial, sans-serif', '24px',
-            'Arial, sans-serif', '16px',
-            '#3498db', 'white', '10px', '12px 0',
-            '#2ecc71', 'white', '6px', '8px 14px',
-            '700px', '30px auto', '20px',
-            '10px', '12px', '15px',
-            'Welcome', 'Book Your Appointment',
-            'Your appointment has been booked successfully!',
-            %s, %s
+            -- יום
+            'rectangle', '#3498db', 'auto',
+            '15px', 'white', 'Tahoma, sans-serif',
+
+            -- שעה
+            'rectangle', '#2ecc71', 'auto',
+            '14px', 'white', 'Arial, sans-serif',
+
+            -- כותרות
+            'Arial, sans-serif', 'Arial, sans-serif',
+            '24px', '18px',
+            '#2c3e50', '#2c3e50',
+            'HairBoss - Book Appointment', 'בחר יום ושעה',
+
+            -- רקע
+            '#f0f4ff'
         )
-    """, (business_id, json.dumps(default_day_names), json.dumps(default_layout)))
+    """, (business_id,))
 
     conn.commit()
     cur.close()
@@ -1390,18 +1393,16 @@ def business_settings_route():
             return jsonify({"error": "No data provided"}), 400
 
         columns = [
-            "body_background_color","body_text_color",
-            "day_button_background","day_button_text_color","day_button_border_radius","day_button_padding",
-            "slot_button_background","slot_button_text_color","slot_button_border_radius","slot_button_padding",
-            "form_background_color","form_input_background_color","form_input_text_color",
-            "form_button_background","form_button_text_color",
-            "booking_details_background","booking_details_text_color",
-            "body_font_family","body_font_size","heading_font_family","heading_font_size","booking_details_font_family","booking_details_font_size",
-            "page_title","page_subtitle",
-            "body_max_width","body_margin","body_padding",
-            "form_input_padding","form_button_padding","booking_details_padding",
-            "booking_success_message","day_names","layout_json"
-        ]
+           "day_button_shape","day_button_color","day_button_size",
+           "day_button_text_size","day_button_text_color","day_button_font_family",
+           "slot_button_shape","slot_button_color","slot_button_size","slot_button_text_size",
+           "slot_button_text_color","slot_button_font_family",
+           "heading_font_family","subheading_font_family","heading_font_size","subheading_font_size",
+           "heading_color","subheading_color",
+           "heading_text","subheading_text",
+           "body_background_color"
+       ]
+
 
         # בדיקה אם כבר קיימת שורה
         cur.execute("SELECT 1 FROM design_settings WHERE business_id = %s", (business_id,))
