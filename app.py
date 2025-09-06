@@ -906,7 +906,7 @@ def orders():
 def admin_design():
     business_id = session.get('business_id')  # עדיף להשתמש ב-ID במקום שם
     business_name = session.get('business_name')
-    if not business_id or not business_name:
+    if not business_name:
         return redirect("/login")
 
     conn = get_db_connection()
