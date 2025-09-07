@@ -2,127 +2,121 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>ניהול עיצוב</title>
+  <title>עיצוב מערכת</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .day-btn, .hour-btn {
+      transition: all 0.2s ease-in-out;
+    }
+    .day-btn:hover, .hour-btn:hover {
+      transform: scale(1.05);
+    }
+  </style>
 </head>
-<body class="bg-gray-100 flex h-screen">
+<body class="bg-gray-100 font-sans">
+  <div class="flex h-screen">
 
-  <!-- אזור הכפתורים -->
-  <div class="w-3/4 p-4 grid grid-cols-1 gap-6 overflow-y-auto">
+    <!-- אזור שמאלי: כפתורים -->
+    <div class="w-3/4 p-6 overflow-y-auto">
+      <h1 class="text-2xl font-bold mb-6">ניהול עיצוב</h1>
 
-    <!-- ימים -->
-    <div>
-      <h2 class="text-lg font-bold mb-2">ימים</h2>
-      <div class="grid grid-cols-7 gap-2">
-        {% for day in days %}
-          <button 
-            class="day-btn px-4 py-2 text-white rounded-lg"
-            style="background-color: {{ day.background }}; color: {{ day.text_color }}; border-radius: {{ day.border_radius }};"
-            data-type="day"
-            data-id="{{ day.id }}"
-          >
-            {{ day.name }}
-          </button>
-        {% endfor %}
+      <!-- כפתורי ימים -->
+      <div class="grid grid-cols-7 gap-4 mb-8">
+        <button class="day-btn bg-blue-500 text-white py-4 rounded-2xl">ראשון</button>
+        <button class="day-btn bg-blue-500 text-white py-4 rounded-2xl">שני</button>
+        <button class="day-btn bg-blue-500 text-white py-4 rounded-2xl">שלישי</button>
+        <button class="day-btn bg-blue-500 text-white py-4 rounded-2xl">רביעי</button>
+        <button class="day-btn bg-blue-500 text-white py-4 rounded-2xl">חמישי</button>
+        <button class="day-btn bg-blue-500 text-white py-4 rounded-2xl">שישי</button>
+        <button class="day-btn bg-blue-500 text-white py-4 rounded-2xl">שבת</button>
+      </div>
+
+      <!-- כפתורי שעות -->
+      <div class="grid grid-cols-5 gap-4">
+        <button class="hour-btn bg-green-500 text-white py-3 rounded-2xl">08:00</button>
+        <button class="hour-btn bg-green-500 text-white py-3 rounded-2xl">08:30</button>
+        <button class="hour-btn bg-green-500 text-white py-3 rounded-2xl">09:00</button>
+        <button class="hour-btn bg-green-500 text-white py-3 rounded-2xl">09:30</button>
+        <button class="hour-btn bg-green-500 text-white py-3 rounded-2xl">10:00</button>
+        <button class="hour-btn bg-green-500 text-white py-3 rounded-2xl">10:30</button>
+        <button class="hour-btn bg-green-500 text-white py-3 rounded-2xl">11:00</button>
+        <button class="hour-btn bg-green-500 text-white py-3 rounded-2xl">11:30</button>
+        <button class="hour-btn bg-green-500 text-white py-3 rounded-2xl">12:00</button>
+        <button class="hour-btn bg-green-500 text-white py-3 rounded-2xl">12:30</button>
+        <button class="hour-btn bg-green-500 text-white py-3 rounded-2xl">13:00</button>
+        <button class="hour-btn bg-green-500 text-white py-3 rounded-2xl">13:30</button>
+        <button class="hour-btn bg-green-500 text-white py-3 rounded-2xl">16:00</button>
+        <button class="hour-btn bg-green-500 text-white py-3 rounded-2xl">16:30</button>
+        <button class="hour-btn bg-green-500 text-white py-3 rounded-2xl">17:00</button>
+        <button class="hour-btn bg-green-500 text-white py-3 rounded-2xl">17:30</button>
+        <button class="hour-btn bg-green-500 text-white py-3 rounded-2xl">18:00</button>
+        <button class="hour-btn bg-green-500 text-white py-3 rounded-2xl">18:30</button>
+        <button class="hour-btn bg-green-500 text-white py-3 rounded-2xl">19:00</button>
+        <button class="hour-btn bg-green-500 text-white py-3 rounded-2xl">19:30</button>
       </div>
     </div>
 
-    <!-- שעות -->
-    <div>
-      <h2 class="text-lg font-bold mb-2">שעות</h2>
-      <div class="grid grid-cols-5 gap-2">
-        {% for slot in slots %}
-          <button 
-            class="slot-btn px-4 py-2 text-white rounded-lg"
-            style="background-color: {{ slot.background }}; color: {{ slot.text_color }}; border-radius: {{ slot.border_radius }};"
-            data-type="slot"
-            data-id="{{ slot.id }}"
-          >
-            {{ slot.label }}
-          </button>
-        {% endfor %}
+    <!-- אזור ימני: פאנל צדדי -->
+    <div id="side-panel" class="w-1/4 bg-white p-6 border-l border-gray-300">
+      <h2 class="text-lg font-bold mb-4">אפשרויות</h2>
+
+      <!-- תמיד זמין -->
+      <div class="mt-2">
+        <label class="block text-sm font-medium">צבע רקע</label>
+        <input type="color" id="background-color" class="w-full h-10 p-0 border mt-1">
       </div>
+
+      <!-- תוכן משתנה לפי כפתור שנבחר -->
+      <div id="panel-content" class="mt-6 text-gray-500">
+        לחץ על כפתור יום או שעה כדי לשנות פרטים נוספים
+      </div>
+
+      <button id="save-btn" class="mt-6 w-full bg-blue-500 text-white py-2 rounded-lg">
+        שמירה
+      </button>
     </div>
-
-  </div>
-
-  <!-- פאנל צדדי -->
-  <div id="side-panel" class="w-1/4 bg-white p-4 border-l border-gray-300">
-    <h2 class="text-lg font-bold mb-4">אפשרויות</h2>
-
-    <!-- תוכן משתנה -->
-    <div id="panel-content">
-      <p class="text-gray-500">בחר כפתור כדי לשנות</p>
-    </div>
-
-    <!-- תמיד זמין -->
-    <div class="mt-6">
-      <label class="block text-sm font-medium">צבע רקע</label>
-      <input type="color" id="background-color" class="w-full h-10 p-0 border mt-1">
-    </div>
-
-    <button id="save-btn" class="mt-6 w-full bg-blue-500 text-white py-2 rounded-lg">שמירה</button>
   </div>
 
   <script>
+    const backgroundInput = document.getElementById("background-color");
     const panelContent = document.getElementById("panel-content");
-    const saveBtn = document.getElementById("save-btn");
-    let selectedElement = null;
+    let selectedBtn = null;
 
-    // האזנה לכל הכפתורים
-    document.querySelectorAll(".day-btn, .slot-btn").forEach(btn => {
+    // כשמשנים צבע רקע
+    backgroundInput.addEventListener("input", () => {
+      document.body.style.backgroundColor = backgroundInput.value;
+    });
+
+    // לחיצה על יום או שעה
+    document.querySelectorAll(".day-btn, .hour-btn").forEach(btn => {
       btn.addEventListener("click", () => {
-        selectedElement = btn;
-        const type = btn.dataset.type;
-        const id = btn.dataset.id;
-
-        // עדכון הפאנל
+        selectedBtn = btn;
         panelContent.innerHTML = `
-          <p class="mb-2">עריכת ${type === "day" ? "יום" : "שעה"}: <strong>${btn.innerText}</strong></p>
+          <h3 class="font-semibold mb-2">עורך כפתור: ${btn.innerText}</h3>
           <label class="block text-sm font-medium">צבע טקסט</label>
-          <input type="color" id="text-color" class="w-full h-10 border mt-1" value="${rgb2hex(btn.style.color)}">
-
+          <input type="color" id="text-color" class="w-full h-10 p-0 border mt-1" value="#ffffff">
           <label class="block text-sm font-medium mt-4">צורת כפתור</label>
-          <select id="border-radius" class="w-full border mt-1 p-2">
-            <option value="0px" ${btn.style.borderRadius === "0px" ? "selected" : ""}>ריבוע</option>
-            <option value="8px" ${btn.style.borderRadius === "8px" ? "selected" : ""}>מעוגל קלות</option>
-            <option value="9999px" ${btn.style.borderRadius === "9999px" ? "selected" : ""}>עיגול</option>
+          <select id="shape" class="w-full border mt-1">
+            <option value="rounded-2xl">מעוגל</option>
+            <option value="rounded-md">בינוני</option>
+            <option value="rounded-none">מרובע</option>
           </select>
         `;
 
-        document.getElementById("background-color").value = rgb2hex(btn.style.backgroundColor);
+        // מאזינים חדשים בתוך הפאנל
+        document.getElementById("text-color").addEventListener("input", (e) => {
+          btn.style.color = e.target.value;
+        });
+        document.getElementById("shape").addEventListener("change", (e) => {
+          btn.classList.remove("rounded-2xl", "rounded-md", "rounded-none");
+          btn.classList.add(e.target.value);
+        });
       });
     });
 
-    // המרת צבע HEX
-    function rgb2hex(rgb) {
-      if (!rgb) return "#000000";
-      const result = rgb.match(/\d+/g);
-      if (!result) return "#000000";
-      return "#" + result.slice(0, 3).map(x => {
-        const hex = parseInt(x).toString(16);
-        return hex.length === 1 ? "0" + hex : hex;
-      }).join("");
-    }
-
-    // שמירה
-    saveBtn.addEventListener("click", () => {
-      if (!selectedElement) return alert("לא נבחר כפתור");
-
-      const bg = document.getElementById("background-color").value;
-      const text = document.getElementById("text-color")?.value || selectedElement.style.color;
-      const radius = document.getElementById("border-radius")?.value || selectedElement.style.borderRadius;
-
-      selectedElement.style.backgroundColor = bg;
-      selectedElement.style.color = text;
-      selectedElement.style.borderRadius = radius;
-
-      // TODO: שליחה לשרת ב-AJAX
-      console.log("Saving:", {
-        id: selectedElement.dataset.id,
-        type: selectedElement.dataset.type,
-        bg, text, radius
-      });
+    // כפתור שמירה (פה בעתיד נוסיף AJAX לשמירה במסד)
+    document.getElementById("save-btn").addEventListener("click", () => {
+      alert("השינויים נשמרו (בשלב הבא נעשה שמירה למסד נתונים)");
     });
   </script>
 </body>
