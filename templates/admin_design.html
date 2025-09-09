@@ -17,7 +17,7 @@
 <script>
   // אם אתה מעביר מ-Flask: window.__DESIGN = {{ design_settings | tojson | safe }};
   // אחרת יהיה אובייקט ריק והסקריפט יעדכן לברירות מחדל.
-  window.__DESIGN = window.__DESIGN || {};
+  window.__DESIGN = {{ design_settings | tojson | safe }};
 </script>
 
   <div class="flex h-full">
