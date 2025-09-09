@@ -4,48 +4,10 @@
   <meta charset="utf-8" />
   <title>עיצוב - תצוגה מקדימה</title>
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- סטייל דינמי מה-DB -->
   <style>
-    body {
-      font-family: {{ design_settings.subheading_font_family }};
-      background-color: {{ design_settings.body_background_color }};
-      transition: background-color 0.2s;
-    }
-    #mainTitle {
-      font-family: {{ design_settings.heading_font_family }};
-      font-size: {{ design_settings.heading_font_size }};
-      color: {{ design_settings.heading_color }};
-    }
-    #subTitle {
-      font-family: {{ design_settings.subheading_font_family }};
-      font-size: {{ design_settings.subheading_font_size }};
-      color: {{ design_settings.subheading_color }};
-    }
-    .day-btn {
-      background-color: {{ design_settings.day_button_color }};
-      color: {{ design_settings.day_button_text_color }};
-      border-radius: {{ design_settings.day_button_shape }};
-      font-family: {{ design_settings.day_button_font_family }};
-      font-size: {{ design_settings.day_button_text_size }};
-      padding-top: {{ design_settings.day_button_size }};
-      padding-bottom: {{ design_settings.day_button_size }};
-      transition: transform .12s ease, box-shadow .12s ease;
-      cursor:pointer;
-    }
-    .day-btn:hover { transform: translateY(-2px); }
-    .slot-btn {
-      background-color: {{ design_settings.slot_button_color }};
-      color: {{ design_settings.slot_button_text_color }};
-      border-radius: {{ design_settings.slot_button_shape }};
-      font-family: {{ design_settings.slot_button_font_family }};
-      font-size: {{ design_settings.slot_button_text_size }};
-      padding-top: {{ design_settings.slot_button_size }};
-      padding-bottom: {{ design_settings.slot_button_size }};
-      transition: transform .12s ease, box-shadow .12s ease;
-      cursor:pointer;
-    }
-    .slot-btn:hover { transform: translateY(-2px); }
+    body { font-family: Arial, sans-serif; transition: background-color 0.2s; }
+    .btn { transition: transform .12s ease, box-shadow .12s ease; cursor:pointer; }
+    .btn:hover { transform: translateY(-2px); }
     .selected-outline { outline: 3px solid #f59e0b; outline-offset: 3px; }
     .small-label { font-size: 0.9rem; color: #555; }
   </style>
@@ -61,14 +23,14 @@
   <div class="w-3/4 p-6 overflow-auto">
 
     <div class="mb-6">
-      <h1 id="mainTitle" class="text-2xl font-bold">{{ design_settings.heading_text }}</h1>
-      <h2 id="subTitle" class="text-lg text-gray-600">{{ design_settings.subheading_text }}</h2>
+      <h1 id="mainTitle" class="text-2xl font-bold"></h1>
+      <h2 id="subTitle" class="text-lg text-gray-600"></h2>
     </div>
 
     <div class="mb-6">
       <div class="grid grid-cols-7 gap-3" id="daysRow">
         {% for i in range(7) %}
-          <button class="day-btn" data-type="day">DAY</button>
+          <button class="btn day-btn" data-type="day">DAY</button>
         {% endfor %}
       </div>
     </div>
@@ -76,7 +38,7 @@
     <div>
       <div class="grid grid-cols-5 gap-3" id="slotsGrid">
         {% for i in range(20) %}
-          <button class="slot-btn" data-type="slot">HOUR</button>
+          <button class="btn slot-btn" data-type="slot">HOUR</button>
         {% endfor %}
       </div>
     </div>
@@ -87,7 +49,7 @@
 
     <div class="mb-4">
       <label class="block small-label mb-1">צבע רקע (תצוגה)</label>
-      <input id="pageBg" type="color" class="w-full h-10 p-0 border" value="{{ design_settings.body_background_color }}">
+      <input id="pageBg" type="color" class="w-full h-10 p-0 border">
     </div>
 
     <div id="editorArea" class="text-gray-600">
@@ -110,11 +72,43 @@ document.addEventListener('DOMContentLoaded', ()=> {
     return '#' + m.slice(0,3).map(x=>{const h=parseInt(x).toString(16); return h.length===1?'0'+h:h}).join('');
   }
 
+  document.body.style.backgroundColor = DS.body_background_color;
+
   const mainTitle = document.getElementById('mainTitle');
   const subTitle = document.getElementById('subTitle');
 
-  // צבע רקע
+  mainTitle.textContent = DS.business_name;
+  mainTitle.style.fontFamily = DS.heading_font_family;
+  mainTitle.style.fontSize = DS.heading_font_size;
+  mainTitle.style.color = DS.heading_color;
+
+  subTitle.textContent = 'בחרו תור לקביעת פגישה';
+  subTitle.style.fontFamily = DS.subheading_font_family;
+  subTitle.style.fontSize = DS.subheading_font_size;
+  subTitle.style.color = DS.subheading_color;
+
+  document.querySelectorAll('.day-btn').forEach(btn=>{
+    btn.style.backgroundColor = DS.day_button_color;
+    btn.style.color = DS.day_button_text_color;
+    btn.style.borderRadius = DS.day_button_shape;
+    btn.style.fontFamily = DS.day_button_font_family;
+    btn.style.fontSize = DS.day_button_text_size;
+    btn.style.paddingTop = DS.day_button_size;
+    btn.style.paddingBottom = DS.day_button_size;
+  });
+
+  document.querySelectorAll('.slot-btn').forEach(btn=>{
+    btn.style.backgroundColor = DS.slot_button_color;
+    btn.style.color = DS.slot_button_text_color;
+    btn.style.borderRadius = DS.slot_button_shape;
+    btn.style.fontFamily = DS.slot_button_font_family;
+    btn.style.fontSize = DS.slot_button_text_size;
+    btn.style.paddingTop = DS.slot_button_size;
+    btn.style.paddingBottom = DS.slot_button_size;
+  });
+
   const pageBg = document.getElementById('pageBg');
+  pageBg.value = rgbToHex(getComputedStyle(document.body).backgroundColor);
   pageBg.addEventListener('input', e=> document.body.style.backgroundColor = e.target.value);
 
   let currentType=null, currentTrigger=null;
@@ -133,30 +127,30 @@ document.addEventListener('DOMContentLoaded', ()=> {
 
     if(type==='day'||type==='slot'){
       const sample = type==='day'?document.querySelector('.day-btn'):document.querySelector('.slot-btn');
-      const c=DS;
+      const c=getComputedStyle(sample);
 
       editorArea.innerHTML=`
         <div>
           <p class="font-semibold mb-2">עורך ${type==='day'?'DAY':'HOUR'}</p>
           <label class="block small-label mb-1">צבע רקע</label>
-          <input id="groupBg" type="color" class="w-full h-10 p-0 border" value="${rgbToHex(type==='day'?c.day_button_color:c.slot_button_color)}">
+          <input id="groupBg" type="color" class="w-full h-10 p-0 border" value="${rgbToHex(c.backgroundColor)}">
 
           <label class="block small-label mt-3 mb-1">צבע טקסט</label>
-          <input id="groupText" type="color" class="w-full h-10 p-0 border" value="${rgbToHex(type==='day'?c.day_button_text_color:c.slot_button_text_color)}">
+          <input id="groupText" type="color" class="w-full h-10 p-0 border" value="${rgbToHex(c.color)}">
 
           <label class="block small-label mt-3 mb-1">גודל טקסט (px)</label>
-          <input id="groupFontSize" type="number" min="8" class="w-full border p-2" value="${parseInt(type==='day'?c.day_button_text_size:c.slot_button_text_size)}">
+          <input id="groupFontSize" type="number" min="8" class="w-full border p-2" value="${parseInt(c.fontSize)}">
 
           <label class="block small-label mt-3 mb-1">פונט</label>
           <select id="groupFontFamily" class="w-full border p-2">
-            <option ${ (type==='day'?c.day_button_font_family:c.slot_button_font_family).includes('Tahoma')?'selected':'' }>Tahoma, sans-serif</option>
-            <option ${ (type==='day'?c.day_button_font_family:c.slot_button_font_family).includes('Arial')?'selected':'' }>Arial, sans-serif</option>
-            <option ${ (type==='day'?c.day_button_font_family:c.slot_button_font_family).includes('Verdana')?'selected':'' }>Verdana, sans-serif</option>
-            <option ${ (type==='day'?c.day_button_font_family:c.slot_button_font_family).includes('Georgia')?'selected':'' }>Georgia, serif</option>
+            <option ${c.fontFamily.includes('Tahoma')?'selected':''}>Tahoma, sans-serif</option>
+            <option ${c.fontFamily.includes('Arial')?'selected':''}>Arial, sans-serif</option>
+            <option ${c.fontFamily.includes('Verdana')?'selected':''}>Verdana, sans-serif</option>
+            <option ${c.fontFamily.includes('Georgia')?'selected':''}>Georgia, serif</option>
           </select>
 
           <label class="block small-label mt-3 mb-1">גובה פנימי (padding px)</label>
-          <input id="groupPadding" type="number" min="0" class="w-full border p-2" value="${parseInt(type==='day'?c.day_button_size:c.slot_button_size)}">
+          <input id="groupPadding" type="number" min="0" class="w-full border p-2" value="${parseInt(c.paddingTop)}">
 
           <label class="block small-label mt-3 mb-1">צורת כפתור (border-radius)</label>
           <select id="groupShape" class="w-full border p-2">
@@ -195,7 +189,10 @@ document.addEventListener('DOMContentLoaded', ()=> {
 
     } else if(type==='title'||type==='subtitle'){
       const el = type==='title'?mainTitle:subTitle;
-      const c = DS;
+      const c=getComputedStyle(el);
+      const curColor = rgbToHex(c.color);
+      const curSize = parseInt(c.fontSize);
+      const curFamily = c.fontFamily;
 
       editorArea.innerHTML=`
         <div>
@@ -203,15 +200,15 @@ document.addEventListener('DOMContentLoaded', ()=> {
           <label class="block small-label mb-1">טקסט</label>
           <input id="titleText" type="text" class="w-full border p-2" value="${el.textContent}">
           <label class="block small-label mt-3 mb-1">צבע טקסט</label>
-          <input id="titleColor" type="color" class="w-full h-10 p-0 border" value="${rgbToHex(getComputedStyle(el).color)}">
+          <input id="titleColor" type="color" class="w-full h-10 p-0 border" value="${curColor}">
           <label class="block small-label mt-3 mb-1">גודל טקסט (px)</label>
-          <input id="titleSize" type="number" class="w-full border p-2" value="${parseInt(getComputedStyle(el).fontSize)}">
+          <input id="titleSize" type="number" class="w-full border p-2" value="${curSize}">
           <label class="block small-label mt-3 mb-1">פונט</label>
           <select id="titleFont" class="w-full border p-2">
-            <option ${getComputedStyle(el).fontFamily.includes('Georgia')?'selected':''}>Georgia, serif</option>
-            <option ${getComputedStyle(el).fontFamily.includes('Tahoma')?'selected':''}>Tahoma, sans-serif</option>
-            <option ${getComputedStyle(el).fontFamily.includes('Verdana')?'selected':''}>Verdana, sans-serif</option>
-            <option ${getComputedStyle(el).fontFamily.includes('Arial')?'selected':''}>Arial, sans-serif</option>
+            <option ${curFamily.includes('Georgia')?'selected':''}>Georgia, serif</option>
+            <option ${curFamily.includes('Tahoma')?'selected':''}>Tahoma, sans-serif</option>
+            <option ${curFamily.includes('Verdana')?'selected':''}>Verdana, sans-serif</option>
+            <option ${curFamily.includes('Arial')?'selected':''}>Arial, sans-serif</option>
           </select>
         </div>
       `;
@@ -230,6 +227,9 @@ document.addEventListener('DOMContentLoaded', ()=> {
   document.getElementById('saveBtn').addEventListener('click', async ()=>{
     const daySample=document.querySelector('.day-btn');
     const slotSample=document.querySelector('.slot-btn');
+
+    const dayComp=getComputedStyle(daySample);
+    const slotComp=getComputedStyle(slotSample);
 
     const payload = {
       body_background_color: getComputedStyle(document.body).backgroundColor,
