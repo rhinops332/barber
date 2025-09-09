@@ -19,12 +19,10 @@
 </script>
 
 <div class="flex h-screen">
-
   <div class="w-3/4 p-6 overflow-auto">
-
     <div class="mb-6">
       <h1 id="mainTitle" class="text-2xl font-bold"></h1>
-      <h2 id="subTitle" class="text-lg text-gray-600"></h2>
+      <h2 id="subTitle" class="text-lg"></h2>
     </div>
 
     <div class="mb-6">
@@ -72,45 +70,49 @@ document.addEventListener('DOMContentLoaded', ()=> {
     return '#' + m.slice(0,3).map(x=>{const h=parseInt(x).toString(16); return h.length===1?'0'+h:h}).join('');
   }
 
-  document.body.style.backgroundColor = DS.body_background_color;
+  // צבע רקע מה-DB
+  if(DS.body_background_color) document.body.style.backgroundColor = DS.body_background_color;
 
+  // כותרת ראשית ומשנית
   const mainTitle = document.getElementById('mainTitle');
   const subTitle = document.getElementById('subTitle');
 
-  mainTitle.textContent = DS.business_name;
-  mainTitle.style.fontFamily = DS.heading_font_family;
-  mainTitle.style.fontSize = DS.heading_font_size;
-  mainTitle.style.color = DS.heading_color;
+  if(DS.heading_text) mainTitle.textContent = DS.heading_text;
+  if(DS.heading_font_family) mainTitle.style.fontFamily = DS.heading_font_family;
+  if(DS.heading_font_size) mainTitle.style.fontSize = DS.heading_font_size;
+  if(DS.heading_color) mainTitle.style.color = DS.heading_color;
 
-  subTitle.textContent = 'בחרו תור לקביעת פגישה';
-  subTitle.style.fontFamily = DS.subheading_font_family;
-  subTitle.style.fontSize = DS.subheading_font_size;
-  subTitle.style.color = DS.subheading_color;
+  if(DS.subheading_text) subTitle.textContent = DS.subheading_text;
+  if(DS.subheading_font_family) subTitle.style.fontFamily = DS.subheading_font_family;
+  if(DS.subheading_font_size) subTitle.style.fontSize = DS.subheading_font_size;
+  if(DS.subheading_color) subTitle.style.color = DS.subheading_color;
 
+  // כפתורי יום
   document.querySelectorAll('.day-btn').forEach(btn=>{
-    btn.style.backgroundColor = DS.day_button_color;
-    btn.style.color = DS.day_button_text_color;
-    btn.style.borderRadius = DS.day_button_shape;
-    btn.style.fontFamily = DS.day_button_font_family;
-    btn.style.fontSize = DS.day_button_text_size;
-    btn.style.paddingTop = DS.day_button_size;
-    btn.style.paddingBottom = DS.day_button_size;
+    if(DS.day_button_color) btn.style.backgroundColor = DS.day_button_color;
+    if(DS.day_button_text_color) btn.style.color = DS.day_button_text_color;
+    if(DS.day_button_shape) btn.style.borderRadius = DS.day_button_shape;
+    if(DS.day_button_font_family) btn.style.fontFamily = DS.day_button_font_family;
+    if(DS.day_button_text_size) btn.style.fontSize = DS.day_button_text_size;
+    if(DS.day_button_size) { btn.style.paddingTop = DS.day_button_size; btn.style.paddingBottom = DS.day_button_size; }
   });
 
+  // כפתורי שעה
   document.querySelectorAll('.slot-btn').forEach(btn=>{
-    btn.style.backgroundColor = DS.slot_button_color;
-    btn.style.color = DS.slot_button_text_color;
-    btn.style.borderRadius = DS.slot_button_shape;
-    btn.style.fontFamily = DS.slot_button_font_family;
-    btn.style.fontSize = DS.slot_button_text_size;
-    btn.style.paddingTop = DS.slot_button_size;
-    btn.style.paddingBottom = DS.slot_button_size;
+    if(DS.slot_button_color) btn.style.backgroundColor = DS.slot_button_color;
+    if(DS.slot_button_text_color) btn.style.color = DS.slot_button_text_color;
+    if(DS.slot_button_shape) btn.style.borderRadius = DS.slot_button_shape;
+    if(DS.slot_button_font_family) btn.style.fontFamily = DS.slot_button_font_family;
+    if(DS.slot_button_text_size) btn.style.fontSize = DS.slot_button_text_size;
+    if(DS.slot_button_size) { btn.style.paddingTop = DS.slot_button_size; btn.style.paddingBottom = DS.slot_button_size; }
   });
 
+  // עורך צבע רקע
   const pageBg = document.getElementById('pageBg');
   pageBg.value = rgbToHex(getComputedStyle(document.body).backgroundColor);
   pageBg.addEventListener('input', e=> document.body.style.backgroundColor = e.target.value);
 
+  // עריכת כותרות וכפתורים
   let currentType=null, currentTrigger=null;
   const editorArea = document.getElementById('editorArea');
 
@@ -224,12 +226,10 @@ document.addEventListener('DOMContentLoaded', ()=> {
   mainTitle.addEventListener('click', e=>renderEditor('title',e.currentTarget));
   subTitle.addEventListener('click', e=>renderEditor('subtitle',e.currentTarget));
 
+  // שמירה לשרת
   document.getElementById('saveBtn').addEventListener('click', async ()=>{
     const daySample=document.querySelector('.day-btn');
     const slotSample=document.querySelector('.slot-btn');
-
-    const dayComp=getComputedStyle(daySample);
-    const slotComp=getComputedStyle(slotSample);
 
     const payload = {
       body_background_color: getComputedStyle(document.body).backgroundColor,
