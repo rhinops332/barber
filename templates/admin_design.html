@@ -1,197 +1,281 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <title>ניהול עיצוב</title>
+  <meta charset="utf-8" />
+  <title>עיצוב - תצוגה מקדימה</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      display: flex;
-      gap: 20px;
-      margin: 0;
-      padding: 0;
-    }
-    #preview {
-      flex: 2;
-      padding: 20px;
-      min-height: 100vh;
-    }
-    #controls {
-      flex: 1;
-      background: #f7f7f7;
-      padding: 20px;
-      border-right: 2px solid #ccc;
-      overflow-y: auto;
-      max-height: 100vh;
-    }
-    h1, h2 {
-      margin: 10px 0;
-    }
-    .day-button, .slot-button {
-      margin: 5px;
-      padding: 10px 15px;
-      cursor: pointer;
-      border: none;
-    }
-    label {
-      display: block;
-      margin-top: 10px;
-      font-size: 14px;
-      font-weight: bold;
-    }
-    input, select {
-      width: 100%;
-      padding: 5px;
-      margin-top: 3px;
-    }
-    button.save {
-      margin-top: 20px;
-      width: 100%;
-      padding: 10px;
-      font-size: 16px;
-      background: #4CAF50;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
+    body { font-family: Arial, sans-serif; transition: background-color 0.2s; }
+    .btn { transition: transform .12s ease, box-shadow .12s ease; cursor:pointer; }
+    .btn:hover { transform: translateY(-2px); }
+    .selected-outline { outline: 3px solid #f59e0b; outline-offset: 3px; }
+    .small-label { font-size: 0.9rem; color: #555; }
   </style>
-  <script>
-    let settings = {{ design_settings | tojson | safe }};
-    function applySettings() {
-      document.body.style.backgroundColor = settings.body_background_color;
-
-      const heading = document.getElementById("heading");
-      heading.textContent = settings.heading_text;
-      heading.style.color = settings.heading_color;
-      heading.style.fontSize = settings.heading_font_size + "px";
-      heading.style.fontFamily = settings.heading_font_family;
-
-      const subheading = document.getElementById("subheading");
-      subheading.textContent = settings.subheading_text;
-      subheading.style.color = settings.subheading_color;
-      subheading.style.fontSize = settings.subheading_font_size + "px";
-      subheading.style.fontFamily = settings.subheading_font_family;
-
-      document.querySelectorAll(".day-button").forEach(btn => {
-        btn.style.borderRadius = settings.day_button_shape;
-        btn.style.backgroundColor = settings.day_button_color;
-        btn.style.fontSize = settings.day_button_text_size + "px";
-        btn.style.color = settings.day_button_text_color;
-        btn.style.fontFamily = settings.day_button_font_family;
-        btn.style.padding = settings.day_button_size + "px";
-      });
-
-      document.querySelectorAll(".slot-button").forEach(btn => {
-        btn.style.borderRadius = settings.slot_button_shape;
-        btn.style.backgroundColor = settings.slot_button_color;
-        btn.style.fontSize = settings.slot_button_text_size + "px";
-        btn.style.color = settings.slot_button_text_color;
-        btn.style.fontFamily = settings.slot_button_font_family;
-        btn.style.padding = settings.slot_button_size + "px";
-      });
-    }
-
-    function updateField(field, value) {
-      settings[field] = value;
-      applySettings();
-    }
-
-    function saveSettings() {
-      fetch("/business_settings", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(settings)
-      })
-      .then(r => r.json())
-      .then(d => alert("ההגדרות נשמרו בהצלחה"))
-      .catch(err => alert("שגיאה בשמירה"));
-    }
-
-    window.onload = () => {
-      // למלא inputs עם הערכים
-      for (const [key, value] of Object.entries(settings)) {
-        const el = document.getElementById("ctrl_" + key);
-        if (el) el.value = value;
-      }
-      applySettings();
-    };
-  </script>
 </head>
 <body>
-  <div id="controls">
-    <h3>הגדרות עיצוב</h3>
 
-    <!-- כותרת -->
-    <label>טקסט כותרת</label>
-    <input id="ctrl_heading_text" oninput="updateField('heading_text', this.value)">
-    <label>צבע כותרת</label>
-    <input type="color" id="ctrl_heading_color" oninput="updateField('heading_color', this.value)">
-    <label>גודל כותרת</label>
-    <input type="number" id="ctrl_heading_font_size" oninput="updateField('heading_font_size', this.value)">
-    <label>פונט כותרת</label>
-    <input id="ctrl_heading_font_family" oninput="updateField('heading_font_family', this.value)">
+<script>
+  window.__DESIGN = {{ design_settings | tojson | safe }};
+</script>
 
-    <!-- כותרת משנה -->
-    <label>טקסט כותרת משנה</label>
-    <input id="ctrl_subheading_text" oninput="updateField('subheading_text', this.value)">
-    <label>צבע כותרת משנה</label>
-    <input type="color" id="ctrl_subheading_color" oninput="updateField('subheading_color', this.value)">
-    <label>גודל כותרת משנה</label>
-    <input type="number" id="ctrl_subheading_font_size" oninput="updateField('subheading_font_size', this.value)">
-    <label>פונט כותרת משנה</label>
-    <input id="ctrl_subheading_font_family" oninput="updateField('subheading_font_family', this.value)">
+<div class="flex h-screen">
 
-    <!-- כפתורי ימים -->
-    <h4>כפתורי ימים</h4>
-    <label>צורה (border-radius)</label>
-    <input id="ctrl_day_button_shape" oninput="updateField('day_button_shape', this.value)">
-    <label>צבע רקע</label>
-    <input type="color" id="ctrl_day_button_color" oninput="updateField('day_button_color', this.value)">
-    <label>גודל ריווח</label>
-    <input type="number" id="ctrl_day_button_size" oninput="updateField('day_button_size', this.value)">
-    <label>גודל טקסט</label>
-    <input type="number" id="ctrl_day_button_text_size" oninput="updateField('day_button_text_size', this.value)">
-    <label>צבע טקסט</label>
-    <input type="color" id="ctrl_day_button_text_color" oninput="updateField('day_button_text_color', this.value)">
-    <label>פונט</label>
-    <input id="ctrl_day_button_font_family" oninput="updateField('day_button_font_family', this.value)">
+  <!-- שמאל: תצוגה -->
+  <div class="w-3/4 p-6 overflow-auto">
 
-    <!-- כפתורי שעות -->
-    <h4>כפתורי שעות</h4>
-    <label>צורה (border-radius)</label>
-    <input id="ctrl_slot_button_shape" oninput="updateField('slot_button_shape', this.value)">
-    <label>צבע רקע</label>
-    <input type="color" id="ctrl_slot_button_color" oninput="updateField('slot_button_color', this.value)">
-    <label>גודל ריווח</label>
-    <input type="number" id="ctrl_slot_button_size" oninput="updateField('slot_button_size', this.value)">
-    <label>גודל טקסט</label>
-    <input type="number" id="ctrl_slot_button_text_size" oninput="updateField('slot_button_text_size', this.value)">
-    <label>צבע טקסט</label>
-    <input type="color" id="ctrl_slot_button_text_color" oninput="updateField('slot_button_text_color', this.value)">
-    <label>פונט</label>
-    <input id="ctrl_slot_button_font_family" oninput="updateField('slot_button_font_family', this.value)">
-
-    <!-- צבע רקע עמוד -->
-    <h4>עמוד</h4>
-    <label>צבע רקע</label>
-    <input type="color" id="ctrl_body_background_color" oninput="updateField('body_background_color', this.value)">
-
-    <button class="save" onclick="saveSettings()">שמור</button>
-  </div>
-
-  <div id="preview">
-    <h1 id="heading"></h1>
-    <h2 id="subheading"></h2>
-    <div>
-      <button class="day-button">ראשון</button>
-      <button class="day-button">שני</button>
-      <button class="day-button">שלישי</button>
+    <!-- כותרות -->
+    <div class="mb-6">
+      <h1 id="mainTitle" class="text-2xl font-bold"></h1>
+      <h2 id="subTitle" class="text-lg text-gray-600"></h2>
     </div>
+
+    <!-- DAYS: 7 כפתורים -->
+    <div class="mb-6">
+      <div class="grid grid-cols-7 gap-3" id="daysRow">
+        {% for i in range(7) %}
+          <button class="btn day-btn" data-type="day">DAY</button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- SLOTS: 20 כפתורים -->
     <div>
-      <button class="slot-button">08:00</button>
-      <button class="slot-button">08:30</button>
-      <button class="slot-button">09:00</button>
+      <div class="grid grid-cols-5 gap-3" id="slotsGrid">
+        {% for i in range(20) %}
+          <button class="btn slot-btn" data-type="slot">HOUR</button>
+        {% endfor %}
+      </div>
     </div>
   </div>
+
+  <!-- ימין: פאנל קבוע -->
+  <aside id="sidePanel" class="w-1/4 bg-white p-6 border-l border-gray-300">
+    <h3 class="text-lg font-semibold mb-4">אפשרויות</h3>
+
+    <div class="mb-4">
+      <label class="block small-label mb-1">צבע רקע (תצוגה)</label>
+      <input id="pageBg" type="color" class="w-full h-10 p-0 border">
+    </div>
+
+    <div id="editorArea" class="text-gray-600">
+      <p id="editorHint">לחץ על כפתור DAY או HOUR או על הכותרת כדי לערוך.</p>
+    </div>
+
+    <button id="saveBtn" class="mt-6 w-full bg-blue-600 text-white py-2 rounded-lg">💾 שמור (לשרת)</button>
+  </aside>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', ()=> {
+
+  const DS = window.__DESIGN || {};
+
+  function rgbToHex(rgb){
+    if (!rgb) return '#000000';
+    if (rgb.startsWith('#')) return rgb;
+    const m = rgb.match(/\d+/g);
+    return '#' + m.slice(0,3).map(x=>{const h=parseInt(x).toString(16); return h.length===1?'0'+h:h}).join('');
+  }
+
+  document.body.style.backgroundColor = DS.body_background_color || '#f3f4f6';
+
+  const mainTitle = document.getElementById('mainTitle');
+  const subTitle = document.getElementById('subTitle');
+
+  mainTitle.textContent = DS.business_name || '';
+  mainTitle.style.fontFamily = DS.heading_font_family || 'Georgia, serif';
+  mainTitle.style.fontSize = DS.heading_font_size || '32px';
+  mainTitle.style.color = DS.heading_color || '#2980b9';
+
+  subTitle.textContent = 'בחרו תור לקביעת פגישה';
+  subTitle.style.fontFamily = DS.subheading_font_family || 'Verdana, sans-serif';
+  subTitle.style.fontSize = DS.subheading_font_size || '18px';
+  subTitle.style.color = DS.subheading_color || '#555';
+
+  document.querySelectorAll('.day-btn').forEach(btn=>{
+    btn.style.backgroundColor = DS.day_button_color || '#3498db';
+    btn.style.color = DS.day_button_text_color || '#fff';
+    btn.style.borderRadius = DS.day_button_shape || '12px';
+    btn.style.fontFamily = DS.day_button_font_family || 'Tahoma, sans-serif';
+    btn.style.fontSize = DS.day_button_text_size || '15px';
+    btn.style.paddingTop = DS.day_button_size || '12px';
+    btn.style.paddingBottom = DS.day_button_size || '12px';
+  });
+
+  document.querySelectorAll('.slot-btn').forEach(btn=>{
+    btn.style.backgroundColor = DS.slot_button_color || '#2ecc71';
+    btn.style.color = DS.slot_button_text_color || '#fff';
+    btn.style.borderRadius = DS.slot_button_shape || '8px';
+    btn.style.fontFamily = DS.slot_button_font_family || 'Verdana, sans-serif';
+    btn.style.fontSize = DS.slot_button_text_size || '14px';
+    btn.style.paddingTop = DS.slot_button_size || '8px';
+    btn.style.paddingBottom = DS.slot_button_size || '8px';
+  });
+
+  const pageBg = document.getElementById('pageBg');
+  pageBg.value = rgbToHex(getComputedStyle(document.body).backgroundColor);
+  pageBg.addEventListener('input', e=> document.body.style.backgroundColor = e.target.value);
+
+  let currentType=null, currentTrigger=null;
+  const editorArea = document.getElementById('editorArea');
+
+  function clearSelectionOutline(){
+    document.querySelectorAll('.day-btn,.slot-btn,#mainTitle,#subTitle').forEach(el=>el.classList.remove('selected-outline'));
+  }
+
+  function renderEditor(type, triggerEl=null){
+    currentType=type;
+    currentTrigger=triggerEl;
+    clearSelectionOutline();
+    if(triggerEl) triggerEl.classList.add('selected-outline');
+    editorArea.innerHTML='';
+
+    if(type==='day'||type==='slot'){
+      const sample = type==='day'?document.querySelector('.day-btn'):document.querySelector('.slot-btn');
+      const c=getComputedStyle(sample);
+
+      editorArea.innerHTML=`
+        <div>
+          <p class="font-semibold mb-2">עורך ${type==='day'?'DAY':'HOUR'}</p>
+          <label class="block small-label mb-1">צבע רקע</label>
+          <input id="groupBg" type="color" class="w-full h-10 p-0 border" value="${rgbToHex(c.backgroundColor)}">
+
+          <label class="block small-label mt-3 mb-1">צבע טקסט</label>
+          <input id="groupText" type="color" class="w-full h-10 p-0 border" value="${rgbToHex(c.color)}">
+
+          <label class="block small-label mt-3 mb-1">גודל טקסט (px)</label>
+          <input id="groupFontSize" type="number" min="8" class="w-full border p-2" value="${parseInt(c.fontSize)}">
+
+          <label class="block small-label mt-3 mb-1">פונט</label>
+          <select id="groupFontFamily" class="w-full border p-2">
+            <option ${c.fontFamily.includes('Tahoma')?'selected':''}>Tahoma, sans-serif</option>
+            <option ${c.fontFamily.includes('Arial')?'selected':''}>Arial, sans-serif</option>
+            <option ${c.fontFamily.includes('Verdana')?'selected':''}>Verdana, sans-serif</option>
+            <option ${c.fontFamily.includes('Georgia')?'selected':''}>Georgia, serif</option>
+          </select>
+
+          <label class="block small-label mt-3 mb-1">גובה פנימי (padding px)</label>
+          <input id="groupPadding" type="number" min="0" class="w-full border p-2" value="${parseInt(c.paddingTop)}">
+
+          <label class="block small-label mt-3 mb-1">צורת כפתור (border-radius)</label>
+          <select id="groupShape" class="w-full border p-2">
+            <option value="0px">מרובע</option>
+            <option value="6px">מעט מעוגל</option>
+            <option value="12px" selected>מעוגל</option>
+            <option value="9999px">pill</option>
+          </select>
+          <p class="text-sm text-gray-500 mt-3">השינויים יחולו על כל הכפתורים בזמן אמת.</p>
+        </div>
+      `;
+
+      const applyToGroup = ()=>{
+        const bg = document.getElementById('groupBg').value;
+        const text = document.getElementById('groupText').value;
+        const fs = document.getElementById('groupFontSize').value+'px';
+        const ff = document.getElementById('groupFontFamily').value;
+        const pad = document.getElementById('groupPadding').value+'px';
+        const rad = document.getElementById('groupShape').value;
+
+        document.querySelectorAll(type==='day'?'.day-btn':'.slot-btn').forEach(el=>{
+          el.style.backgroundColor=bg;
+          el.style.color=text;
+          el.style.fontSize=fs;
+          el.style.fontFamily=ff;
+          el.style.paddingTop=pad;
+          el.style.paddingBottom=pad;
+          el.style.borderRadius=rad;
+        });
+      };
+
+      ['groupBg','groupText','groupFontSize','groupFontFamily','groupPadding','groupShape'].forEach(id=>{
+        document.getElementById(id).addEventListener('input', applyToGroup);
+        document.getElementById(id).addEventListener('change', applyToGroup);
+      });
+
+    } else if(type==='title'||type==='subtitle'){
+      const el = type==='title'?mainTitle:subTitle;
+      const c=getComputedStyle(el);
+      const curColor = rgbToHex(c.color);
+      const curSize = parseInt(c.fontSize);
+      const curFamily = c.fontFamily;
+
+      editorArea.innerHTML=`
+        <div>
+          <p class="font-semibold mb-2">עורך ${type==='title'?'כותרת':'כותרת משנה'}</p>
+          <label class="block small-label mb-1">טקסט</label>
+          <input id="titleText" type="text" class="w-full border p-2" value="${el.textContent}">
+          <label class="block small-label mt-3 mb-1">צבע טקסט</label>
+          <input id="titleColor" type="color" class="w-full h-10 p-0 border" value="${curColor}">
+          <label class="block small-label mt-3 mb-1">גודל טקסט (px)</label>
+          <input id="titleSize" type="number" class="w-full border p-2" value="${curSize}">
+          <label class="block small-label mt-3 mb-1">פונט</label>
+          <select id="titleFont" class="w-full border p-2">
+            <option ${curFamily.includes('Georgia')?'selected':''}>Georgia, serif</option>
+            <option ${curFamily.includes('Tahoma')?'selected':''}>Tahoma, sans-serif</option>
+            <option ${curFamily.includes('Verdana')?'selected':''}>Verdana, sans-serif</option>
+            <option ${curFamily.includes('Arial')?'selected':''}>Arial, sans-serif</option>
+          </select>
+        </div>
+      `;
+      document.getElementById('titleText').addEventListener('input', e=>el.textContent=e.target.value);
+      document.getElementById('titleColor').addEventListener('input', e=>el.style.color=e.target.value);
+      document.getElementById('titleSize').addEventListener('input', e=>el.style.fontSize=e.target.value+'px');
+      document.getElementById('titleFont').addEventListener('change', e=>el.style.fontFamily=e.target.value);
+    }
+  }
+
+  document.querySelectorAll('.day-btn').forEach(btn=>btn.addEventListener('click', e=>renderEditor('day',e.currentTarget)));
+  document.querySelectorAll('.slot-btn').forEach(btn=>btn.addEventListener('click', e=>renderEditor('slot',e.currentTarget)));
+  mainTitle.addEventListener('click', e=>renderEditor('title',e.currentTarget));
+  subTitle.addEventListener('click', e=>renderEditor('subtitle',e.currentTarget));
+
+  document.getElementById('saveBtn').addEventListener('click', async ()=>{
+    const daySample=document.querySelector('.day-btn');
+    const slotSample=document.querySelector('.slot-btn');
+
+    const dayComp=getComputedStyle(daySample);
+    const slotComp=getComputedStyle(slotSample);
+
+    const payload = {
+      body_background_color: rgbToHex(getComputedStyle(document.body).backgroundColor),
+      heading_font_family: mainTitle.style.fontFamily || getComputedStyle(mainTitle).fontFamily,
+      heading_font_size: mainTitle.style.fontSize || getComputedStyle(mainTitle).fontSize,
+      heading_color: rgbToHex(getComputedStyle(mainTitle).color),
+      heading_text: mainTitle.textContent,
+      subheading_font_family: subTitle.style.fontFamily || getComputedStyle(subTitle).fontFamily,
+      subheading_font_size: subTitle.style.fontSize || getComputedStyle(subTitle).fontSize,
+      subheading_color: rgbToHex(getComputedStyle(subTitle).color),
+      subheading_text: subTitle.textContent,
+      day_button_shape: daySample.style.borderRadius || dayComp.borderRadius,
+      day_button_color: rgbToHex(dayComp.backgroundColor),
+      day_button_size: daySample.style.paddingTop || dayComp.paddingTop,
+      day_button_text_size: daySample.style.fontSize || dayComp.fontSize,
+      day_button_text_color: rgbToHex(dayComp.color),
+      day_button_font_family: daySample.style.fontFamily || dayComp.fontFamily,
+      slot_button_shape: slotSample.style.borderRadius || slotComp.borderRadius,
+      slot_button_color: rgbToHex(slotComp.backgroundColor),
+      slot_button_size: slotSample.style.paddingTop || slotComp.paddingTop,
+      slot_button_text_size: slotSample.style.fontSize || slotComp.fontSize,
+      slot_button_text_color: rgbToHex(slotComp.color),
+      slot_button_font_family: slotSample.style.fontFamily || slotComp.fontFamily
+    };
+
+    try{
+      const res = await fetch('/business_settings',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.error || 'שגיאה בשרת');
+      alert(data.message || 'נשמר בהצלחה!');
+    } catch(err){
+      console.error(err);
+      alert('שגיאה בשמירה — בדוק את השרת (console).');
+    }
+  });
+
+});
+</script>
 </body>
 </html>
