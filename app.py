@@ -742,7 +742,7 @@ def add_business():
                 """, (business_id, day, slot['start_time'], slot['end_time']))
 
         # 2.1️⃣ יצירת שורה ב-business_settings עם ערכי ברירת מחדל
-        create_default_business_settings(business_id,business_name conn)
+        create_default_business_settings(business_id,business_name, conn)
 
         # 3️⃣ יצירת רשומות ריקות לשאר הטבלאות
         for table in ["appointments", "overrides", "bot_knowledge"]:
