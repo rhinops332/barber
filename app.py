@@ -902,6 +902,7 @@ def orders():
     week_slots = generate_week_slots(business_name)
     return render_template("orders.html", week_slots=week_slots, business_name=business_name)
 
+
 @app.route("/admin_design")
 def admin_design():
     business_name = session.get('business_name')
@@ -922,30 +923,20 @@ def admin_design():
     # שליפת הגדרות עיצוב
     cur.execute("SELECT * FROM design_settings WHERE business_id=%s", (business_id,))
     settings_row = cur.fetchone()
-    conn.close()
-
     if not settings_row:
+        cur.close()
+        conn.close()
         return "No design settings found for this business", 404
 
-    # רשימת עמודות כפי שהגדרת בטבלה
-    columns = [
-        "day_button_shape","day_button_color","day_button_size",
-        "day_button_text_size","day_button_text_color","day_button_font_family",
-        "slot_button_shape","slot_button_color","slot_button_size","slot_button_text_size",
-        "slot_button_text_color","slot_button_font_family",
-        "heading_font_family","subheading_font_family","heading_font_size","subheading_font_size",
-        "heading_color","subheading_color",
-        "heading_text","subheading_text",
-        "body_background_color"
-    ]
-
-    # המרת השורה למילון
-    design_settings = {col: settings_row[idx] for idx, col in enumerate(columns)}
+    colnames = [desc[0] for desc in cur.description]
+    design_settings = dict(zip(colnames, settings_row))
     design_settings['business_name'] = business_name
 
-    return render_template("admin_design.html", **design_settings)
+    cur.close()
+    conn.close()
 
-
+    # עכשיו זה אובייקט אחד ב־HTML
+    return render_template("admin_design.html", design_settings=design_settings)
 
 
 
