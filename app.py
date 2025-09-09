@@ -943,10 +943,7 @@ def admin_design():
     design_settings = {col: settings_row[idx] for idx, col in enumerate(columns)}
     design_settings['business_name'] = business_name
 
-    return render_template("admin_design.html", **design_settings)
-
-
-
+    return render_template("admin_design.html", design_settings=design_settings)
 
 
 # --- ניהול שגרה שבועית ---
