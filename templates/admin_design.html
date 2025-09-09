@@ -1,31 +1,35 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-<meta charset="utf-8" />
-<title>עיצוב - תצוגה מקדימה</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-  body { font-family: Arial, sans-serif; transition: background-color 0.2s; }
-  .btn { transition: transform .12s ease, box-shadow .12s ease; cursor:pointer; }
-  .btn:hover { transform: translateY(-2px); }
-  .selected-outline { outline: 3px solid #f59e0b; outline-offset: 3px; }
-  .small-label { font-size: 0.9rem; color: #555; }
-</style>
+  <meta charset="utf-8" />
+  <title>עיצוב - תצוגה מקדימה</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: Arial, sans-serif; transition: background-color 0.2s; }
+    .btn { transition: transform .12s ease, box-shadow .12s ease; cursor:pointer; }
+    .btn:hover { transform: translateY(-2px); }
+    .selected-outline { outline: 3px solid #f59e0b; outline-offset: 3px; }
+    .small-label { font-size: 0.9rem; color: #555; }
+  </style>
 </head>
 <body>
 
 <script>
-  window.__DESIGN = {{ design_settings | tojson | safe }} || {};
+  window.__DESIGN = {{ design_settings | tojson | safe }};
 </script>
 
 <div class="flex h-screen">
+
   <!-- שמאל: תצוגה -->
   <div class="w-3/4 p-6 overflow-auto">
+
+    <!-- כותרות -->
     <div class="mb-6">
       <h1 id="mainTitle" class="text-2xl font-bold"></h1>
       <h2 id="subTitle" class="text-lg text-gray-600"></h2>
     </div>
 
+    <!-- DAYS: 7 כפתורים -->
     <div class="mb-6">
       <div class="grid grid-cols-7 gap-3" id="daysRow">
         {% for i in range(7) %}
@@ -34,6 +38,7 @@
       </div>
     </div>
 
+    <!-- SLOTS: 20 כפתורים -->
     <div>
       <div class="grid grid-cols-5 gap-3" id="slotsGrid">
         {% for i in range(20) %}
@@ -46,20 +51,24 @@
   <!-- ימין: פאנל קבוע -->
   <aside id="sidePanel" class="w-1/4 bg-white p-6 border-l border-gray-300">
     <h3 class="text-lg font-semibold mb-4">אפשרויות</h3>
+
     <div class="mb-4">
       <label class="block small-label mb-1">צבע רקע (תצוגה)</label>
       <input id="pageBg" type="color" class="w-full h-10 p-0 border">
     </div>
+
     <div id="editorArea" class="text-gray-600">
       <p id="editorHint">לחץ על כפתור DAY או HOUR או על הכותרת כדי לערוך.</p>
     </div>
+
     <button id="saveBtn" class="mt-6 w-full bg-blue-600 text-white py-2 rounded-lg">💾 שמור (לשרת)</button>
   </aside>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', ()=> {
-  const DS = window.__DESIGN;
+
+  const DS = window.__DESIGN || {};
 
   function rgbToHex(rgb){
     if (!rgb) return '#000000';
@@ -68,18 +77,17 @@ document.addEventListener('DOMContentLoaded', ()=> {
     return '#' + m.slice(0,3).map(x=>{const h=parseInt(x).toString(16); return h.length===1?'0'+h:h}).join('');
   }
 
-  // ---------- הצבת ערכים מהמסד ----------
   document.body.style.backgroundColor = DS.body_background_color || '#f3f4f6';
 
   const mainTitle = document.getElementById('mainTitle');
   const subTitle = document.getElementById('subTitle');
 
-  mainTitle.textContent = DS.heading_text || 'כותרת';
+  mainTitle.textContent = DS.business_name || '';
   mainTitle.style.fontFamily = DS.heading_font_family || 'Georgia, serif';
   mainTitle.style.fontSize = DS.heading_font_size || '32px';
   mainTitle.style.color = DS.heading_color || '#2980b9';
 
-  subTitle.textContent = DS.subheading_text || 'כותרת משנה';
+  subTitle.textContent = 'בחרו תור לקביעת פגישה';
   subTitle.style.fontFamily = DS.subheading_font_family || 'Verdana, sans-serif';
   subTitle.style.fontSize = DS.subheading_font_size || '18px';
   subTitle.style.color = DS.subheading_color || '#555';
@@ -105,10 +113,9 @@ document.addEventListener('DOMContentLoaded', ()=> {
   });
 
   const pageBg = document.getElementById('pageBg');
-  pageBg.value = rgbToHex(document.body.style.backgroundColor);
+  pageBg.value = rgbToHex(getComputedStyle(document.body).backgroundColor);
   pageBg.addEventListener('input', e=> document.body.style.backgroundColor = e.target.value);
 
-  // ---------- עורך ----------
   let currentType=null, currentTrigger=null;
   const editorArea = document.getElementById('editorArea');
 
@@ -125,17 +132,20 @@ document.addEventListener('DOMContentLoaded', ()=> {
 
     if(type==='day'||type==='slot'){
       const sample = type==='day'?document.querySelector('.day-btn'):document.querySelector('.slot-btn');
-      const c=sample.style;
+      const c=getComputedStyle(sample);
 
       editorArea.innerHTML=`
         <div>
           <p class="font-semibold mb-2">עורך ${type==='day'?'DAY':'HOUR'}</p>
           <label class="block small-label mb-1">צבע רקע</label>
           <input id="groupBg" type="color" class="w-full h-10 p-0 border" value="${rgbToHex(c.backgroundColor)}">
+
           <label class="block small-label mt-3 mb-1">צבע טקסט</label>
           <input id="groupText" type="color" class="w-full h-10 p-0 border" value="${rgbToHex(c.color)}">
+
           <label class="block small-label mt-3 mb-1">גודל טקסט (px)</label>
           <input id="groupFontSize" type="number" min="8" class="w-full border p-2" value="${parseInt(c.fontSize)}">
+
           <label class="block small-label mt-3 mb-1">פונט</label>
           <select id="groupFontFamily" class="w-full border p-2">
             <option ${c.fontFamily.includes('Tahoma')?'selected':''}>Tahoma, sans-serif</option>
@@ -143,6 +153,18 @@ document.addEventListener('DOMContentLoaded', ()=> {
             <option ${c.fontFamily.includes('Verdana')?'selected':''}>Verdana, sans-serif</option>
             <option ${c.fontFamily.includes('Georgia')?'selected':''}>Georgia, serif</option>
           </select>
+
+          <label class="block small-label mt-3 mb-1">גובה פנימי (padding px)</label>
+          <input id="groupPadding" type="number" min="0" class="w-full border p-2" value="${parseInt(c.paddingTop)}">
+
+          <label class="block small-label mt-3 mb-1">צורת כפתור (border-radius)</label>
+          <select id="groupShape" class="w-full border p-2">
+            <option value="0px">מרובע</option>
+            <option value="6px">מעט מעוגל</option>
+            <option value="12px" selected>מעוגל</option>
+            <option value="9999px">pill</option>
+          </select>
+          <p class="text-sm text-gray-500 mt-3">השינויים יחולו על כל הכפתורים בזמן אמת.</p>
         </div>
       `;
 
@@ -151,22 +173,31 @@ document.addEventListener('DOMContentLoaded', ()=> {
         const text = document.getElementById('groupText').value;
         const fs = document.getElementById('groupFontSize').value+'px';
         const ff = document.getElementById('groupFontFamily').value;
+        const pad = document.getElementById('groupPadding').value+'px';
+        const rad = document.getElementById('groupShape').value;
 
         document.querySelectorAll(type==='day'?'.day-btn':'.slot-btn').forEach(el=>{
           el.style.backgroundColor=bg;
           el.style.color=text;
           el.style.fontSize=fs;
           el.style.fontFamily=ff;
+          el.style.paddingTop=pad;
+          el.style.paddingBottom=pad;
+          el.style.borderRadius=rad;
         });
       };
-      ['groupBg','groupText','groupFontSize','groupFontFamily'].forEach(id=>{
+
+      ['groupBg','groupText','groupFontSize','groupFontFamily','groupPadding','groupShape'].forEach(id=>{
         document.getElementById(id).addEventListener('input', applyToGroup);
         document.getElementById(id).addEventListener('change', applyToGroup);
       });
 
     } else if(type==='title'||type==='subtitle'){
       const el = type==='title'?mainTitle:subTitle;
-      const c=el.style;
+      const c=getComputedStyle(el);
+      const curColor = rgbToHex(c.color);
+      const curSize = parseInt(c.fontSize);
+      const curFamily = c.fontFamily;
 
       editorArea.innerHTML=`
         <div>
@@ -174,15 +205,15 @@ document.addEventListener('DOMContentLoaded', ()=> {
           <label class="block small-label mb-1">טקסט</label>
           <input id="titleText" type="text" class="w-full border p-2" value="${el.textContent}">
           <label class="block small-label mt-3 mb-1">צבע טקסט</label>
-          <input id="titleColor" type="color" class="w-full h-10 p-0 border" value="${rgbToHex(c.color)}">
+          <input id="titleColor" type="color" class="w-full h-10 p-0 border" value="${curColor}">
           <label class="block small-label mt-3 mb-1">גודל טקסט (px)</label>
-          <input id="titleSize" type="number" class="w-full border p-2" value="${parseInt(c.fontSize)}">
+          <input id="titleSize" type="number" class="w-full border p-2" value="${curSize}">
           <label class="block small-label mt-3 mb-1">פונט</label>
           <select id="titleFont" class="w-full border p-2">
-            <option ${c.fontFamily.includes('Georgia')?'selected':''}>Georgia, serif</option>
-            <option ${c.fontFamily.includes('Tahoma')?'selected':''}>Tahoma, sans-serif</option>
-            <option ${c.fontFamily.includes('Verdana')?'selected':''}>Verdana, sans-serif</option>
-            <option ${c.fontFamily.includes('Arial')?'selected':''}>Arial, sans-serif</option>
+            <option ${curFamily.includes('Georgia')?'selected':''}>Georgia, serif</option>
+            <option ${curFamily.includes('Tahoma')?'selected':''}>Tahoma, sans-serif</option>
+            <option ${curFamily.includes('Verdana')?'selected':''}>Verdana, sans-serif</option>
+            <option ${curFamily.includes('Arial')?'selected':''}>Arial, sans-serif</option>
           </select>
         </div>
       `;
@@ -198,33 +229,35 @@ document.addEventListener('DOMContentLoaded', ()=> {
   mainTitle.addEventListener('click', e=>renderEditor('title',e.currentTarget));
   subTitle.addEventListener('click', e=>renderEditor('subtitle',e.currentTarget));
 
-  // ---------- שמירה ----------
   document.getElementById('saveBtn').addEventListener('click', async ()=>{
     const daySample=document.querySelector('.day-btn');
     const slotSample=document.querySelector('.slot-btn');
 
+    const dayComp=getComputedStyle(daySample);
+    const slotComp=getComputedStyle(slotSample);
+
     const payload = {
-      body_background_color: document.body.style.backgroundColor,
-      heading_font_family: mainTitle.style.fontFamily,
-      heading_font_size: mainTitle.style.fontSize,
-      heading_color: mainTitle.style.color,
+      body_background_color: rgbToHex(getComputedStyle(document.body).backgroundColor),
+      heading_font_family: mainTitle.style.fontFamily || getComputedStyle(mainTitle).fontFamily,
+      heading_font_size: mainTitle.style.fontSize || getComputedStyle(mainTitle).fontSize,
+      heading_color: rgbToHex(getComputedStyle(mainTitle).color),
       heading_text: mainTitle.textContent,
-      subheading_font_family: subTitle.style.fontFamily,
-      subheading_font_size: subTitle.style.fontSize,
-      subheading_color: subTitle.style.color,
+      subheading_font_family: subTitle.style.fontFamily || getComputedStyle(subTitle).fontFamily,
+      subheading_font_size: subTitle.style.fontSize || getComputedStyle(subTitle).fontSize,
+      subheading_color: rgbToHex(getComputedStyle(subTitle).color),
       subheading_text: subTitle.textContent,
-      day_button_shape: daySample.style.borderRadius,
-      day_button_color: daySample.style.backgroundColor,
-      day_button_size: daySample.style.paddingTop,
-      day_button_text_size: daySample.style.fontSize,
-      day_button_text_color: daySample.style.color,
-      day_button_font_family: daySample.style.fontFamily,
-      slot_button_shape: slotSample.style.borderRadius,
-      slot_button_color: slotSample.style.backgroundColor,
-      slot_button_size: slotSample.style.paddingTop,
-      slot_button_text_size: slotSample.style.fontSize,
-      slot_button_text_color: slotSample.style.color,
-      slot_button_font_family: slotSample.style.fontFamily
+      day_button_shape: daySample.style.borderRadius || dayComp.borderRadius,
+      day_button_color: rgbToHex(dayComp.backgroundColor),
+      day_button_size: daySample.style.paddingTop || dayComp.paddingTop,
+      day_button_text_size: daySample.style.fontSize || dayComp.fontSize,
+      day_button_text_color: rgbToHex(dayComp.color),
+      day_button_font_family: daySample.style.fontFamily || dayComp.fontFamily,
+      slot_button_shape: slotSample.style.borderRadius || slotComp.borderRadius,
+      slot_button_color: rgbToHex(slotComp.backgroundColor),
+      slot_button_size: slotSample.style.paddingTop || slotComp.paddingTop,
+      slot_button_text_size: slotSample.style.fontSize || slotComp.fontSize,
+      slot_button_text_color: rgbToHex(slotComp.color),
+      slot_button_font_family: slotSample.style.fontFamily || slotComp.fontFamily
     };
 
     try{
