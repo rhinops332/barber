@@ -1391,19 +1391,14 @@ def cancel_appointment():
 
 @app.route("/business_settings", methods=["GET", "POST"])
 def business_settings_route():
-    business_name = session.get('business_name')
-    if not business_name:
+    business_id = session.get("business_id")
+    business_name = session.get("business_name")
+
+    if not business_id or not business_name:
         return jsonify({"error": "Business not logged in"}), 403
 
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT id FROM businesses WHERE name = %s", (business_name,))
-    row = cur.fetchone()
-    if not row:
-        cur.close()
-        conn.close()
-        return jsonify({"error": "Business not found"}), 404
-    business_id = row[0]
 
     if request.method == "GET":
         cur.execute("SELECT * FROM design_settings WHERE business_id = %s", (business_id,))
@@ -1412,13 +1407,22 @@ def business_settings_route():
             cur.close()
             conn.close()
             return jsonify({"error": "Business settings not found"}), 404
+
         colnames = [desc[0] for desc in cur.description]
         settings_dict = dict(zip(colnames, settings))
-        # פירוק JSON לשדות קריאים
+
+        # המרה חזרה מ־JSON לאובייקט קריא
         if settings_dict.get("day_names"):
-            settings_dict["day_names"] = json.loads(settings_dict["day_names"])
+            try:
+                settings_dict["day_names"] = json.loads(settings_dict["day_names"])
+            except:
+                settings_dict["day_names"] = []
         if settings_dict.get("layout_json"):
-            settings_dict["layout_json"] = json.loads(settings_dict["layout_json"])
+            try:
+                settings_dict["layout_json"] = json.loads(settings_dict["layout_json"])
+            except:
+                settings_dict["layout_json"] = {}
+
         cur.close()
         conn.close()
         return jsonify(settings_dict)
@@ -1430,17 +1434,18 @@ def business_settings_route():
             conn.close()
             return jsonify({"error": "No data provided"}), 400
 
+        # כל השדות הרלוונטיים לעיצוב
         columns = [
-           "day_button_shape","day_button_color","day_button_size",
-           "day_button_text_size","day_button_text_color","day_button_font_family",
-           "slot_button_shape","slot_button_color","slot_button_size","slot_button_text_size",
-           "slot_button_text_color","slot_button_font_family",
-           "heading_font_family","subheading_font_family","heading_font_size","subheading_font_size",
-           "heading_color","subheading_color",
-           "heading_text","subheading_text",
-           "body_background_color"
-       ]
-
+            "day_button_shape","day_button_color","day_button_size",
+            "day_button_text_size","day_button_text_color","day_button_font_family",
+            "slot_button_shape","slot_button_color","slot_button_size","slot_button_text_size",
+            "slot_button_text_color","slot_button_font_family",
+            "heading_font_family","subheading_font_family","heading_font_size","subheading_font_size",
+            "heading_color","subheading_color",
+            "heading_text","subheading_text",
+            "body_background_color",
+            "day_names","layout_json"
+        ]
 
         # בדיקה אם כבר קיימת שורה
         cur.execute("SELECT 1 FROM design_settings WHERE business_id = %s", (business_id,))
@@ -1450,12 +1455,11 @@ def business_settings_route():
         for col in columns:
             val = data.get(col)
             if col in ["day_names", "layout_json"]:
-                if isinstance(val, str):
-                    try:
-                        val = json.loads(val)
-                    except:
-                        val = [d.strip() for d in val.split(",")] if col=="day_names" else {}
-                val = json.dumps(val)
+                # שמירה כ־JSON
+                if val is None:
+                    val = "[]" if col == "day_names" else "{}"
+                elif not isinstance(val, str):
+                    val = json.dumps(val)
             values.append(val)
 
         if exists:
@@ -1464,7 +1468,10 @@ def business_settings_route():
         else:
             cols_str = ", ".join(["business_id"] + columns)
             vals_placeholders = ", ".join(["%s"] * (len(columns) + 1))
-            cur.execute(f"INSERT INTO design_settings ({cols_str}) VALUES ({vals_placeholders})", [business_id] + values)
+            cur.execute(
+                f"INSERT INTO design_settings ({cols_str}) VALUES ({vals_placeholders})",
+                [business_id] + values
+            )
 
         conn.commit()
         cur.close()
