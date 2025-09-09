@@ -77,17 +77,18 @@ document.addEventListener('DOMContentLoaded', ()=> {
     return '#' + m.slice(0,3).map(x=>{const h=parseInt(x).toString(16); return h.length===1?'0'+h:h}).join('');
   }
 
+  // ---------- עיצוב ראשוני ----------
   document.body.style.backgroundColor = DS.body_background_color || '#f3f4f6';
 
   const mainTitle = document.getElementById('mainTitle');
   const subTitle = document.getElementById('subTitle');
 
-  mainTitle.textContent = DS.business_name || '';
+  mainTitle.textContent = DS.heading_text || 'כותרת';
   mainTitle.style.fontFamily = DS.heading_font_family || 'Georgia, serif';
   mainTitle.style.fontSize = DS.heading_font_size || '32px';
   mainTitle.style.color = DS.heading_color || '#2980b9';
 
-  subTitle.textContent = 'בחרו תור לקביעת פגישה';
+  subTitle.textContent = DS.subheading_text || 'כותרת משנה';
   subTitle.style.fontFamily = DS.subheading_font_family || 'Verdana, sans-serif';
   subTitle.style.fontSize = DS.subheading_font_size || '18px';
   subTitle.style.color = DS.subheading_color || '#555';
@@ -116,6 +117,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
   pageBg.value = rgbToHex(getComputedStyle(document.body).backgroundColor);
   pageBg.addEventListener('input', e=> document.body.style.backgroundColor = e.target.value);
 
+  // ---------- בחירה לעריכה ----------
   let currentType=null, currentTrigger=null;
   const editorArea = document.getElementById('editorArea');
 
@@ -139,13 +141,10 @@ document.addEventListener('DOMContentLoaded', ()=> {
           <p class="font-semibold mb-2">עורך ${type==='day'?'DAY':'HOUR'}</p>
           <label class="block small-label mb-1">צבע רקע</label>
           <input id="groupBg" type="color" class="w-full h-10 p-0 border" value="${rgbToHex(c.backgroundColor)}">
-
           <label class="block small-label mt-3 mb-1">צבע טקסט</label>
           <input id="groupText" type="color" class="w-full h-10 p-0 border" value="${rgbToHex(c.color)}">
-
           <label class="block small-label mt-3 mb-1">גודל טקסט (px)</label>
           <input id="groupFontSize" type="number" min="8" class="w-full border p-2" value="${parseInt(c.fontSize)}">
-
           <label class="block small-label mt-3 mb-1">פונט</label>
           <select id="groupFontFamily" class="w-full border p-2">
             <option ${c.fontFamily.includes('Tahoma')?'selected':''}>Tahoma, sans-serif</option>
@@ -153,10 +152,8 @@ document.addEventListener('DOMContentLoaded', ()=> {
             <option ${c.fontFamily.includes('Verdana')?'selected':''}>Verdana, sans-serif</option>
             <option ${c.fontFamily.includes('Georgia')?'selected':''}>Georgia, serif</option>
           </select>
-
           <label class="block small-label mt-3 mb-1">גובה פנימי (padding px)</label>
           <input id="groupPadding" type="number" min="0" class="w-full border p-2" value="${parseInt(c.paddingTop)}">
-
           <label class="block small-label mt-3 mb-1">צורת כפתור (border-radius)</label>
           <select id="groupShape" class="w-full border p-2">
             <option value="0px">מרובע</option>
@@ -164,7 +161,6 @@ document.addEventListener('DOMContentLoaded', ()=> {
             <option value="12px" selected>מעוגל</option>
             <option value="9999px">pill</option>
           </select>
-          <p class="text-sm text-gray-500 mt-3">השינויים יחולו על כל הכפתורים בזמן אמת.</p>
         </div>
       `;
 
@@ -229,6 +225,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
   mainTitle.addEventListener('click', e=>renderEditor('title',e.currentTarget));
   subTitle.addEventListener('click', e=>renderEditor('subtitle',e.currentTarget));
 
+  // ---------- שמירה ----------
   document.getElementById('saveBtn').addEventListener('click', async ()=>{
     const daySample=document.querySelector('.day-btn');
     const slotSample=document.querySelector('.slot-btn');
