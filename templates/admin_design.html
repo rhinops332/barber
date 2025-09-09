@@ -15,7 +15,6 @@
 <body>
 
 <script>
-  // העברת ערכים מ-Flask
   window.__DESIGN = {{ design_settings | tojson | safe }};
 </script>
 
@@ -71,7 +70,6 @@ document.addEventListener('DOMContentLoaded', ()=> {
 
   const DS = window.__DESIGN || {};
 
-  // ---------- פונקציה להמרת rgb ל hex ----------
   function rgbToHex(rgb){
     if (!rgb) return '#000000';
     if (rgb.startsWith('#')) return rgb;
@@ -79,23 +77,21 @@ document.addEventListener('DOMContentLoaded', ()=> {
     return '#' + m.slice(0,3).map(x=>{const h=parseInt(x).toString(16); return h.length===1?'0'+h:h}).join('');
   }
 
-  // ---------- עיצוב ראשוני ----------
   document.body.style.backgroundColor = DS.body_background_color || '#f3f4f6';
 
   const mainTitle = document.getElementById('mainTitle');
   const subTitle = document.getElementById('subTitle');
 
-  mainTitle.textContent = DS.heading_text || 'כותרת';
+  mainTitle.textContent = DS.business_name || '';
   mainTitle.style.fontFamily = DS.heading_font_family || 'Georgia, serif';
   mainTitle.style.fontSize = DS.heading_font_size || '32px';
   mainTitle.style.color = DS.heading_color || '#2980b9';
 
-  subTitle.textContent = DS.subheading_text || 'כותרת משנה';
+  subTitle.textContent = 'בחרו תור לקביעת פגישה';
   subTitle.style.fontFamily = DS.subheading_font_family || 'Verdana, sans-serif';
   subTitle.style.fontSize = DS.subheading_font_size || '18px';
   subTitle.style.color = DS.subheading_color || '#555';
 
-  // --- DAY BUTTONS ---
   document.querySelectorAll('.day-btn').forEach(btn=>{
     btn.style.backgroundColor = DS.day_button_color || '#3498db';
     btn.style.color = DS.day_button_text_color || '#fff';
@@ -106,7 +102,6 @@ document.addEventListener('DOMContentLoaded', ()=> {
     btn.style.paddingBottom = DS.day_button_size || '12px';
   });
 
-  // --- SLOT BUTTONS ---
   document.querySelectorAll('.slot-btn').forEach(btn=>{
     btn.style.backgroundColor = DS.slot_button_color || '#2ecc71';
     btn.style.color = DS.slot_button_text_color || '#fff';
@@ -117,12 +112,10 @@ document.addEventListener('DOMContentLoaded', ()=> {
     btn.style.paddingBottom = DS.slot_button_size || '8px';
   });
 
-  // --- שינוי רקע בזמן אמת ---
   const pageBg = document.getElementById('pageBg');
   pageBg.value = rgbToHex(getComputedStyle(document.body).backgroundColor);
   pageBg.addEventListener('input', e=> document.body.style.backgroundColor = e.target.value);
 
-  // ---------- בחירה לעריכה ----------
   let currentType=null, currentTrigger=null;
   const editorArea = document.getElementById('editorArea');
 
@@ -135,7 +128,6 @@ document.addEventListener('DOMContentLoaded', ()=> {
     currentTrigger=triggerEl;
     clearSelectionOutline();
     if(triggerEl) triggerEl.classList.add('selected-outline');
-
     editorArea.innerHTML='';
 
     if(type==='day'||type==='slot'){
@@ -232,13 +224,11 @@ document.addEventListener('DOMContentLoaded', ()=> {
     }
   }
 
-  // click listeners
   document.querySelectorAll('.day-btn').forEach(btn=>btn.addEventListener('click', e=>renderEditor('day',e.currentTarget)));
   document.querySelectorAll('.slot-btn').forEach(btn=>btn.addEventListener('click', e=>renderEditor('slot',e.currentTarget)));
   mainTitle.addEventListener('click', e=>renderEditor('title',e.currentTarget));
   subTitle.addEventListener('click', e=>renderEditor('subtitle',e.currentTarget));
 
-  // save handler
   document.getElementById('saveBtn').addEventListener('click', async ()=>{
     const daySample=document.querySelector('.day-btn');
     const slotSample=document.querySelector('.slot-btn');
