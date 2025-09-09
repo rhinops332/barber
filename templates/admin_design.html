@@ -9,15 +9,22 @@
     .btn { transition: transform .12s ease, box-shadow .12s ease; cursor:pointer; }
     .btn:hover { transform: translateY(-2px); }
     .selected-outline { outline: 3px solid #f59e0b; outline-offset: 3px; }
+    .small-label { font-size: 0.9rem; color: #555; }
   </style>
 </head>
 <body class="bg-gray-100 h-screen">
+
+<script>
+  // אם אתה מעביר מ-Flask: window.__DESIGN = {{ design_settings | tojson | safe }};
+  // אחרת יהיה אובייקט ריק והסקריפט יעדכן לברירות מחדל.
+  window.__DESIGN = window.__DESIGN || {};
+</script>
 
   <div class="flex h-full">
 
     <!-- שמאל: תצוגה -->
     <div class="w-3/4 p-6 overflow-auto">
-      <!-- כותרות (ניתן להחליף ב-Jinja: {{ heading_text }} וכו') -->
+      <!-- כותרות (ניתן למלא דרך Flask) -->
       <div class="mb-6">
         <h1 id="mainTitle" class="text-2xl font-bold">כותרת</h1>
         <h2 id="subTitle" class="text-lg text-gray-600">כותרת משנה</h2>
@@ -25,8 +32,7 @@
 
       <!-- DAYS: 7 כפתורים, כולם מציגים "DAY" -->
       <div class="mb-6">
-        <div class="grid grid-cols-7 gap-3">
-          <!-- ניתן להחליף ב-Jinja כדי להשתמש בערכים מה-DB -->
+        <div class="grid grid-cols-7 gap-3" id="daysRow">
           <button class="btn day-btn px-3 py-3 text-white" data-type="day">DAY</button>
           <button class="btn day-btn px-3 py-3 text-white" data-type="day">DAY</button>
           <button class="btn day-btn px-3 py-3 text-white" data-type="day">DAY</button>
@@ -39,31 +45,15 @@
 
       <!-- SLOTS: 20 כפתורים - 5 בכל שורה, כולם מציגים "HOUR" -->
       <div>
-        <div class="grid grid-cols-5 gap-3">
+        <div class="grid grid-cols-5 gap-3" id="slotsGrid">
           <!-- 20 כפתורים -->
-          <button class="btn slot-btn px-3 py-2 text-white" data-type="slot">HOUR</button>
-          <button class="btn slot-btn px-3 py-2 text-white" data-type="slot">HOUR</button>
-          <button class="btn slot-btn px-3 py-2 text-white" data-type="slot">HOUR</button>
-          <button class="btn slot-btn px-3 py-2 text-white" data-type="slot">HOUR</button>
-          <button class="btn slot-btn px-3 py-2 text-white" data-type="slot">HOUR</button>
-
-          <button class="btn slot-btn px-3 py-2 text-white" data-type="slot">HOUR</button>
-          <button class="btn slot-btn px-3 py-2 text-white" data-type="slot">HOUR</button>
-          <button class="btn slot-btn px-3 py-2 text-white" data-type="slot">HOUR</button>
-          <button class="btn slot-btn px-3 py-2 text-white" data-type="slot">HOUR</button>
-          <button class="btn slot-btn px-3 py-2 text-white" data-type="slot">HOUR</button>
-
-          <button class="btn slot-btn px-3 py-2 text-white" data-type="slot">HOUR</button>
-          <button class="btn slot-btn px-3 py-2 text-white" data-type="slot">HOUR</button>
-          <button class="btn slot-btn px-3 py-2 text-white" data-type="slot">HOUR</button>
-          <button class="btn slot-btn px-3 py-2 text-white" data-type="slot">HOUR</button>
-          <button class="btn slot-btn px-3 py-2 text-white" data-type="slot">HOUR</button>
-
-          <button class="btn slot-btn px-3 py-2 text-white" data-type="slot">HOUR</button>
-          <button class="btn slot-btn px-3 py-2 text-white" data-type="slot">HOUR</button>
-          <button class="btn slot-btn px-3 py-2 text-white" data-type="slot">HOUR</button>
-          <button class="btn slot-btn px-3 py-2 text-white" data-type="slot">HOUR</button>
-          <button class="btn slot-btn px-3 py-2 text-white" data-type="slot">HOUR</button>
+          <!-- (אם תרצה אפשר לייצר אותם דינמית ב-Jinja לפי slots) -->
+          <script>
+            // יצירת 20 כפתורים במקום לכתוב אותם ידנית
+            for (let i=0;i<20;i++) {
+              document.write('<button class="btn slot-btn px-3 py-2 text-white" data-type="slot">HOUR</button>');
+            }
+          </script>
         </div>
       </div>
     </div>
@@ -74,184 +64,310 @@
 
       <!-- תמיד: שינוי צבע רקע של הדף (זמין גם כשלא נבחר כלום) -->
       <div class="mb-4">
-        <label class="block text-sm mb-1">צבע רקע (תצוגה)</label>
+        <label class="block small-label mb-1">צבע רקע (תצוגה)</label>
         <input id="pageBg" type="color" class="w-full h-10 p-0 border" value="#f3f4f6">
       </div>
 
-      <!-- תוכן שמשתנה לפי בחירה: במצב ברירת מחדל אין פרטים נוספים -->
+      <!-- תוכן שמשתנה לפי בחירה -->
       <div id="editorArea" class="text-gray-600">
-        <p id="editorHint">בחר כפתור DAY או HOUR כדי לערוך — אם לא נבחר כלום, רק צבע הרקע זמין.</p>
+        <p id="editorHint">לחץ על כפתור DAY או HOUR או על הכותרת כדי לערוך — אם לא נבחר כלום, רק צבע הרקע זמין.</p>
       </div>
 
-      <button id="saveBtn" class="mt-6 w-full bg-blue-600 text-white py-2 rounded-lg">💾 שמור (שולח לשרת)</button>
+      <button id="saveBtn" class="mt-6 w-full bg-blue-600 text-white py-2 rounded-lg">💾 שמור (לשרת)</button>
     </aside>
   </div>
 
 <script>
-/* --- עיקרי --- */
-const pageBg = document.getElementById('pageBg');
-const editorArea = document.getElementById('editorArea');
-const editorHint = document.getElementById('editorHint');
-const saveBtn = document.getElementById('saveBtn');
-
-let selectedGroup = null; // "day" | "slot" | null
-let selectedTriggerBtn = null; // הכפתור שנלחץ (להצגה ו-outline)
-
-/* ברירות מחדל (ניתן להחליף ב-Jinja inline values מה-DB) */
-const defaults = {
-  dayBg: "{{ day_button_color if false else '#3498db' }}",
-  dayText: "{{ day_button_text_color if false else '#ffffff' }}",
-  dayRadius: "{{ day_button_shape if false else '12px' }}",
-  slotBg: "{{ slot_button_color if false else '#2ecc71' }}",
-  slotText: "{{ slot_button_text_color if false else '#ffffff' }}",
-  slotRadius: "{{ slot_button_shape if false else '8px' }}"
-};
-
-/* אתחול כפתורים עם ערכים ברירת מחדל (אם הבניה ב-Jinja כבר שינתה - ישמר) */
-document.querySelectorAll('.day-btn').forEach(btn => {
-  if (!btn.style.backgroundColor) btn.style.backgroundColor = defaults.dayBg;
-  if (!btn.style.color) btn.style.color = defaults.dayText;
-  if (!btn.style.borderRadius) btn.style.borderRadius = defaults.dayRadius;
-});
-document.querySelectorAll('.slot-btn').forEach(btn => {
-  if (!btn.style.backgroundColor) btn.style.backgroundColor = defaults.slotBg;
-  if (!btn.style.color) btn.style.color = defaults.slotText;
-  if (!btn.style.borderRadius) btn.style.borderRadius = defaults.slotRadius;
-});
-
-/* שינוי צבע רקע של הדף - תמיד זמין */
-pageBg.addEventListener('input', (e) => {
-  document.body.style.backgroundColor = e.target.value;
-});
-
-/* המרה מ־rgb(...) ל־hex */
-function rgbToHex(rgb) {
+/* ---------- UTIL ---------- */
+function rgbToHex(rgb){
   if (!rgb) return '#000000';
-  // אם כבר HEX
   if (rgb.startsWith('#')) return rgb;
   const m = rgb.match(/\d+/g);
   if (!m) return '#000000';
-  return '#' + m.slice(0,3).map(x => {
-    const h = parseInt(x).toString(16);
-    return h.length === 1 ? '0' + h : h;
-  }).join('');
+  return '#' + m.slice(0,3).map(x=> { const h = parseInt(x).toString(16); return h.length===1 ? '0'+h : h; }).join('');
+}
+function setInlineIfEmpty(el, prop, val){
+  if(!el.style[prop]) el.style[prop]=val;
 }
 
-/* החלת סגנון על קבוצה (day/slot) */
-function applyToGroup(type, styles) {
-  const selector = type === 'day' ? '.day-btn' : '.slot-btn';
-  document.querySelectorAll(selector).forEach(el => {
-    if (styles.backgroundColor !== undefined) el.style.backgroundColor = styles.backgroundColor;
-    if (styles.color !== undefined) el.style.color = styles.color;
-    if (styles.borderRadius !== undefined) el.style.borderRadius = styles.borderRadius;
+/* ---------- ברירות מחדל / טעינת מה-DB ---------- */
+const DS = window.__DESIGN || {};
+const defaults = {
+  body_background_color: DS.body_background_color || '#f3f4f6',
+
+  // heading
+  heading_font_family: DS.heading_font_family || 'Georgia, serif',
+  heading_font_size: DS.heading_font_size || '32px',
+  heading_color: DS.heading_color || '#2980b9',
+  heading_text: DS.heading_text || 'כותרת',
+
+  // subheading
+  subheading_font_family: DS.subheading_font_family || 'Verdana, sans-serif',
+  subheading_font_size: DS.subheading_font_size || '18px',
+  subheading_color: DS.subheading_color || '#555',
+  subheading_text: DS.subheading_text || 'כותרת משנה',
+
+  // day buttons
+  day_button_color: DS.day_button_color || '#3498db',
+  day_button_text_color: DS.day_button_text_color || '#ffffff',
+  day_button_shape: DS.day_button_shape || '12px',
+  day_button_text_size: DS.day_button_text_size || '15px',
+  day_button_font_family: DS.day_button_font_family || 'Tahoma, sans-serif',
+  day_button_size: DS.day_button_size || '12px', // we'll use as vertical padding
+
+  // slot buttons
+  slot_button_color: DS.slot_button_color || '#2ecc71',
+  slot_button_text_color: DS.slot_button_text_color || '#ffffff',
+  slot_button_shape: DS.slot_button_shape || '8px',
+  slot_button_text_size: DS.slot_button_text_size || '14px',
+  slot_button_font_family: DS.slot_button_font_family || 'Verdana, sans-serif',
+  slot_button_size: DS.slot_button_size || '8px'
+};
+
+/* ---------- אפליקציה: החל מה־DOMContentLoaded ---------- */
+document.addEventListener('DOMContentLoaded', ()=> {
+
+  // הפעל עיצוב ראשוני
+  document.body.style.backgroundColor = defaults.body_background_color;
+
+  // כותרות
+  const mainTitle = document.getElementById('mainTitle');
+  const subTitle = document.getElementById('subTitle');
+  mainTitle.textContent = defaults.heading_text;
+  mainTitle.style.fontFamily = defaults.heading_font_family;
+  mainTitle.style.fontSize = defaults.heading_font_size;
+  mainTitle.style.color = defaults.heading_color;
+
+  subTitle.textContent = defaults.subheading_text;
+  subTitle.style.fontFamily = defaults.subheading_font_family;
+  subTitle.style.fontSize = defaults.subheading_font_size;
+  subTitle.style.color = defaults.subheading_color;
+
+  // day buttons
+  document.querySelectorAll('.day-btn').forEach(btn=>{
+    btn.style.backgroundColor = defaults.day_button_color;
+    btn.style.color = defaults.day_button_text_color;
+    btn.style.borderRadius = defaults.day_button_shape;
+    btn.style.fontFamily = defaults.day_button_font_family;
+    btn.style.fontSize = defaults.day_button_text_size;
+    btn.style.paddingTop = defaults.day_button_size;
+    btn.style.paddingBottom = defaults.day_button_size;
   });
-}
 
-/* בונה את הפאנל בהתאם לסוג הנבחר */
-function renderEditorFor(type, triggerBtn) {
-  selectedGroup = type;
-  selectedTriggerBtn = triggerBtn;
-
-  // הסיר סגנון בחירה מכל הכפתורים, ונתן outline לכפתור שנלחץ
-  document.querySelectorAll('.day-btn, .slot-btn').forEach(b => b.classList.remove('selected-outline'));
-  if (triggerBtn) triggerBtn.classList.add('selected-outline');
-
-  // נשאף לערכי הקבוצה מתוך הכפתור שנלחץ (מחליף על ידי getComputedStyle)
-  const sample = triggerBtn || document.querySelector(type === 'day' ? '.day-btn' : '.slot-btn');
-  const computed = window.getComputedStyle(sample);
-
-  const currentBg = rgbToHex(computed.backgroundColor);
-  const currentColor = rgbToHex(computed.color);
-  const currentRadius = computed.borderRadius || '12px';
-
-  // בנה HTML מתאים: DAY ו-SLOT מקבלים גם צבע טקסט; ניתן לשנות צורה (border-radius)
-  editorArea.innerHTML = `
-    <div>
-      <p class="font-semibold mb-2">עורך ${type === 'day' ? 'DAY' : 'HOUR'}</p>
-
-      <label class="block text-sm mb-1">צבע רקע</label>
-      <input id="groupBg" type="color" class="w-full h-10 p-0 border" value="${currentBg}">
-
-      <label class="block text-sm mt-3 mb-1">צבע טקסט</label>
-      <input id="groupText" type="color" class="w-full h-10 p-0 border" value="${currentColor}">
-
-      <label class="block text-sm mt-3 mb-1">צורת כפתור (border-radius)</label>
-      <select id="groupShape" class="w-full border p-2">
-        <option value="0px"${currentRadius==='0px' ? ' selected' : ''}>מרובע (0px)</option>
-        <option value="6px"${currentRadius==='6px' ? ' selected' : ''}>מעט מעוגל (6px)</option>
-        <option value="12px"${currentRadius==='12px' ? ' selected' : ''}>מעוגל (12px)</option>
-        <option value="9999px"${(currentRadius.includes('9999')|| currentRadius.includes('50%')) ? ' selected' : ''}>פאדינג (pill)</option>
-      </select>
-
-      <p class="text-sm text-gray-500 mt-3">השינויים יחולו על כל הכפתורים מהקבוצה בזמן אמת. השמירה תעדכן את השרת.</p>
-    </div>
-  `;
-
-  // מאזינים לשינויים
-  const groupBg = document.getElementById('groupBg');
-  const groupText = document.getElementById('groupText');
-  const groupShape = document.getElementById('groupShape');
-
-  groupBg.addEventListener('input', () => {
-    applyToGroup(type, { backgroundColor: groupBg.value });
+  // slot buttons
+  document.querySelectorAll('.slot-btn').forEach(btn=>{
+    btn.style.backgroundColor = defaults.slot_button_color;
+    btn.style.color = defaults.slot_button_text_color;
+    btn.style.borderRadius = defaults.slot_button_shape;
+    btn.style.fontFamily = defaults.slot_button_font_family;
+    btn.style.fontSize = defaults.slot_button_text_size;
+    btn.style.paddingTop = defaults.slot_button_size;
+    btn.style.paddingBottom = defaults.slot_button_size;
   });
-  groupText.addEventListener('input', () => {
-    applyToGroup(type, { color: groupText.value });
-  });
-  groupShape.addEventListener('change', () => {
-    applyToGroup(type, { borderRadius: groupShape.value });
-  });
-}
 
-/* מאזינים לכפתורים: לחיצה על כל כפתור DAY/ SLOT תפתח עורך - אך שינוי יחול על כל הקבוצה */
-document.querySelectorAll('.day-btn').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    renderEditorFor('day', e.currentTarget);
+  // page background controller
+  const pageBg = document.getElementById('pageBg');
+  pageBg.value = rgbToHex(getComputedStyle(document.body).backgroundColor);
+  pageBg.addEventListener('input', (e)=>{
+    document.body.style.backgroundColor = e.target.value;
   });
-});
-document.querySelectorAll('.slot-btn').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    renderEditorFor('slot', e.currentTarget);
-  });
-});
 
-/* שמירה: אוסף סגנון נוכחי ומבצע POST לשרת (endpoint: /business_settings) */
-saveBtn.addEventListener('click', async () => {
-  // קח סגנון מהכפתור הראשון של כל קבוצה כייצוג
-  const daySample = document.querySelector('.day-btn');
-  const slotSample = document.querySelector('.slot-btn');
-  const dayStyle = window.getComputedStyle(daySample);
-  const slotStyle = window.getComputedStyle(slotSample);
+  // listeners: DAY / SLOT / titles
+  let currentType = null; // 'day'|'slot'|'title'|'subtitle'
+  let currentTrigger = null; // the clicked element (for outline)
 
-  const payload = {
-    layout_json: {
-      page_background: rgbToHex(getComputedStyle(document.body).backgroundColor),
-      day: {
-        background: rgbToHex(dayStyle.backgroundColor),
-        text_color: rgbToHex(dayStyle.color),
-        border_radius: daySample.style.borderRadius || dayStyle.borderRadius
-      },
-      slot: {
-        background: rgbToHex(slotStyle.backgroundColor),
-        text_color: rgbToHex(slotStyle.color),
-        border_radius: slotSample.style.borderRadius || slotStyle.borderRadius
-      }
-    }
-  };
+  const editorArea = document.getElementById('editorArea');
 
-  try {
-    const res = await fetch('/business_settings', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-    alert(data.message || 'נשמר בהצלחה!');
-  } catch (err) {
-    console.error(err);
-    alert('שגיאה בשמירה — בדוק את השרת בקצה ה־API');
+  function clearSelectionOutline(){
+    document.querySelectorAll('.day-btn,.slot-btn,#mainTitle,#subTitle').forEach(el=>el.classList.remove('selected-outline'));
   }
-});
+
+  // render editor for groups (day/slot) or title/subtitle
+  function renderEditor(type, triggerEl=null){
+    currentType = type;
+    currentTrigger = triggerEl;
+    clearSelectionOutline();
+    if (triggerEl) triggerEl.classList.add('selected-outline');
+
+    editorArea.innerHTML = ''; // clear
+    if (type === 'day' || type === 'slot'){
+      // sample element to read current computed style
+      const sample = (type==='day') ? document.querySelector('.day-btn') : document.querySelector('.slot-btn');
+      const c = getComputedStyle(sample);
+      const bgVal = rgbToHex(c.backgroundColor);
+      const textVal = rgbToHex(c.color);
+      const radiusVal = sample.style.borderRadius || c.borderRadius || '12px';
+      const fontFamily = sample.style.fontFamily || c.fontFamily || '';
+      const fontSize = sample.style.fontSize || c.fontSize || '';
+      const paddingVal = sample.style.paddingTop || '' ;
+
+      editorArea.innerHTML = `
+        <div>
+          <p class="font-semibold mb-2">עורך ${type === 'day' ? 'DAY' : 'HOUR'}</p>
+
+          <label class="block small-label mb-1">צבע רקע</label>
+          <input id="groupBg" type="color" class="w-full h-10 p-0 border" value="${bgVal}">
+
+          <label class="block small-label mt-3 mb-1">צבע טקסט</label>
+          <input id="groupText" type="color" class="w-full h-10 p-0 border" value="${textVal}">
+
+          <label class="block small-label mt-3 mb-1">גודל טקסט (px)</label>
+          <input id="groupFontSize" type="number" min="8" class="w-full border p-2" value="${parseInt(fontSize)|| (type==='day'?15:14)}">
+
+          <label class="block small-label mt-3 mb-1">פונט</label>
+          <select id="groupFontFamily" class="w-full border p-2">
+            <option ${fontFamily.includes('Tahoma')?'selected':''}>Tahoma, sans-serif</option>
+            <option ${fontFamily.includes('Arial')?'selected':''}>Arial, sans-serif</option>
+            <option ${fontFamily.includes('Verdana')?'selected':''}>Verdana, sans-serif</option>
+            <option ${fontFamily.includes('Georgia')?'selected':''}>Georgia, serif</option>
+          </select>
+
+          <label class="block small-label mt-3 mb-1">גובה פנימי (padding px)</label>
+          <input id="groupPadding" type="number" min="0" class="w-full border p-2" value="${parseInt(paddingVal)|| (type==='day'?12:8)}">
+
+          <label class="block small-label mt-3 mb-1">צורת כפתור (border-radius)</label>
+          <select id="groupShape" class="w-full border p-2">
+            <option value="0px">מרובע (0px)</option>
+            <option value="6px">מעט מעוגל (6px)</option>
+            <option value="12px" selected>מעוגל (12px)</option>
+            <option value="9999px">pill</option>
+          </select>
+
+          <p class="text-sm text-gray-500 mt-3">השינויים יחולו על כל כפתורי הקבוצה בזמן אמת. שמור כדי לשמור במסד.</p>
+        </div>
+      `;
+
+      // listeners apply live
+      const groupBg = document.getElementById('groupBg');
+      const groupText = document.getElementById('groupText');
+      const groupFontSize = document.getElementById('groupFontSize');
+      const groupFontFamily = document.getElementById('groupFontFamily');
+      const groupPadding = document.getElementById('groupPadding');
+      const groupShape = document.getElementById('groupShape');
+
+      function applyTo(type, styles){
+        const selector = type==='day' ? '.day-btn' : '.slot-btn';
+        document.querySelectorAll(selector).forEach(el=>{
+          if (styles.backgroundColor !== undefined) el.style.backgroundColor = styles.backgroundColor;
+          if (styles.color !== undefined) el.style.color = styles.color;
+          if (styles.borderRadius !== undefined) el.style.borderRadius = styles.borderRadius;
+          if (styles.fontSize !== undefined) el.style.fontSize = styles.fontSize;
+          if (styles.fontFamily !== undefined) el.style.fontFamily = styles.fontFamily;
+          if (styles.padding !== undefined) { el.style.paddingTop = styles.padding; el.style.paddingBottom = styles.padding; }
+        });
+      }
+
+      groupBg.addEventListener('input', ()=> applyTo(type, {backgroundColor: groupBg.value}));
+      groupText.addEventListener('input', ()=> applyTo(type, {color: groupText.value}));
+      groupFontSize.addEventListener('input', ()=> applyTo(type, {fontSize: groupFontSize.value + 'px'}));
+      groupFontFamily.addEventListener('change', ()=> applyTo(type, {fontFamily: groupFontFamily.value}));
+      groupPadding.addEventListener('input', ()=> applyTo(type, {padding: groupPadding.value + 'px'}));
+      groupShape.addEventListener('change', ()=> applyTo(type, {borderRadius: groupShape.value}));
+    }
+    else if (type === 'title' || type === 'subtitle'){
+      // editor for title/subtitle
+      const el = (type==='title') ? document.getElementById('mainTitle') : document.getElementById('subTitle');
+      const c = getComputedStyle(el);
+      const curColor = rgbToHex(c.color);
+      const curSize = parseInt(c.fontSize) || (type==='title'?32:18);
+      const curFamily = el.style.fontFamily || c.fontFamily || '';
+
+      editorArea.innerHTML = `
+        <div>
+          <p class="font-semibold mb-2">עורך ${type === 'title' ? 'כותרת' : 'כותרת משנה'}</p>
+
+          <label class="block small-label mb-1">טקסט</label>
+          <input id="titleText" type="text" class="w-full border p-2" value="${el.textContent}">
+
+          <label class="block small-label mt-3 mb-1">צבע טקסט</label>
+          <input id="titleColor" type="color" class="w-full h-10 p-0 border" value="${curColor}">
+
+          <label class="block small-label mt-3 mb-1">גודל טקסט (px)</label>
+          <input id="titleSize" type="number" class="w-full border p-2" value="${curSize}">
+
+          <label class="block small-label mt-3 mb-1">פונט</label>
+          <select id="titleFont" class="w-full border p-2">
+            <option ${curFamily.includes('Georgia')?'selected':''}>Georgia, serif</option>
+            <option ${curFamily.includes('Tahoma')?'selected':''}>Tahoma, sans-serif</option>
+            <option ${curFamily.includes('Verdana')?'selected':''}>Verdana, sans-serif</option>
+            <option ${curFamily.includes('Arial')?'selected':''}>Arial, sans-serif</option>
+          </select>
+        </div>
+      `;
+
+      document.getElementById('titleText').addEventListener('input', (e)=> el.textContent = e.target.value);
+      document.getElementById('titleColor').addEventListener('input', (e)=> el.style.color = e.target.value);
+      document.getElementById('titleSize').addEventListener('input', (e)=> el.style.fontSize = e.target.value + 'px');
+      document.getElementById('titleFont').addEventListener('change', (e)=> el.style.fontFamily = e.target.value);
+    }
+  } // renderEditor end
+
+  // attach click listeners
+  document.querySelectorAll('.day-btn').forEach(btn=>{
+    btn.addEventListener('click', (e)=> renderEditor('day', e.currentTarget));
+  });
+  document.querySelectorAll('.slot-btn').forEach(btn=>{
+    btn.addEventListener('click', (e)=> renderEditor('slot', e.currentTarget));
+  });
+  document.getElementById('mainTitle').addEventListener('click', (e)=> renderEditor('title', e.currentTarget));
+  document.getElementById('subTitle').addEventListener('click', (e)=> renderEditor('subtitle', e.currentTarget));
+
+  // Save handler (מייצר payload שמתאים לשדות בטבלה שלך)
+  document.getElementById('saveBtn').addEventListener('click', async ()=>{
+    const daySample = document.querySelector('.day-btn');
+    const slotSample = document.querySelector('.slot-btn');
+
+    const dayComp = getComputedStyle(daySample);
+    const slotComp = getComputedStyle(slotSample);
+
+    const payload = {
+      // שדות בטבלה design_settings
+      body_background_color: rgbToHex(getComputedStyle(document.body).backgroundColor),
+
+      // heading/subheading
+      heading_font_family: (mainTitle.style.fontFamily || getComputedStyle(mainTitle).fontFamily),
+      heading_font_size: (mainTitle.style.fontSize || getComputedStyle(mainTitle).fontSize),
+      heading_color: rgbToHex(getComputedStyle(mainTitle).color),
+      heading_text: mainTitle.textContent,
+
+      subheading_font_family: (subTitle.style.fontFamily || getComputedStyle(subTitle).fontFamily),
+      subheading_font_size: (subTitle.style.fontSize || getComputedStyle(subTitle).fontSize),
+      subheading_color: rgbToHex(getComputedStyle(subTitle).color),
+      subheading_text: subTitle.textContent,
+
+      // day
+      day_button_shape: daySample.style.borderRadius || dayComp.borderRadius,
+      day_button_color: rgbToHex(dayComp.backgroundColor),
+      day_button_size: (daySample.style.paddingTop || dayComp.paddingTop),
+      day_button_text_size: (daySample.style.fontSize || dayComp.fontSize),
+      day_button_text_color: rgbToHex(dayComp.color),
+      day_button_font_family: (daySample.style.fontFamily || dayComp.fontFamily),
+
+      // slot
+      slot_button_shape: slotSample.style.borderRadius || slotComp.borderRadius,
+      slot_button_color: rgbToHex(slotComp.backgroundColor),
+      slot_button_size: (slotSample.style.paddingTop || slotComp.paddingTop),
+      slot_button_text_size: (slotSample.style.fontSize || slotComp.fontSize),
+      slot_button_text_color: rgbToHex(slotComp.color),
+      slot_button_font_family: (slotSample.style.fontFamily || slotComp.fontFamily)
+    };
+
+    try {
+      const res = await fetch('/business_settings', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'שגיאה בשרת');
+      alert(data.message || 'נשמר בהצלחה!');
+    } catch (err) {
+      console.error(err);
+      alert('שגיאה בשמירה — בדוק את השרת (console).');
+    }
+  });
+
+}); // DOMContentLoaded
 </script>
 </body>
 </html>
