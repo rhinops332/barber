@@ -1445,14 +1445,20 @@ def business_settings_route():
            "body_background_color"
        ]
 
-
         # בדיקה אם כבר קיימת שורה
-        cur.execute("SELECT 1 FROM design_settings WHERE business_id = %s", (business_id,))
-        exists = cur.fetchone()
+        cur.execute("SELECT * FROM design_settings WHERE business_id = %s", (business_id,))
+        existing = cur.fetchone()
+        existing_dict = {}
+        if existing:
+            colnames = [desc[0] for desc in cur.description]
+            existing_dict = dict(zip(colnames, existing))
 
         values = []
         for col in columns:
             val = data.get(col)
+            if val is None and existing_dict.get(col) is not None:
+                val = existing_dict[col]  # שמור את הערך הקודם אם לא הגיע חדש
+            # טיפול ב־JSON
             if col in ["day_names", "layout_json"]:
                 if isinstance(val, str):
                     try:
@@ -1462,7 +1468,7 @@ def business_settings_route():
                 val = json.dumps(val)
             values.append(val)
 
-        if exists:
+        if existing:
             placeholders = ", ".join([f"{col} = %s" for col in columns])
             cur.execute(f"UPDATE design_settings SET {placeholders} WHERE business_id = %s", values + [business_id])
         else:
@@ -1474,6 +1480,7 @@ def business_settings_route():
         cur.close()
         conn.close()
         return jsonify({"message": "Business settings saved successfully"})
+
 
 
 # --- שליחת אימייל ---
