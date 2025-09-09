@@ -25,8 +25,8 @@
 
     <!-- כותרות -->
     <div class="mb-6">
-      <h1 id="mainTitle" class="text-2xl font-bold"></h1>
-      <h2 id="subTitle" class="text-lg text-gray-600"></h2>
+      <h1 id="mainTitle" class="text-2xl font-bold">כותרת</h1>
+      <h2 id="subTitle" class="text-lg text-gray-600">כותרת משנה</h2>
     </div>
 
     <!-- DAYS: 7 כפתורים -->
@@ -77,47 +77,52 @@ document.addEventListener('DOMContentLoaded', ()=> {
     return '#' + m.slice(0,3).map(x=>{const h=parseInt(x).toString(16); return h.length===1?'0'+h:h}).join('');
   }
 
-  // ---------- עיצוב ראשוני ----------
-  document.body.style.backgroundColor = DS.body_background_color || '#f3f4f6';
-
   const mainTitle = document.getElementById('mainTitle');
   const subTitle = document.getElementById('subTitle');
 
-  mainTitle.textContent = DS.heading_text || 'כותרת';
-  mainTitle.style.fontFamily = DS.heading_font_family || 'Georgia, serif';
-  mainTitle.style.fontSize = DS.heading_font_size || '32px';
-  mainTitle.style.color = DS.heading_color || '#2980b9';
-
-  subTitle.textContent = DS.subheading_text || 'כותרת משנה';
-  subTitle.style.fontFamily = DS.subheading_font_family || 'Verdana, sans-serif';
-  subTitle.style.fontSize = DS.subheading_font_size || '18px';
-  subTitle.style.color = DS.subheading_color || '#555';
-
-  document.querySelectorAll('.day-btn').forEach(btn=>{
-    btn.style.backgroundColor = DS.day_button_color || '#3498db';
-    btn.style.color = DS.day_button_text_color || '#fff';
-    btn.style.borderRadius = DS.day_button_shape || '12px';
-    btn.style.fontFamily = DS.day_button_font_family || 'Tahoma, sans-serif';
-    btn.style.fontSize = DS.day_button_text_size || '15px';
-    btn.style.paddingTop = DS.day_button_size || '12px';
-    btn.style.paddingBottom = DS.day_button_size || '12px';
-  });
-
-  document.querySelectorAll('.slot-btn').forEach(btn=>{
-    btn.style.backgroundColor = DS.slot_button_color || '#2ecc71';
-    btn.style.color = DS.slot_button_text_color || '#fff';
-    btn.style.borderRadius = DS.slot_button_shape || '8px';
-    btn.style.fontFamily = DS.slot_button_font_family || 'Verdana, sans-serif';
-    btn.style.fontSize = DS.slot_button_text_size || '14px';
-    btn.style.paddingTop = DS.slot_button_size || '8px';
-    btn.style.paddingBottom = DS.slot_button_size || '8px';
-  });
-
+  // --- BODY BACKGROUND ---
+  const bodyBg = DS.body_background_color || getComputedStyle(document.body).backgroundColor;
+  document.body.style.backgroundColor = bodyBg;
   const pageBg = document.getElementById('pageBg');
-  pageBg.value = rgbToHex(getComputedStyle(document.body).backgroundColor);
+  pageBg.value = rgbToHex(bodyBg);
   pageBg.addEventListener('input', e=> document.body.style.backgroundColor = e.target.value);
 
-  // ---------- בחירה לעריכה ----------
+  // --- TITLE ---
+  mainTitle.textContent = DS.heading_text || mainTitle.textContent;
+  mainTitle.style.fontFamily = DS.heading_font_family || getComputedStyle(mainTitle).fontFamily;
+  mainTitle.style.fontSize = DS.heading_font_size || getComputedStyle(mainTitle).fontSize;
+  mainTitle.style.color = DS.heading_color || getComputedStyle(mainTitle).color;
+
+  subTitle.textContent = DS.subheading_text || subTitle.textContent;
+  subTitle.style.fontFamily = DS.subheading_font_family || getComputedStyle(subTitle).fontFamily;
+  subTitle.style.fontSize = DS.subheading_font_size || getComputedStyle(subTitle).fontSize;
+  subTitle.style.color = DS.subheading_color || getComputedStyle(subTitle).color;
+
+  // --- DAY BUTTONS ---
+  document.querySelectorAll('.day-btn').forEach(btn=>{
+    const comp = getComputedStyle(btn);
+    btn.style.backgroundColor = DS.day_button_color || comp.backgroundColor || '#3498db';
+    btn.style.color = DS.day_button_text_color || comp.color || '#fff';
+    btn.style.borderRadius = DS.day_button_shape || comp.borderRadius || '12px';
+    btn.style.fontFamily = DS.day_button_font_family || comp.fontFamily || 'Tahoma, sans-serif';
+    btn.style.fontSize = DS.day_button_text_size || comp.fontSize || '15px';
+    btn.style.paddingTop = DS.day_button_size || comp.paddingTop || '12px';
+    btn.style.paddingBottom = DS.day_button_size || comp.paddingBottom || '12px';
+  });
+
+  // --- SLOT BUTTONS ---
+  document.querySelectorAll('.slot-btn').forEach(btn=>{
+    const comp = getComputedStyle(btn);
+    btn.style.backgroundColor = DS.slot_button_color || comp.backgroundColor || '#2ecc71';
+    btn.style.color = DS.slot_button_text_color || comp.color || '#fff';
+    btn.style.borderRadius = DS.slot_button_shape || comp.borderRadius || '8px';
+    btn.style.fontFamily = DS.slot_button_font_family || comp.fontFamily || 'Verdana, sans-serif';
+    btn.style.fontSize = DS.slot_button_text_size || comp.fontSize || '14px';
+    btn.style.paddingTop = DS.slot_button_size || comp.paddingTop || '8px';
+    btn.style.paddingBottom = DS.slot_button_size || comp.paddingBottom || '8px';
+  });
+
+  // ---------- EDITOR FUNCTIONS ----------
   let currentType=null, currentTrigger=null;
   const editorArea = document.getElementById('editorArea');
 
