@@ -72,39 +72,39 @@ document.addEventListener('DOMContentLoaded', ()=> {
     return '#' + m.slice(0,3).map(x=>{const h=parseInt(x).toString(16); return h.length===1?'0'+h:h}).join('');
   }
 
-  document.body.style.backgroundColor = DS.body_background_color;
+  document.body.style.backgroundColor = DS.body_background_color || '#f3f4f6';
 
   const mainTitle = document.getElementById('mainTitle');
   const subTitle = document.getElementById('subTitle');
 
-  mainTitle.textContent = DS.business_name;
-  mainTitle.style.fontFamily = DS.heading_font_family;
-  mainTitle.style.fontSize = DS.heading_font_size;
-  mainTitle.style.color = DS.heading_color;
+  mainTitle.textContent = DS.heading_text || '';
+  mainTitle.style.fontFamily = DS.heading_font_family || 'Georgia, serif';
+  mainTitle.style.fontSize = DS.heading_font_size || '32px';
+  mainTitle.style.color = DS.heading_color || '#2980b9';
 
-  subTitle.textContent = 'בחרו תור לקביעת פגישה';
-  subTitle.style.fontFamily = DS.subheading_font_family;
-  subTitle.style.fontSize = DS.subheading_font_size;
-  subTitle.style.color = DS.subheading_color;
+  subTitle.textContent = DS.subheading_text || 'בחרו תור לקביעת פגישה';
+  subTitle.style.fontFamily = DS.subheading_font_family || 'Verdana, sans-serif';
+  subTitle.style.fontSize = DS.subheading_font_size || '18px';
+  subTitle.style.color = DS.subheading_color || '#555';
 
   document.querySelectorAll('.day-btn').forEach(btn=>{
-    btn.style.backgroundColor = DS.day_button_color;
-    btn.style.color = DS.day_button_text_color;
-    btn.style.borderRadius = DS.day_button_shape;
-    btn.style.fontFamily = DS.day_button_font_family;
-    btn.style.fontSize = DS.day_button_text_size;
-    btn.style.paddingTop = DS.day_button_size;
-    btn.style.paddingBottom = DS.day_button_size;
+    btn.style.backgroundColor = DS.day_button_color || '#3498db';
+    btn.style.color = DS.day_button_text_color || '#fff';
+    btn.style.borderRadius = DS.day_button_shape || '12px';
+    btn.style.fontFamily = DS.day_button_font_family || 'Tahoma, sans-serif';
+    btn.style.fontSize = DS.day_button_text_size || '15px';
+    btn.style.paddingTop = DS.day_button_size || '12px';
+    btn.style.paddingBottom = DS.day_button_size || '12px';
   });
 
   document.querySelectorAll('.slot-btn').forEach(btn=>{
-    btn.style.backgroundColor = DS.slot_button_color;
-    btn.style.color = DS.slot_button_text_color;
-    btn.style.borderRadius = DS.slot_button_shape;
-    btn.style.fontFamily = DS.slot_button_font_family;
-    btn.style.fontSize = DS.slot_button_text_size;
-    btn.style.paddingTop = DS.slot_button_size;
-    btn.style.paddingBottom = DS.slot_button_size;
+    btn.style.backgroundColor = DS.slot_button_color || '#2ecc71';
+    btn.style.color = DS.slot_button_text_color || '#fff';
+    btn.style.borderRadius = DS.slot_button_shape || '8px';
+    btn.style.fontFamily = DS.slot_button_font_family || 'Verdana, sans-serif';
+    btn.style.fontSize = DS.slot_button_text_size || '14px';
+    btn.style.paddingTop = DS.slot_button_size || '8px';
+    btn.style.paddingBottom = DS.slot_button_size || '8px';
   });
 
   const pageBg = document.getElementById('pageBg');
@@ -199,10 +199,13 @@ document.addEventListener('DOMContentLoaded', ()=> {
           <p class="font-semibold mb-2">עורך ${type==='title'?'כותרת':'כותרת משנה'}</p>
           <label class="block small-label mb-1">טקסט</label>
           <input id="titleText" type="text" class="w-full border p-2" value="${el.textContent}">
+
           <label class="block small-label mt-3 mb-1">צבע טקסט</label>
           <input id="titleColor" type="color" class="w-full h-10 p-0 border" value="${curColor}">
+
           <label class="block small-label mt-3 mb-1">גודל טקסט (px)</label>
           <input id="titleSize" type="number" class="w-full border p-2" value="${curSize}">
+
           <label class="block small-label mt-3 mb-1">פונט</label>
           <select id="titleFont" class="w-full border p-2">
             <option ${curFamily.includes('Georgia')?'selected':''}>Georgia, serif</option>
@@ -232,27 +235,27 @@ document.addEventListener('DOMContentLoaded', ()=> {
     const slotComp=getComputedStyle(slotSample);
 
     const payload = {
-      body_background_color: getComputedStyle(document.body).backgroundColor,
-      heading_font_family: mainTitle.style.fontFamily,
-      heading_font_size: mainTitle.style.fontSize,
-      heading_color: getComputedStyle(mainTitle).color,
+      body_background_color: rgbToHex(getComputedStyle(document.body).backgroundColor),
+      heading_font_family: mainTitle.style.fontFamily || getComputedStyle(mainTitle).fontFamily,
+      heading_font_size: mainTitle.style.fontSize || getComputedStyle(mainTitle).fontSize,
+      heading_color: rgbToHex(getComputedStyle(mainTitle).color),
       heading_text: mainTitle.textContent,
-      subheading_font_family: subTitle.style.fontFamily,
-      subheading_font_size: subTitle.style.fontSize,
-      subheading_color: getComputedStyle(subTitle).color,
+      subheading_font_family: subTitle.style.fontFamily || getComputedStyle(subTitle).fontFamily,
+      subheading_font_size: subTitle.style.fontSize || getComputedStyle(subTitle).fontSize,
+      subheading_color: rgbToHex(getComputedStyle(subTitle).color),
       subheading_text: subTitle.textContent,
-      day_button_shape: daySample.style.borderRadius,
-      day_button_color: getComputedStyle(daySample).backgroundColor,
-      day_button_size: daySample.style.paddingTop,
-      day_button_text_size: daySample.style.fontSize,
-      day_button_text_color: getComputedStyle(daySample).color,
-      day_button_font_family: daySample.style.fontFamily,
-      slot_button_shape: slotSample.style.borderRadius,
-      slot_button_color: getComputedStyle(slotSample).backgroundColor,
-      slot_button_size: slotSample.style.paddingTop,
-      slot_button_text_size: slotSample.style.fontSize,
-      slot_button_text_color: getComputedStyle(slotSample).color,
-      slot_button_font_family: slotSample.style.fontFamily
+      day_button_shape: daySample.style.borderRadius || dayComp.borderRadius,
+      day_button_color: rgbToHex(dayComp.backgroundColor),
+      day_button_size: daySample.style.paddingTop || dayComp.paddingTop,
+      day_button_text_size: daySample.style.fontSize || dayComp.fontSize,
+      day_button_text_color: rgbToHex(dayComp.color),
+      day_button_font_family: daySample.style.fontFamily || dayComp.fontFamily,
+      slot_button_shape: slotSample.style.borderRadius || slotComp.borderRadius,
+      slot_button_color: rgbToHex(slotComp.backgroundColor),
+      slot_button_size: slotSample.style.paddingTop || slotComp.paddingTop,
+      slot_button_text_size: slotSample.style.fontSize || slotComp.fontSize,
+      slot_button_text_color: rgbToHex(slotComp.color),
+      slot_button_font_family: slotSample.style.fontFamily || slotComp.fontFamily
     };
 
     try{
