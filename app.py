@@ -952,6 +952,7 @@ def admin_design():
     return render_template("admin_design.html", design_settings=design_settings)
 
 
+
 # --- ניהול שגרה שבועית ---
 
 @app.route("/weekly_schedule", methods=["POST"])
