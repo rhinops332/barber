@@ -24,7 +24,7 @@
 
     <div class="mb-6">
       <h1 id="mainTitle" class="text-2xl font-bold"></h1>
-      <h2 id="subTitle" class="text-lg"></h2>
+      <h2 id="subTitle" class="text-lg text-gray-600"></h2>
     </div>
 
     <div class="mb-6">
@@ -61,98 +61,100 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', ()=> {
+document.addEventListener('DOMContentLoaded', () => {
 
   const DS = window.__DESIGN || {};
 
-  function rgbToHex(rgb){
+  function rgbToHex(rgb) {
     if (!rgb) return '#000000';
     if (rgb.startsWith('#')) return rgb;
     const m = rgb.match(/\d+/g);
-    return '#' + m.slice(0,3).map(x=>{const h=parseInt(x).toString(16); return h.length===1?'0'+h:h}).join('');
+    return '#' + m.slice(0, 3).map(x => { 
+      const h = parseInt(x).toString(16); 
+      return h.length === 1 ? '0' + h : h 
+    }).join('');
   }
 
-  // צבע רקע
-  document.body.style.backgroundColor = DS.body_background_color || '#ffffff';
+  // רקע גוף
+  document.body.style.backgroundColor = DS.body_background_color;
 
+  // כותרות
   const mainTitle = document.getElementById('mainTitle');
+  mainTitle.textContent = DS.heading_text || DS.business_name;
+  mainTitle.style.fontFamily = DS.heading_font_family;
+  mainTitle.style.fontSize = DS.heading_font_size;
+  mainTitle.style.color = DS.heading_color;
+
   const subTitle = document.getElementById('subTitle');
-
-  // כותרת ראשית
-  mainTitle.textContent = DS.heading_text || 'כותרת';
-  mainTitle.style.fontFamily = DS.heading_font_family || 'Arial, sans-serif';
-  mainTitle.style.fontSize = DS.heading_font_size || '24px';
-  mainTitle.style.color = DS.heading_color || '#000000';
-
-  // כותרת משנית
-  subTitle.textContent = DS.subheading_text || 'בחרו תור';
-  subTitle.style.fontFamily = DS.subheading_font_family || 'Arial, sans-serif';
-  subTitle.style.fontSize = DS.subheading_font_size || '16px';
-  subTitle.style.color = DS.subheading_color || '#555555';
+  subTitle.textContent = DS.subheading_text || 'בחרו תור לקביעת פגישה';
+  subTitle.style.fontFamily = DS.subheading_font_family;
+  subTitle.style.fontSize = DS.subheading_font_size;
+  subTitle.style.color = DS.subheading_color;
 
   // כפתורי יום
-  document.querySelectorAll('.day-btn').forEach(btn=>{
-    btn.style.backgroundColor = DS.day_button_color || '#eee';
-    btn.style.color = DS.day_button_text_color || '#000';
-    btn.style.borderRadius = DS.day_button_shape || '12px';
-    btn.style.fontFamily = DS.day_button_font_family || 'Arial, sans-serif';
-    btn.style.fontSize = DS.day_button_text_size || '14px';
-    btn.style.paddingTop = DS.day_button_size || '6px';
-    btn.style.paddingBottom = DS.day_button_size || '6px';
+  document.querySelectorAll('.day-btn').forEach(btn => {
+    btn.style.backgroundColor = DS.day_button_color;
+    btn.style.color = DS.day_button_text_color;
+    btn.style.borderRadius = DS.day_button_shape;
+    btn.style.fontFamily = DS.day_button_font_family;
+    btn.style.fontSize = DS.day_button_text_size;
+    btn.style.paddingTop = DS.day_button_size;
+    btn.style.paddingBottom = DS.day_button_size;
   });
 
   // כפתורי שעה
-  document.querySelectorAll('.slot-btn').forEach(btn=>{
-    btn.style.backgroundColor = DS.slot_button_color || '#eee';
-    btn.style.color = DS.slot_button_text_color || '#000';
-    btn.style.borderRadius = DS.slot_button_shape || '12px';
-    btn.style.fontFamily = DS.slot_button_font_family || 'Arial, sans-serif';
-    btn.style.fontSize = DS.slot_button_text_size || '14px';
-    btn.style.paddingTop = DS.slot_button_size || '6px';
-    btn.style.paddingBottom = DS.slot_button_size || '6px';
+  document.querySelectorAll('.slot-btn').forEach(btn => {
+    btn.style.backgroundColor = DS.slot_button_color;
+    btn.style.color = DS.slot_button_text_color;
+    btn.style.borderRadius = DS.slot_button_shape;
+    btn.style.fontFamily = DS.slot_button_font_family;
+    btn.style.fontSize = DS.slot_button_text_size;
+    btn.style.paddingTop = DS.slot_button_size;
+    btn.style.paddingBottom = DS.slot_button_size;
   });
 
-  // צבע רקע בתצוגת input
+  // תצוגה של צבע הרקע בצד
   const pageBg = document.getElementById('pageBg');
-  pageBg.value = DS.body_background_color ? DS.body_background_color : '#ffffff';
-  pageBg.addEventListener('input', e=> document.body.style.backgroundColor = e.target.value);
+  pageBg.value = rgbToHex(getComputedStyle(document.body).backgroundColor);
+  pageBg.addEventListener('input', e => document.body.style.backgroundColor = e.target.value);
 
-  let currentType=null, currentTrigger=null;
+  // עורך
   const editorArea = document.getElementById('editorArea');
+  let currentType = null, currentTrigger = null;
 
-  function clearSelectionOutline(){
-    document.querySelectorAll('.day-btn,.slot-btn,#mainTitle,#subTitle').forEach(el=>el.classList.remove('selected-outline'));
+  function clearSelectionOutline() {
+    document.querySelectorAll('.day-btn,.slot-btn,#mainTitle,#subTitle').forEach(el => el.classList.remove('selected-outline'));
   }
 
-  function renderEditor(type, triggerEl=null){
-    currentType=type;
-    currentTrigger=triggerEl;
+  function renderEditor(type, triggerEl = null) {
+    currentType = type;
+    currentTrigger = triggerEl;
     clearSelectionOutline();
-    if(triggerEl) triggerEl.classList.add('selected-outline');
-    editorArea.innerHTML='';
+    if (triggerEl) triggerEl.classList.add('selected-outline');
+    editorArea.innerHTML = '';
 
-    if(type==='day'||type==='slot'){
-      const sample = type==='day'?document.querySelector('.day-btn'):document.querySelector('.slot-btn');
-      const c = sample.style; // משתמשים בערכים מה‑DB
+    if (type === 'day' || type === 'slot') {
+      const sample = type === 'day' ? document.querySelector('.day-btn') : document.querySelector('.slot-btn');
+      const c = getComputedStyle(sample);
 
-      editorArea.innerHTML=`
+      editorArea.innerHTML = `
         <div>
-          <p class="font-semibold mb-2">עורך ${type==='day'?'DAY':'HOUR'}</p>
+          <p class="font-semibold mb-2">עורך ${type === 'day' ? 'DAY' : 'HOUR'}</p>
           <label class="block small-label mb-1">צבע רקע</label>
-          <input id="groupBg" type="color" class="w-full h-10 p-0 border" value="${c.backgroundColor}">
+          <input id="groupBg" type="color" class="w-full h-10 p-0 border" value="${rgbToHex(c.backgroundColor)}">
 
           <label class="block small-label mt-3 mb-1">צבע טקסט</label>
-          <input id="groupText" type="color" class="w-full h-10 p-0 border" value="${c.color}">
+          <input id="groupText" type="color" class="w-full h-10 p-0 border" value="${rgbToHex(c.color)}">
 
           <label class="block small-label mt-3 mb-1">גודל טקסט (px)</label>
-          <input id="groupFontSize" type="number" min="8" class="w-full border p-2" value="${c.fontSize}">
+          <input id="groupFontSize" type="number" min="8" class="w-full border p-2" value="${parseInt(c.fontSize)}">
 
           <label class="block small-label mt-3 mb-1">פונט</label>
           <select id="groupFontFamily" class="w-full border p-2">
-            <option ${c.fontFamily.includes('Tahoma')?'selected':''}>Tahoma, sans-serif</option>
-            <option ${c.fontFamily.includes('Arial')?'selected':''}>Arial, sans-serif</option>
-            <option ${c.fontFamily.includes('Verdana')?'selected':''}>Verdana, sans-serif</option>
-            <option ${c.fontFamily.includes('Georgia')?'selected':''}>Georgia, serif</option>
+            <option ${c.fontFamily.includes('Tahoma') ? 'selected' : ''}>Tahoma, sans-serif</option>
+            <option ${c.fontFamily.includes('Arial') ? 'selected' : ''}>Arial, sans-serif</option>
+            <option ${c.fontFamily.includes('Verdana') ? 'selected' : ''}>Verdana, sans-serif</option>
+            <option ${c.fontFamily.includes('Georgia') ? 'selected' : ''}>Georgia, serif</option>
           </select>
 
           <label class="block small-label mt-3 mb-1">גובה פנימי (padding px)</label>
@@ -169,93 +171,98 @@ document.addEventListener('DOMContentLoaded', ()=> {
         </div>
       `;
 
-      const applyToGroup = ()=>{
+      const applyToGroup = () => {
         const bg = document.getElementById('groupBg').value;
         const text = document.getElementById('groupText').value;
-        const fs = document.getElementById('groupFontSize').value+'px';
+        const fs = document.getElementById('groupFontSize').value + 'px';
         const ff = document.getElementById('groupFontFamily').value;
-        const pad = document.getElementById('groupPadding').value+'px';
+        const pad = document.getElementById('groupPadding').value + 'px';
         const rad = document.getElementById('groupShape').value;
 
-        document.querySelectorAll(type==='day'?'.day-btn':'.slot-btn').forEach(el=>{
-          el.style.backgroundColor=bg;
-          el.style.color=text;
-          el.style.fontSize=fs;
-          el.style.fontFamily=ff;
-          el.style.paddingTop=pad;
-          el.style.paddingBottom=pad;
-          el.style.borderRadius=rad;
+        document.querySelectorAll(type === 'day' ? '.day-btn' : '.slot-btn').forEach(el => {
+          el.style.backgroundColor = bg;
+          el.style.color = text;
+          el.style.fontSize = fs;
+          el.style.fontFamily = ff;
+          el.style.paddingTop = pad;
+          el.style.paddingBottom = pad;
+          el.style.borderRadius = rad;
         });
       };
 
-      ['groupBg','groupText','groupFontSize','groupFontFamily','groupPadding','groupShape'].forEach(id=>{
+      ['groupBg','groupText','groupFontSize','groupFontFamily','groupPadding','groupShape'].forEach(id => {
         document.getElementById(id).addEventListener('input', applyToGroup);
         document.getElementById(id).addEventListener('change', applyToGroup);
       });
 
-    } else if(type==='title'||type==='subtitle'){
-      const el = type==='title'?mainTitle:subTitle;
-      const c = el.style;
+    } else if (type === 'title' || type === 'subtitle') {
+      const el = type === 'title' ? mainTitle : subTitle;
+      const c = getComputedStyle(el);
+      const curColor = rgbToHex(c.color);
+      const curSize = parseInt(c.fontSize);
+      const curFamily = c.fontFamily;
 
-      editorArea.innerHTML=`
+      editorArea.innerHTML = `
         <div>
-          <p class="font-semibold mb-2">עורך ${type==='title'?'כותרת':'כותרת משנה'}</p>
+          <p class="font-semibold mb-2">עורך ${type === 'title' ? 'כותרת' : 'כותרת משנה'}</p>
           <label class="block small-label mb-1">טקסט</label>
           <input id="titleText" type="text" class="w-full border p-2" value="${el.textContent}">
           <label class="block small-label mt-3 mb-1">צבע טקסט</label>
-          <input id="titleColor" type="color" class="w-full h-10 p-0 border" value="${c.color || '#000000'}">
+          <input id="titleColor" type="color" class="w-full h-10 p-0 border" value="${curColor}">
           <label class="block small-label mt-3 mb-1">גודל טקסט (px)</label>
-          <input id="titleSize" type="number" class="w-full border p-2" value="${parseInt(c.fontSize) || 24}">
+          <input id="titleSize" type="number" class="w-full border p-2" value="${curSize}">
           <label class="block small-label mt-3 mb-1">פונט</label>
           <select id="titleFont" class="w-full border p-2">
-            <option ${c.fontFamily.includes('Georgia')?'selected':''}>Georgia, serif</option>
-            <option ${c.fontFamily.includes('Tahoma')?'selected':''}>Tahoma, sans-serif</option>
-            <option ${c.fontFamily.includes('Verdana')?'selected':''}>Verdana, sans-serif</option>
-            <option ${c.fontFamily.includes('Arial')?'selected':''}>Arial, sans-serif</option>
+            <option ${curFamily.includes('Georgia')?'selected':''}>Georgia, serif</option>
+            <option ${curFamily.includes('Tahoma')?'selected':''}>Tahoma, sans-serif</option>
+            <option ${curFamily.includes('Verdana')?'selected':''}>Verdana, sans-serif</option>
+            <option ${curFamily.includes('Arial')?'selected':''}>Arial, sans-serif</option>
           </select>
         </div>
       `;
-      document.getElementById('titleText').addEventListener('input', e=>el.textContent=e.target.value);
-      document.getElementById('titleColor').addEventListener('input', e=>el.style.color=e.target.value);
-      document.getElementById('titleSize').addEventListener('input', e=>el.style.fontSize=e.target.value+'px');
-      document.getElementById('titleFont').addEventListener('change', e=>el.style.fontFamily=e.target.value);
+
+      document.getElementById('titleText').addEventListener('input', e => el.textContent = e.target.value);
+      document.getElementById('titleColor').addEventListener('input', e => el.style.color = e.target.value);
+      document.getElementById('titleSize').addEventListener('input', e => el.style.fontSize = e.target.value + 'px');
+      document.getElementById('titleFont').addEventListener('change', e => el.style.fontFamily = e.target.value);
     }
   }
 
-  document.querySelectorAll('.day-btn').forEach(btn=>btn.addEventListener('click', e=>renderEditor('day',e.currentTarget)));
-  document.querySelectorAll('.slot-btn').forEach(btn=>btn.addEventListener('click', e=>renderEditor('slot',e.currentTarget)));
-  mainTitle.addEventListener('click', e=>renderEditor('title',e.currentTarget));
-  subTitle.addEventListener('click', e=>renderEditor('subtitle',e.currentTarget));
+  document.querySelectorAll('.day-btn').forEach(btn => btn.addEventListener('click', e => renderEditor('day', e.currentTarget)));
+  document.querySelectorAll('.slot-btn').forEach(btn => btn.addEventListener('click', e => renderEditor('slot', e.currentTarget)));
+  mainTitle.addEventListener('click', e => renderEditor('title', e.currentTarget));
+  subTitle.addEventListener('click', e => renderEditor('subtitle', e.currentTarget));
 
-  document.getElementById('saveBtn').addEventListener('click', async ()=>{
-    const daySample=document.querySelector('.day-btn');
-    const slotSample=document.querySelector('.slot-btn');
+  // שמירה
+  document.getElementById('saveBtn').addEventListener('click', async () => {
+    const daySample = document.querySelector('.day-btn');
+    const slotSample = document.querySelector('.slot-btn');
 
     const payload = {
-      body_background_color: document.body.style.backgroundColor,
+      body_background_color: getComputedStyle(document.body).backgroundColor,
       heading_font_family: mainTitle.style.fontFamily,
       heading_font_size: mainTitle.style.fontSize,
-      heading_color: mainTitle.style.color,
+      heading_color: getComputedStyle(mainTitle).color,
       heading_text: mainTitle.textContent,
       subheading_font_family: subTitle.style.fontFamily,
       subheading_font_size: subTitle.style.fontSize,
-      subheading_color: subTitle.style.color,
+      subheading_color: getComputedStyle(subTitle).color,
       subheading_text: subTitle.textContent,
       day_button_shape: daySample.style.borderRadius,
-      day_button_color: daySample.style.backgroundColor,
+      day_button_color: getComputedStyle(daySample).backgroundColor,
       day_button_size: daySample.style.paddingTop,
       day_button_text_size: daySample.style.fontSize,
-      day_button_text_color: daySample.style.color,
+      day_button_text_color: getComputedStyle(daySample).color,
       day_button_font_family: daySample.style.fontFamily,
       slot_button_shape: slotSample.style.borderRadius,
-      slot_button_color: slotSample.style.backgroundColor,
+      slot_button_color: getComputedStyle(slotSample).backgroundColor,
       slot_button_size: slotSample.style.paddingTop,
       slot_button_text_size: slotSample.style.fontSize,
-      slot_button_text_color: slotSample.style.color,
+      slot_button_text_color: getComputedStyle(slotSample).color,
       slot_button_font_family: slotSample.style.fontFamily
     };
 
-    try{
+    try {
       const res = await fetch('/business_settings',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
@@ -264,7 +271,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
       const data = await res.json();
       if(!res.ok) throw new Error(data.error || 'שגיאה בשרת');
       alert(data.message || 'נשמר בהצלחה!');
-    } catch(err){
+    } catch(err) {
       console.error(err);
       alert('שגיאה בשמירה — בדוק את השרת (console).');
     }
