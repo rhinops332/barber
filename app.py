@@ -472,15 +472,16 @@ def create_default_weekly_schedule():
         schedule[day] = slots
     return schedule
 
-def create_default_business_settings(business_id, conn):
+def create_default_business_settings(business_id, business_name, conn):
     cur = conn.cursor()
-    # נבדוק אם כבר קיימת שורה
+
+    # בדיקה אם כבר קיימת שורה עבור העסק
     cur.execute("SELECT id FROM design_settings WHERE business_id=%s", (business_id,))
     if cur.fetchone():
         cur.close()
         return  # כבר קיימת, לא עושים כלום
 
-    # ערכי ברירת מחדל מתוך ה-CSS
+    # ערכי ברירת מחדל תואמים ל-JS / CSS
     cur.execute("""
         INSERT INTO design_settings (
             business_id,
@@ -504,26 +505,31 @@ def create_default_business_settings(business_id, conn):
         VALUES (
             %s,
             -- יום
-            'rectangle', '#3498db', 'auto',
-            '15px', 'white', 'Tahoma, sans-serif',
+            '12px', '#3498db', '12px',
+            '15px', '#ffffff', 'Tahoma, sans-serif',
 
             -- שעה
-            'rectangle', '#2ecc71', 'auto',
-            '14px', 'white', 'Arial, sans-serif',
+            '8px', '#2ecc71', '8px',
+            '14px', '#ffffff', 'Verdana, sans-serif',
 
             -- כותרות
-            'Arial, sans-serif', 'Arial, sans-serif',
-            '24px', '18px',
-            '#2c3e50', '#2c3e50',
-            'HairBoss - Book Appointment', 'בחר יום ושעה',
+            'Georgia, serif', 'Verdana, sans-serif',
+            '32px', '18px',
+            '#2980b9', '#555555',
+            %s, %s,
 
-            -- רקע
-            '#f0f4ff'
+            -- רקע כללי
+            '#f3f4f6'
         )
-    """, (business_id,))
+    """, (
+        business_id,
+        business_name,           # heading_text = שם העסק
+        "בחרו תור לקביעת פגישה"     # subheading_text
+    ))
 
     conn.commit()
     cur.close()
+
 
 
 
@@ -736,7 +742,7 @@ def add_business():
                 """, (business_id, day, slot['start_time'], slot['end_time']))
 
         # 2.1️⃣ יצירת שורה ב-business_settings עם ערכי ברירת מחדל
-        create_default_business_settings(business_id, conn)
+        create_default_business_settings(business_id,business_name conn)
 
         # 3️⃣ יצירת רשומות ריקות לשאר הטבלאות
         for table in ["appointments", "overrides", "bot_knowledge"]:
