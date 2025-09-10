@@ -926,15 +926,7 @@ def admin_design():
         return "Business not found", 404
     business_id = row[0]
 
-    # שליפת הגדרות עיצוב
-    cur.execute("SELECT * FROM design_settings WHERE business_id=%s", (business_id,))
-    settings_row = cur.fetchone()
-    conn.close()
-
-    if not settings_row:
-        return "No design settings found for this business", 404
-
-    # רשימת עמודות כפי שהגדרת בטבלה
+    # שליפת הגדרות עיצוב - מציינים עמודות במפורש
     columns = [
         "day_button_shape","day_button_color","day_button_size",
         "day_button_text_size","day_button_text_color","day_button_font_family",
@@ -946,8 +938,19 @@ def admin_design():
         "body_background_color"
     ]
 
-    # המרת השורה למילון
-    design_settings = {col: settings_row[idx] for idx, col in enumerate(columns)}
+    cur.execute(f"""
+        SELECT {", ".join(columns)}
+        FROM design_settings
+        WHERE business_id=%s
+    """, (business_id,))
+    row = cur.fetchone()
+    conn.close()
+
+    if not row:
+        return "No design settings found for this business", 404
+
+    # הפיכה למילון
+    design_settings = dict(zip(columns, row))
     design_settings['business_name'] = business_name
 
     return render_template("admin_design.html", design_settings=design_settings)
@@ -1402,6 +1405,8 @@ def business_settings_route():
 
     conn = get_db_connection()
     cur = conn.cursor()
+
+    # שליפת business_id לפי שם העסק
     cur.execute("SELECT id FROM businesses WHERE name = %s", (business_name,))
     row = cur.fetchone()
     if not row:
@@ -1410,22 +1415,33 @@ def business_settings_route():
         return jsonify({"error": "Business not found"}), 404
     business_id = row[0]
 
+    # רשימת העמודות הקיימות בטבלת design_settings
+    columns = [
+        "day_button_shape","day_button_color","day_button_size",
+        "day_button_text_size","day_button_text_color","day_button_font_family",
+        "slot_button_shape","slot_button_color","slot_button_size","slot_button_text_size",
+        "slot_button_text_color","slot_button_font_family",
+        "heading_font_family","subheading_font_family","heading_font_size","subheading_font_size",
+        "heading_color","subheading_color",
+        "heading_text","subheading_text",
+        "body_background_color"
+    ]
+
     if request.method == "GET":
-        cur.execute("SELECT * FROM design_settings WHERE business_id = %s", (business_id,))
-        settings = cur.fetchone()
-        if not settings:
-            cur.close()
-            conn.close()
-            return jsonify({"error": "Business settings not found"}), 404
-        colnames = [desc[0] for desc in cur.description]
-        settings_dict = dict(zip(colnames, settings))
-        # פירוק JSON לשדות קריאים
-        if settings_dict.get("day_names"):
-            settings_dict["day_names"] = json.loads(settings_dict["day_names"])
-        if settings_dict.get("layout_json"):
-            settings_dict["layout_json"] = json.loads(settings_dict["layout_json"])
+        cur.execute(f"""
+            SELECT {", ".join(columns)}
+            FROM design_settings
+            WHERE business_id = %s
+        """, (business_id,))
+        row = cur.fetchone()
         cur.close()
         conn.close()
+
+        if not row:
+            return jsonify({"error": "Business settings not found"}), 404
+
+        settings_dict = dict(zip(columns, row))
+        settings_dict["business_name"] = business_name
         return jsonify(settings_dict)
 
     if request.method == "POST":
@@ -1435,47 +1451,28 @@ def business_settings_route():
             conn.close()
             return jsonify({"error": "No data provided"}), 400
 
-        columns = [
-           "day_button_shape","day_button_color","day_button_size",
-           "day_button_text_size","day_button_text_color","day_button_font_family",
-           "slot_button_shape","slot_button_color","slot_button_size","slot_button_text_size",
-           "slot_button_text_color","slot_button_font_family",
-           "heading_font_family","subheading_font_family","heading_font_size","subheading_font_size",
-           "heading_color","subheading_color",
-           "heading_text","subheading_text",
-           "body_background_color"
-       ]
-
-        # בדיקה אם כבר קיימת שורה
-        cur.execute("SELECT * FROM design_settings WHERE business_id = %s", (business_id,))
+        # בדיקה אם קיימת שורה קיימת לעסק
+        cur.execute("SELECT id FROM design_settings WHERE business_id = %s", (business_id,))
         existing = cur.fetchone()
-        existing_dict = {}
-        if existing:
-            colnames = [desc[0] for desc in cur.description]
-            existing_dict = dict(zip(colnames, existing))
 
-        values = []
-        for col in columns:
-            val = data.get(col)
-            if val is None and existing_dict.get(col) is not None:
-                val = existing_dict[col]  # שמור את הערך הקודם אם לא הגיע חדש
-            # טיפול ב־JSON
-            if col in ["day_names", "layout_json"]:
-                if isinstance(val, str):
-                    try:
-                        val = json.loads(val)
-                    except:
-                        val = [d.strip() for d in val.split(",")] if col=="day_names" else {}
-                val = json.dumps(val)
-            values.append(val)
+        # בניית ערכים לפי הסדר בעמודות
+        values = [data.get(col) for col in columns]
 
         if existing:
+            # עדכון שורה קיימת
             placeholders = ", ".join([f"{col} = %s" for col in columns])
-            cur.execute(f"UPDATE design_settings SET {placeholders} WHERE business_id = %s", values + [business_id])
+            cur.execute(
+                f"UPDATE design_settings SET {placeholders} WHERE business_id = %s",
+                values + [business_id]
+            )
         else:
+            # יצירת שורה חדשה
             cols_str = ", ".join(["business_id"] + columns)
             vals_placeholders = ", ".join(["%s"] * (len(columns) + 1))
-            cur.execute(f"INSERT INTO design_settings ({cols_str}) VALUES ({vals_placeholders})", [business_id] + values)
+            cur.execute(
+                f"INSERT INTO design_settings ({cols_str}) VALUES ({vals_placeholders})",
+                [business_id] + values
+            )
 
         conn.commit()
         cur.close()
