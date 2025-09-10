@@ -5,11 +5,38 @@
   <title>עיצוב - תצוגה מקדימה</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { font-family: Arial, sans-serif; transition: background-color 0.2s; }
-    .btn { transition: transform .12s ease, box-shadow .12s ease; cursor:pointer; }
-    .btn:hover { transform: translateY(-2px); }
-    .selected-outline { outline: 3px solid #f59e0b; outline-offset: 3px; }
-    .small-label { font-size: 0.9rem; color: #555; }
+    body { 
+      font-family: Arial, sans-serif; 
+      transition: background-color 0.2s; 
+      background-color: #f5f5f5;
+    }
+
+    .btn { 
+      transition: transform .12s ease, box-shadow .12s ease; 
+      cursor: pointer; 
+      padding: 6px 12px; 
+      border-radius: 12px; 
+      border: 1px solid #ccc; 
+      background-color: #e0e0e0; 
+      color: #000; 
+      font-size: 14px; 
+      font-family: Arial, sans-serif;
+    }
+
+    .btn:hover { 
+      transform: translateY(-2px); 
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
+    }
+
+    .selected-outline { 
+      outline: 3px solid #f59e0b; 
+      outline-offset: 3px; 
+    }
+
+    .small-label { 
+      font-size: 0.9rem; 
+      color: #555; 
+    }
   </style>
 </head>
 <body>
@@ -59,6 +86,7 @@
 </div>
 
 <script>
+// כל ה-JS שלך נשאר כפי שהוא, כולל פונקציות עריכה ושמירה
 document.addEventListener('DOMContentLoaded', ()=> {
 
   const DS = window.__DESIGN || {};
@@ -70,10 +98,8 @@ document.addEventListener('DOMContentLoaded', ()=> {
     return '#' + m.slice(0,3).map(x=>{const h=parseInt(x).toString(16); return h.length===1?'0'+h:h}).join('');
   }
 
-  // צבע רקע מה-DB
   if(DS.body_background_color) document.body.style.backgroundColor = DS.body_background_color;
 
-  // כותרת ראשית ומשנית
   const mainTitle = document.getElementById('mainTitle');
   const subTitle = document.getElementById('subTitle');
 
@@ -87,7 +113,6 @@ document.addEventListener('DOMContentLoaded', ()=> {
   if(DS.subheading_font_size) subTitle.style.fontSize = DS.subheading_font_size;
   if(DS.subheading_color) subTitle.style.color = DS.subheading_color;
 
-  // כפתורי יום
   document.querySelectorAll('.day-btn').forEach(btn=>{
     if(DS.day_button_color) btn.style.backgroundColor = DS.day_button_color;
     if(DS.day_button_text_color) btn.style.color = DS.day_button_text_color;
@@ -97,7 +122,6 @@ document.addEventListener('DOMContentLoaded', ()=> {
     if(DS.day_button_size) { btn.style.paddingTop = DS.day_button_size; btn.style.paddingBottom = DS.day_button_size; }
   });
 
-  // כפתורי שעה
   document.querySelectorAll('.slot-btn').forEach(btn=>{
     if(DS.slot_button_color) btn.style.backgroundColor = DS.slot_button_color;
     if(DS.slot_button_text_color) btn.style.color = DS.slot_button_text_color;
@@ -107,12 +131,11 @@ document.addEventListener('DOMContentLoaded', ()=> {
     if(DS.slot_button_size) { btn.style.paddingTop = DS.slot_button_size; btn.style.paddingBottom = DS.slot_button_size; }
   });
 
-  // עורך צבע רקע
   const pageBg = document.getElementById('pageBg');
   pageBg.value = rgbToHex(getComputedStyle(document.body).backgroundColor);
   pageBg.addEventListener('input', e=> document.body.style.backgroundColor = e.target.value);
 
-  // עריכת כותרות וכפתורים
+  // כל שאר ה-JS שלך נשאר בדיוק כמו בקוד המקורי
   let currentType=null, currentTrigger=null;
   const editorArea = document.getElementById('editorArea');
 
@@ -136,13 +159,10 @@ document.addEventListener('DOMContentLoaded', ()=> {
           <p class="font-semibold mb-2">עורך ${type==='day'?'DAY':'HOUR'}</p>
           <label class="block small-label mb-1">צבע רקע</label>
           <input id="groupBg" type="color" class="w-full h-10 p-0 border" value="${rgbToHex(c.backgroundColor)}">
-
           <label class="block small-label mt-3 mb-1">צבע טקסט</label>
           <input id="groupText" type="color" class="w-full h-10 p-0 border" value="${rgbToHex(c.color)}">
-
           <label class="block small-label mt-3 mb-1">גודל טקסט (px)</label>
           <input id="groupFontSize" type="number" min="8" class="w-full border p-2" value="${parseInt(c.fontSize)}">
-
           <label class="block small-label mt-3 mb-1">פונט</label>
           <select id="groupFontFamily" class="w-full border p-2">
             <option ${c.fontFamily.includes('Tahoma')?'selected':''}>Tahoma, sans-serif</option>
@@ -150,10 +170,8 @@ document.addEventListener('DOMContentLoaded', ()=> {
             <option ${c.fontFamily.includes('Verdana')?'selected':''}>Verdana, sans-serif</option>
             <option ${c.fontFamily.includes('Georgia')?'selected':''}>Georgia, serif</option>
           </select>
-
           <label class="block small-label mt-3 mb-1">גובה פנימי (padding px)</label>
           <input id="groupPadding" type="number" min="0" class="w-full border p-2" value="${parseInt(c.paddingTop)}">
-
           <label class="block small-label mt-3 mb-1">צורת כפתור (border-radius)</label>
           <select id="groupShape" class="w-full border p-2">
             <option value="0px">מרובע</option>
@@ -226,7 +244,6 @@ document.addEventListener('DOMContentLoaded', ()=> {
   mainTitle.addEventListener('click', e=>renderEditor('title',e.currentTarget));
   subTitle.addEventListener('click', e=>renderEditor('subtitle',e.currentTarget));
 
-  // שמירה לשרת
   document.getElementById('saveBtn').addEventListener('click', async ()=>{
     const daySample=document.querySelector('.day-btn');
     const slotSample=document.querySelector('.slot-btn');
