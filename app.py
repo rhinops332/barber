@@ -481,7 +481,7 @@ def create_default_business_settings(business_id, business_name, conn):
         cur.close()
         return  # כבר קיימת, לא עושים כלום
 
-    # ערכי ברירת מחדל תואמים ל-JS / CSS
+    # ערכי ברירת מחדל תקינים
     cur.execute("""
         INSERT INTO design_settings (
             business_id,
@@ -523,12 +523,13 @@ def create_default_business_settings(business_id, business_name, conn):
         )
     """, (
         business_id,
-        business_name,           # heading_text = שם העסק
-        "בחרו תור לקביעת פגישה"     # subheading_text
+        business_name,                  # heading_text = שם העסק
+        "בחרו תור לקביעת פגישה"       # subheading_text
     ))
 
     conn.commit()
     cur.close()
+
 
 
 
