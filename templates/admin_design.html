@@ -5,11 +5,38 @@
   <title>עיצוב - תצוגה מקדימה</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { font-family: Arial, sans-serif; transition: background-color 0.2s; }
-    .btn { transition: transform .12s ease, box-shadow .12s ease; cursor:pointer; }
-    .btn:hover { transform: translateY(-2px); }
-    .selected-outline { outline: 3px solid #f59e0b; outline-offset: 3px; }
-    .small-label { font-size: 0.9rem; color: #555; }
+    body { 
+      font-family: Arial, sans-serif; 
+      transition: background-color 0.2s; 
+      background-color: #f5f5f5;
+    }
+
+    .btn { 
+      transition: transform .12s ease, box-shadow .12s ease; 
+      cursor: pointer; 
+      padding: 6px 12px; 
+      border-radius: 12px; 
+      border: 1px solid #ccc; 
+      background-color: #e0e0e0; 
+      color: #000; 
+      font-size: 14px; 
+      font-family: Arial, sans-serif;
+    }
+
+    .btn:hover { 
+      transform: translateY(-2px); 
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
+    }
+
+    .selected-outline { 
+      outline: 3px solid #f59e0b; 
+      outline-offset: 3px; 
+    }
+
+    .small-label { 
+      font-size: 0.9rem; 
+      color: #555; 
+    }
   </style>
 </head>
 <body>
@@ -20,16 +47,13 @@
 
 <div class="flex h-screen">
 
-  <!-- אזור התצוגה -->
   <div class="w-3/4 p-6 overflow-auto">
 
-    <!-- כותרות -->
     <div class="mb-6">
       <h1 id="mainTitle" class="text-2xl font-bold"></h1>
       <h2 id="subTitle" class="text-lg"></h2>
     </div>
 
-    <!-- כפתורי ימים -->
     <div class="mb-6">
       <div class="grid grid-cols-7 gap-3" id="daysRow">
         {% for i in range(7) %}
@@ -38,7 +62,6 @@
       </div>
     </div>
 
-    <!-- כפתורי שעות -->
     <div>
       <div class="grid grid-cols-5 gap-3" id="slotsGrid">
         {% for i in range(20) %}
@@ -48,7 +71,6 @@
     </div>
   </div>
 
-  <!-- צד העריכה -->
   <aside id="sidePanel" class="w-1/4 bg-white p-6 border-l border-gray-300">
     <h3 class="text-lg font-semibold mb-4">אפשרויות</h3>
 
@@ -77,49 +99,56 @@ document.addEventListener('DOMContentLoaded', ()=> {
     return '#' + m.slice(0,3).map(x=>{const h=parseInt(x).toString(16); return h.length===1?'0'+h:h}).join('');
   }
 
-  // צבע רקע
-  document.body.style.backgroundColor = DS.body_background_color || '#ffffff';
+  // צבע רקע גוף
+  document.body.style.backgroundColor = DS.body_background_color || '#f5f5f5';
 
   const mainTitle = document.getElementById('mainTitle');
   const subTitle = document.getElementById('subTitle');
 
-  // כותרת ראשית
   mainTitle.textContent = DS.heading_text || 'כותרת';
   mainTitle.style.fontFamily = DS.heading_font_family || 'Arial, sans-serif';
   mainTitle.style.fontSize = DS.heading_font_size || '24px';
   mainTitle.style.color = DS.heading_color || '#000000';
 
-  // כותרת משנית
   subTitle.textContent = DS.subheading_text || 'בחרו תור';
   subTitle.style.fontFamily = DS.subheading_font_family || 'Arial, sans-serif';
   subTitle.style.fontSize = DS.subheading_font_size || '16px';
   subTitle.style.color = DS.subheading_color || '#555555';
 
-  // כפתורי יום
-  document.querySelectorAll('.day-btn').forEach(btn=>{
-    btn.style.backgroundColor = DS.day_button_color || '#eee';
-    btn.style.color = DS.day_button_text_color || '#000';
-    btn.style.borderRadius = DS.day_button_shape || '12px';
-    btn.style.fontFamily = DS.day_button_font_family || 'Arial, sans-serif';
-    btn.style.fontSize = DS.day_button_text_size || '14px';
-    btn.style.paddingTop = DS.day_button_size || '6px';
-    btn.style.paddingBottom = DS.day_button_size || '6px';
-  });
+  function styleButtons(selector, color, textColor, radius, fontSize, fontFamily, padding){
+    document.querySelectorAll(selector).forEach(btn=>{
+      btn.style.backgroundColor = color;
+      btn.style.color = textColor;
+      btn.style.borderRadius = radius;
+      btn.style.fontSize = fontSize;
+      btn.style.fontFamily = fontFamily;
+      btn.style.paddingTop = padding;
+      btn.style.paddingBottom = padding;
+      btn.style.border = '1px solid #ccc';
+    });
+  }
 
-  // כפתורי שעה
-  document.querySelectorAll('.slot-btn').forEach(btn=>{
-    btn.style.backgroundColor = DS.slot_button_color || '#eee';
-    btn.style.color = DS.slot_button_text_color || '#000';
-    btn.style.borderRadius = DS.slot_button_shape || '12px';
-    btn.style.fontFamily = DS.slot_button_font_family || 'Arial, sans-serif';
-    btn.style.fontSize = DS.slot_button_text_size || '14px';
-    btn.style.paddingTop = DS.slot_button_size || '6px';
-    btn.style.paddingBottom = DS.slot_button_size || '6px';
-  });
+  styleButtons('.day-btn',
+    DS.day_button_color || '#e0e0e0',
+    DS.day_button_text_color || '#000000',
+    DS.day_button_shape || '12px',
+    DS.day_button_text_size || '14px',
+    DS.day_button_font_family || 'Arial, sans-serif',
+    DS.day_button_size || '6px'
+  );
+
+  styleButtons('.slot-btn',
+    DS.slot_button_color || '#e0e0e0',
+    DS.slot_button_text_color || '#000000',
+    DS.slot_button_shape || '12px',
+    DS.slot_button_text_size || '14px',
+    DS.slot_button_font_family || 'Arial, sans-serif',
+    DS.slot_button_size || '6px'
+  );
 
   // צבע רקע בתצוגת input
   const pageBg = document.getElementById('pageBg');
-  pageBg.value = DS.body_background_color || '#ffffff';
+  pageBg.value = rgbToHex(document.body.style.backgroundColor);
   pageBg.addEventListener('input', e=> document.body.style.backgroundColor = e.target.value);
 
   let currentType=null, currentTrigger=null;
@@ -138,41 +167,34 @@ document.addEventListener('DOMContentLoaded', ()=> {
 
     if(type==='day'||type==='slot'){
       const sample = type==='day'?document.querySelector('.day-btn'):document.querySelector('.slot-btn');
-      const c = sample.style;
+      const c = getComputedStyle(sample);
 
-      editorArea.innerHTML=`
-        <div>
-          <p class="font-semibold mb-2">עורך ${type==='day'?'DAY':'HOUR'}</p>
-          <label class="block small-label mb-1">צבע רקע</label>
-          <input id="groupBg" type="color" class="w-full h-10 p-0 border" value="${c.backgroundColor}">
-
-          <label class="block small-label mt-3 mb-1">צבע טקסט</label>
-          <input id="groupText" type="color" class="w-full h-10 p-0 border" value="${c.color}">
-
-          <label class="block small-label mt-3 mb-1">גודל טקסט (px)</label>
-          <input id="groupFontSize" type="number" min="8" class="w-full border p-2" value="${parseInt(c.fontSize)}">
-
-          <label class="block small-label mt-3 mb-1">פונט</label>
-          <select id="groupFontFamily" class="w-full border p-2">
-            <option ${c.fontFamily.includes('Tahoma')?'selected':''}>Tahoma, sans-serif</option>
-            <option ${c.fontFamily.includes('Arial')?'selected':''}>Arial, sans-serif</option>
-            <option ${c.fontFamily.includes('Verdana')?'selected':''}>Verdana, sans-serif</option>
-            <option ${c.fontFamily.includes('Georgia')?'selected':''}>Georgia, serif</option>
-          </select>
-
-          <label class="block small-label mt-3 mb-1">גובה פנימי (padding px)</label>
-          <input id="groupPadding" type="number" min="0" class="w-full border p-2" value="${parseInt(c.paddingTop)}">
-
-          <label class="block small-label mt-3 mb-1">צורת כפתור (border-radius)</label>
-          <select id="groupShape" class="w-full border p-2">
-            <option value="0px">מרובע</option>
-            <option value="6px">מעט מעוגל</option>
-            <option value="12px" selected>מעוגל</option>
-            <option value="9999px">pill</option>
-          </select>
-          <p class="text-sm text-gray-500 mt-3">השינויים יחולו על כל הכפתורים בזמן אמת.</p>
-        </div>
-      `;
+      editorArea.innerHTML=`<div>
+        <p class="font-semibold mb-2">עורך ${type==='day'?'DAY':'HOUR'}</p>
+        <label class="block small-label mb-1">צבע רקע</label>
+        <input id="groupBg" type="color" class="w-full h-10 p-0 border" value="${rgbToHex(c.backgroundColor)}">
+        <label class="block small-label mt-3 mb-1">צבע טקסט</label>
+        <input id="groupText" type="color" class="w-full h-10 p-0 border" value="${rgbToHex(c.color)}">
+        <label class="block small-label mt-3 mb-1">גודל טקסט (px)</label>
+        <input id="groupFontSize" type="number" min="8" class="w-full border p-2" value="${parseInt(c.fontSize)}">
+        <label class="block small-label mt-3 mb-1">פונט</label>
+        <select id="groupFontFamily" class="w-full border p-2">
+          <option ${c.fontFamily.includes('Tahoma')?'selected':''}>Tahoma, sans-serif</option>
+          <option ${c.fontFamily.includes('Arial')?'selected':''}>Arial, sans-serif</option>
+          <option ${c.fontFamily.includes('Verdana')?'selected':''}>Verdana, sans-serif</option>
+          <option ${c.fontFamily.includes('Georgia')?'selected':''}>Georgia, serif</option>
+        </select>
+        <label class="block small-label mt-3 mb-1">גובה פנימי (padding px)</label>
+        <input id="groupPadding" type="number" min="0" class="w-full border p-2" value="${parseInt(c.paddingTop)}">
+        <label class="block small-label mt-3 mb-1">צורת כפתור (border-radius)</label>
+        <select id="groupShape" class="w-full border p-2">
+          <option value="0px">מרובע</option>
+          <option value="6px">מעט מעוגל</option>
+          <option value="12px" selected>מעוגל</option>
+          <option value="9999px">pill</option>
+        </select>
+        <p class="text-sm text-gray-500 mt-3">השינויים יחולו על כל הכפתורים בזמן אמת.</p>
+      </div>`;
 
       const applyToGroup = ()=>{
         const bg = document.getElementById('groupBg').value;
@@ -181,16 +203,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
         const ff = document.getElementById('groupFontFamily').value;
         const pad = document.getElementById('groupPadding').value+'px';
         const rad = document.getElementById('groupShape').value;
-
-        document.querySelectorAll(type==='day'?'.day-btn':'.slot-btn').forEach(el=>{
-          el.style.backgroundColor=bg;
-          el.style.color=text;
-          el.style.fontSize=fs;
-          el.style.fontFamily=ff;
-          el.style.paddingTop=pad;
-          el.style.paddingBottom=pad;
-          el.style.borderRadius=rad;
-        });
+        styleButtons(type==='day'?'.day-btn':'.slot-btn', bg, text, rad, fs, ff, pad);
       };
 
       ['groupBg','groupText','groupFontSize','groupFontFamily','groupPadding','groupShape'].forEach(id=>{
@@ -200,29 +213,25 @@ document.addEventListener('DOMContentLoaded', ()=> {
 
     } else if(type==='title'||type==='subtitle'){
       const el = type==='title'?mainTitle:subTitle;
-      const c = el.style;
+      const c = getComputedStyle(el);
 
-      editorArea.innerHTML=`
-        <div>
-          <p class="font-semibold mb-2">עורך ${type==='title'?'כותרת':'כותרת משנה'}</p>
-          <label class="block small-label mb-1">טקסט</label>
-          <input id="titleText" type="text" class="w-full border p-2" value="${el.textContent}">
+      editorArea.innerHTML=`<div>
+        <p class="font-semibold mb-2">עורך ${type==='title'?'כותרת':'כותרת משנה'}</p>
+        <label class="block small-label mb-1">טקסט</label>
+        <input id="titleText" type="text" class="w-full border p-2" value="${el.textContent}">
+        <label class="block small-label mt-3 mb-1">צבע טקסט</label>
+        <input id="titleColor" type="color" class="w-full h-10 p-0 border" value="${rgbToHex(c.color)}">
+        <label class="block small-label mt-3 mb-1">גודל טקסט (px)</label>
+        <input id="titleSize" type="number" class="w-full border p-2" value="${parseInt(c.fontSize)}">
+        <label class="block small-label mt-3 mb-1">פונט</label>
+        <select id="titleFont" class="w-full border p-2">
+          <option ${c.fontFamily.includes('Georgia')?'selected':''}>Georgia, serif</option>
+          <option ${c.fontFamily.includes('Tahoma')?'selected':''}>Tahoma, sans-serif</option>
+          <option ${c.fontFamily.includes('Verdana')?'selected':''}>Verdana, sans-serif</option>
+          <option ${c.fontFamily.includes('Arial')?'selected':''}>Arial, sans-serif</option>
+        </select>
+      </div>`;
 
-          <label class="block small-label mt-3 mb-1">צבע טקסט</label>
-          <input id="titleColor" type="color" class="w-full h-10 p-0 border" value="${c.color || '#000000'}">
-
-          <label class="block small-label mt-3 mb-1">גודל טקסט (px)</label>
-          <input id="titleSize" type="number" class="w-full border p-2" value="${parseInt(c.fontSize) || 24}">
-
-          <label class="block small-label mt-3 mb-1">פונט</label>
-          <select id="titleFont" class="w-full border p-2">
-            <option ${c.fontFamily.includes('Georgia')?'selected':''}>Georgia, serif</option>
-            <option ${c.fontFamily.includes('Tahoma')?'selected':''}>Tahoma, sans-serif</option>
-            <option ${c.fontFamily.includes('Verdana')?'selected':''}>Verdana, sans-serif</option>
-            <option ${c.fontFamily.includes('Arial')?'selected':''}>Arial, sans-serif</option>
-          </select>
-        </div>
-      `;
       document.getElementById('titleText').addEventListener('input', e=>el.textContent=e.target.value);
       document.getElementById('titleColor').addEventListener('input', e=>el.style.color=e.target.value);
       document.getElementById('titleSize').addEventListener('input', e=>el.style.fontSize=e.target.value+'px');
@@ -235,7 +244,6 @@ document.addEventListener('DOMContentLoaded', ()=> {
   mainTitle.addEventListener('click', e=>renderEditor('title',e.currentTarget));
   subTitle.addEventListener('click', e=>renderEditor('subtitle',e.currentTarget));
 
-  // שמירה
   document.getElementById('saveBtn').addEventListener('click', async ()=>{
     const daySample=document.querySelector('.day-btn');
     const slotSample=document.querySelector('.slot-btn');
