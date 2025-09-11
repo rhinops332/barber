@@ -75,27 +75,28 @@ document.addEventListener('DOMContentLoaded', ()=>{
   subTitle.style.color = DS.subheading_color || '#555';
 
   // סגנון כפתורים
-  function styleButtons(selector, color, textColor, radius, font, size) {
+  function styleButtons(selector, color, textColor, radius, font, textSize, btnHeight) {
     document.querySelectorAll(selector).forEach(btn=>{
       btn.style.backgroundColor = color;
       btn.style.color = textColor;
       btn.style.borderRadius = radius;
       btn.style.fontFamily = font;
-      btn.style.fontSize = size;
+      btn.style.fontSize = textSize;
+      btn.style.height = btnHeight;
+      btn.style.padding = `0 ${parseInt(btnHeight)/2}px`;
     });
   }
   styleButtons('.day-btn', DS.day_button_color || '#3498db', DS.day_button_text_color || '#fff',
                DS.day_button_shape || '12px', DS.day_button_font_family || 'Tahoma',
-               DS.day_button_text_size || '15px');
+               DS.day_button_text_size || '15px', DS.day_button_height || '36px');
   styleButtons('.slot-btn', DS.slot_button_color || '#2ecc71', DS.slot_button_text_color || '#fff',
                DS.slot_button_shape || '8px', DS.slot_button_font_family || 'Verdana',
-               DS.slot_button_text_size || '14px');
+               DS.slot_button_text_size || '14px', DS.slot_button_height || '36px');
 
   pageBg.value = DS.body_background_color || '#f3f4f6';
   pageBg.addEventListener('input', e=>document.body.style.backgroundColor=e.target.value);
 
   // -------- עריכה --------
-  let currentType=null;
   const editorArea = document.getElementById('editorArea');
   function clearOutline(){
     document.querySelectorAll('.day-btn,.slot-btn,#mainTitle,#subTitle')
@@ -105,7 +106,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
   function renderEditor(type, el){
     clearOutline();
     if(el) el.classList.add('selected-outline');
-    currentType=type;
     editorArea.innerHTML='';
 
     if(type==='title'||type==='subtitle'){
@@ -115,15 +115,25 @@ document.addEventListener('DOMContentLoaded', ()=>{
         <input id="titleText" class="w-full border p-2" value="${t.textContent}">
         <label class="small-label mt-3 mb-1">צבע</label>
         <input id="titleColor" type="color" class="w-full h-10 p-0 border" value="${t.style.color}">
-        <label class="small-label mt-3 mb-1">גודל px</label>
-        <input id="titleSize" type="number" class="w-full border p-2" value="${parseInt(t.style.fontSize)}">
+        <label class="small-label mt-3 mb-1">גודל טקסט</label>
+        <select id="titleSize" class="w-full border p-2">
+          <option value="20px">קטן</option>
+          <option value="28px">בינוני</option>
+          <option value="36px">גדול</option>
+          <option value="48px">ענק</option>
+        </select>
         <label class="small-label mt-3 mb-1">פונט</label>
-        <input id="titleFont" type="text" class="w-full border p-2" value="${t.style.fontFamily}">
+        <select id="titleFont" class="w-full border p-2">
+          <option value="Arial">Arial</option>
+          <option value="Tahoma">Tahoma</option>
+          <option value="Rubik">Rubik</option>
+          <option value="Verdana">Verdana</option>
+        </select>
       </div>`;
       document.getElementById('titleText').addEventListener('input', e=>t.textContent=e.target.value);
       document.getElementById('titleColor').addEventListener('input', e=>t.style.color=e.target.value);
-      document.getElementById('titleSize').addEventListener('input', e=>t.style.fontSize=e.target.value+'px');
-      document.getElementById('titleFont').addEventListener('input', e=>t.style.fontFamily=e.target.value);
+      document.getElementById('titleSize').addEventListener('change', e=>t.style.fontSize=e.target.value);
+      document.getElementById('titleFont').addEventListener('change', e=>t.style.fontFamily=e.target.value);
 
     } else if(type==='day' || type==='slot'){
       const targetButtons = type==='day' ? dayButtons : slotButtons;
@@ -133,19 +143,55 @@ document.addEventListener('DOMContentLoaded', ()=>{
         <input id="btnBg" type="color" class="w-full h-10 p-0 border" value="${getComputedStyle(sample).backgroundColor}">
         <label class="small-label mt-3 mb-1">צבע טקסט</label>
         <input id="btnColor" type="color" class="w-full h-10 p-0 border" value="${getComputedStyle(sample).color}">
-        <label class="small-label mt-3 mb-1">גודל טקסט px</label>
-        <input id="btnSizeText" type="number" class="w-full border p-2" value="${parseInt(sample.style.fontSize)}">
+        <label class="small-label mt-3 mb-1">גודל טקסט</label>
+        <select id="btnTextSize" class="w-full border p-2">
+          <option value="12px">קטן</option>
+          <option value="14px">בינוני</option>
+          <option value="18px">גדול</option>
+          <option value="22px">ענק</option>
+        </select>
+        <label class="small-label mt-3 mb-1">גובה כפתור</label>
+        <select id="btnHeight" class="w-full border p-2">
+          <option value="28px">קטן</option>
+          <option value="36px">בינוני</option>
+          <option value="48px">גדול</option>
+          <option value="60px">ענק</option>
+        </select>
         <label class="small-label mt-3 mb-1">פונט</label>
-        <input id="btnFont" type="text" class="w-full border p-2" value="${sample.style.fontFamily}">
-        <label class="small-label mt-3 mb-1">צורת כפתור (border-radius)</label>
-        <input id="btnRadius" type="text" class="w-full border p-2" value="${sample.style.borderRadius}">
+        <select id="btnFont" class="w-full border p-2">
+          <option value="Arial">Arial</option>
+          <option value="Tahoma">Tahoma</option>
+          <option value="Rubik">Rubik</option>
+          <option value="Verdana">Verdana</option>
+        </select>
+        <label class="small-label mt-3 mb-1">צורת כפתור</label>
+        <select id="btnRadius" class="w-full border p-2">
+          <option value="0px">מרובע</option>
+          <option value="8px">פינות מעוגלות</option>
+          <option value="20px">עיגול בינוני</option>
+          <option value="9999px">עיגול מלא</option>
+        </select>
       </div>`;
 
-      document.getElementById('btnBg').addEventListener('input', e=>targetButtons.forEach(b=>b.style.backgroundColor=e.target.value));
-      document.getElementById('btnColor').addEventListener('input', e=>targetButtons.forEach(b=>b.style.color=e.target.value));
-      document.getElementById('btnSizeText').addEventListener('input', e=>targetButtons.forEach(b=>b.style.fontSize=e.target.value+'px'));
-      document.getElementById('btnFont').addEventListener('input', e=>targetButtons.forEach(b=>b.style.fontFamily=e.target.value));
-      document.getElementById('btnRadius').addEventListener('input', e=>targetButtons.forEach(b=>b.style.borderRadius=e.target.value));
+      document.getElementById('btnBg').addEventListener('input', e=>{
+        targetButtons.forEach(b=>b.style.backgroundColor=e.target.value);
+      });
+      document.getElementById('btnColor').addEventListener('input', e=>{
+        targetButtons.forEach(b=>b.style.color=e.target.value);
+      });
+      document.getElementById('btnTextSize').addEventListener('change', e=>{
+        targetButtons.forEach(b=>b.style.fontSize=e.target.value);
+      });
+      document.getElementById('btnHeight').addEventListener('change', e=>{
+        targetButtons.forEach(b=>b.style.height=e.target.value);
+        targetButtons.forEach(b=>b.style.padding = `0 ${parseInt(e.target.value)/2}px`);
+      });
+      document.getElementById('btnFont').addEventListener('change', e=>{
+        targetButtons.forEach(b=>b.style.fontFamily=e.target.value);
+      });
+      document.getElementById('btnRadius').addEventListener('change', e=>{
+        targetButtons.forEach(b=>b.style.borderRadius=e.target.value);
+      });
     }
   }
 
@@ -173,11 +219,13 @@ document.addEventListener('DOMContentLoaded', ()=>{
       day_button_text_size: daySample.style.fontSize,
       day_button_text_color: getComputedStyle(daySample).color,
       day_button_font_family: daySample.style.fontFamily,
+      day_button_height: daySample.style.height,
       slot_button_shape: slotSample.style.borderRadius,
       slot_button_color: getComputedStyle(slotSample).backgroundColor,
       slot_button_text_size: slotSample.style.fontSize,
       slot_button_text_color: getComputedStyle(slotSample).color,
-      slot_button_font_family: slotSample.style.fontFamily
+      slot_button_font_family: slotSample.style.fontFamily,
+      slot_button_height: slotSample.style.height
     };
     try{
       const res = await fetch('/business_settings',{
