@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
       btn.style.fontFamily = font;
       btn.style.fontSize = textSize;
       btn.style.height = btnHeight;
-      btn.style.padding = `0 ${parseInt(btnHeight)/2}px`;
+      btn.style.padding = `0 ${Math.round(parseInt(btnHeight)/2)}px`;
     });
   }
   styleButtons('.day-btn', DS.day_button_color || '#3498db', DS.day_button_text_color || '#fff',
@@ -116,12 +116,11 @@ document.addEventListener('DOMContentLoaded', ()=>{
         <label class="small-label mt-3 mb-1">צבע</label>
         <input id="titleColor" type="color" class="w-full h-10 p-0 border" value="${t.style.color}">
         <label class="small-label mt-3 mb-1">גודל טקסט</label>
-        <select id="titleSize" class="w-full border p-2">
-          <option value="20px">קטן</option>
-          <option value="28px">בינוני</option>
-          <option value="36px">גדול</option>
-          <option value="48px">ענק</option>
-        </select>
+        <div class="flex items-center gap-2">
+          <button type="button" id="textMinus" class="btn px-2 py-1">–</button>
+          <input id="titleSizeNumber" type="number" class="w-16 border p-1 text-center" value="${parseInt(t.style.fontSize)}">
+          <button type="button" id="textPlus" class="btn px-2 py-1">+</button>
+        </div>
         <label class="small-label mt-3 mb-1">פונט</label>
         <select id="titleFont" class="w-full border p-2">
           <option value="Arial">Arial</option>
@@ -130,9 +129,23 @@ document.addEventListener('DOMContentLoaded', ()=>{
           <option value="Verdana">Verdana</option>
         </select>
       </div>`;
+
       document.getElementById('titleText').addEventListener('input', e=>t.textContent=e.target.value);
       document.getElementById('titleColor').addEventListener('input', e=>t.style.color=e.target.value);
-      document.getElementById('titleSize').addEventListener('change', e=>t.style.fontSize=e.target.value);
+      const titleSizeInput = document.getElementById('titleSizeNumber');
+      document.getElementById('textMinus').addEventListener('click', ()=>{
+        titleSizeInput.value = Math.max(1, parseInt(titleSizeInput.value)-1);
+        t.style.fontSize = titleSizeInput.value+'px';
+      });
+      document.getElementById('textPlus').addEventListener('click', ()=>{
+        titleSizeInput.value = parseInt(titleSizeInput.value)+1;
+        t.style.fontSize = titleSizeInput.value+'px';
+      });
+      titleSizeInput.addEventListener('input', ()=>{
+        let v = parseInt(titleSizeInput.value); if(isNaN(v)||v<1)v=1;
+        titleSizeInput.value=v;
+        t.style.fontSize=v+'px';
+      });
       document.getElementById('titleFont').addEventListener('change', e=>t.style.fontFamily=e.target.value);
 
     } else if(type==='day' || type==='slot'){
@@ -144,19 +157,17 @@ document.addEventListener('DOMContentLoaded', ()=>{
         <label class="small-label mt-3 mb-1">צבע טקסט</label>
         <input id="btnColor" type="color" class="w-full h-10 p-0 border" value="${getComputedStyle(sample).color}">
         <label class="small-label mt-3 mb-1">גודל טקסט</label>
-        <select id="btnTextSize" class="w-full border p-2">
-          <option value="12px">קטן</option>
-          <option value="14px">בינוני</option>
-          <option value="18px">גדול</option>
-          <option value="22px">ענק</option>
-        </select>
-        <label class="small-label mt-3 mb-1">גובה כפתור</label>
-        <select id="btnHeight" class="w-full border p-2">
-          <option value="28px">קטן</option>
-          <option value="36px">בינוני</option>
-          <option value="48px">גדול</option>
-          <option value="60px">ענק</option>
-        </select>
+        <div class="flex items-center gap-2">
+          <button type="button" id="textMinus" class="btn px-2 py-1">–</button>
+          <input id="btnTextNumber" type="number" class="w-16 border p-1 text-center" value="${parseInt(getComputedStyle(sample).fontSize)}">
+          <button type="button" id="textPlus" class="btn px-2 py-1">+</button>
+        </div>
+        <label class="small-label mt-3 mb-1">גודל כפתור</label>
+        <div class="flex items-center gap-2">
+          <button type="button" id="btnMinus" class="btn px-2 py-1">–</button>
+          <input id="btnHeightNumber" type="number" class="w-16 border p-1 text-center" value="${parseInt(getComputedStyle(sample).height)}">
+          <button type="button" id="btnPlus" class="btn px-2 py-1">+</button>
+        </div>
         <label class="small-label mt-3 mb-1">פונט</label>
         <select id="btnFont" class="w-full border p-2">
           <option value="Arial">Arial</option>
@@ -179,13 +190,46 @@ document.addEventListener('DOMContentLoaded', ()=>{
       document.getElementById('btnColor').addEventListener('input', e=>{
         targetButtons.forEach(b=>b.style.color=e.target.value);
       });
-      document.getElementById('btnTextSize').addEventListener('change', e=>{
-        targetButtons.forEach(b=>b.style.fontSize=e.target.value);
+
+      // גודל טקסט עם +/-
+      const textInput = document.getElementById('btnTextNumber');
+      document.getElementById('textMinus').addEventListener('click', ()=>{
+        textInput.value = Math.max(1, parseInt(textInput.value)-1);
+        targetButtons.forEach(b=>b.style.fontSize = textInput.value+'px');
       });
-      document.getElementById('btnHeight').addEventListener('change', e=>{
-        targetButtons.forEach(b=>b.style.height=e.target.value);
-        targetButtons.forEach(b=>b.style.padding = `0 ${parseInt(e.target.value)/2}px`);
+      document.getElementById('textPlus').addEventListener('click', ()=>{
+        textInput.value = parseInt(textInput.value)+1;
+        targetButtons.forEach(b=>b.style.fontSize = textInput.value+'px');
       });
+      textInput.addEventListener('input', ()=>{
+        let v=parseInt(textInput.value); if(isNaN(v)||v<1)v=1; textInput.value=v;
+        targetButtons.forEach(b=>b.style.fontSize=v+'px');
+      });
+
+      // גודל כפתור עם +/-
+      const heightInput = document.getElementById('btnHeightNumber');
+      document.getElementById('btnMinus').addEventListener('click', ()=>{
+        heightInput.value = Math.max(10, parseInt(heightInput.value)-1);
+        targetButtons.forEach(b=>{
+          b.style.height = heightInput.value+'px';
+          b.style.padding = `0 ${Math.round(heightInput.value/2)}px`;
+        });
+      });
+      document.getElementById('btnPlus').addEventListener('click', ()=>{
+        heightInput.value = parseInt(heightInput.value)+1;
+        targetButtons.forEach(b=>{
+          b.style.height = heightInput.value+'px';
+          b.style.padding = `0 ${Math.round(heightInput.value/2)}px`;
+        });
+      });
+      heightInput.addEventListener('input', ()=>{
+        let v=parseInt(heightInput.value); if(isNaN(v)||v<10)v=10; heightInput.value=v;
+        targetButtons.forEach(b=>{
+          b.style.height = v+'px';
+          b.style.padding = `0 ${Math.round(v/2)}px`;
+        });
+      });
+
       document.getElementById('btnFont').addEventListener('change', e=>{
         targetButtons.forEach(b=>b.style.fontFamily=e.target.value);
       });
