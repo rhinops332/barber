@@ -115,25 +115,15 @@ document.addEventListener('DOMContentLoaded', ()=>{
         <input id="titleText" class="w-full border p-2" value="${t.textContent}">
         <label class="small-label mt-3 mb-1">צבע</label>
         <input id="titleColor" type="color" class="w-full h-10 p-0 border" value="${t.style.color}">
-        <label class="small-label mt-3 mb-1">גודל טקסט</label>
-        <select id="titleSize" class="w-full border p-2">
-          <option value="20px">קטן</option>
-          <option value="28px">בינוני</option>
-          <option value="36px">גדול</option>
-          <option value="48px">ענק</option>
-        </select>
+        <label class="small-label mt-3 mb-1">גודל px</label>
+        <input id="titleSize" type="number" class="w-full border p-2" value="${parseInt(t.style.fontSize)}">
         <label class="small-label mt-3 mb-1">פונט</label>
-        <select id="titleFont" class="w-full border p-2">
-          <option value="Arial">Arial</option>
-          <option value="Tahoma">Tahoma</option>
-          <option value="Rubik">Rubik</option>
-          <option value="Verdana">Verdana</option>
-        </select>
+        <input id="titleFont" type="text" class="w-full border p-2" value="${t.style.fontFamily}">
       </div>`;
       document.getElementById('titleText').addEventListener('input', e=>t.textContent=e.target.value);
       document.getElementById('titleColor').addEventListener('input', e=>t.style.color=e.target.value);
-      document.getElementById('titleSize').addEventListener('change', e=>t.style.fontSize=e.target.value);
-      document.getElementById('titleFont').addEventListener('change', e=>t.style.fontFamily=e.target.value);
+      document.getElementById('titleSize').addEventListener('input', e=>t.style.fontSize=e.target.value+'px');
+      document.getElementById('titleFont').addEventListener('input', e=>t.style.fontFamily=e.target.value);
 
     } else if(type==='day' || type==='slot'){
       const targetButtons = type==='day' ? dayButtons : slotButtons;
@@ -143,55 +133,19 @@ document.addEventListener('DOMContentLoaded', ()=>{
         <input id="btnBg" type="color" class="w-full h-10 p-0 border" value="${getComputedStyle(sample).backgroundColor}">
         <label class="small-label mt-3 mb-1">צבע טקסט</label>
         <input id="btnColor" type="color" class="w-full h-10 p-0 border" value="${getComputedStyle(sample).color}">
-        <label class="small-label mt-3 mb-1">גודל טקסט</label>
-        <select id="btnTextSize" class="w-full border p-2">
-          <option value="12px">קטן</option>
-          <option value="14px">בינוני</option>
-          <option value="18px">גדול</option>
-          <option value="22px">ענק</option>
-        </select>
-        <label class="small-label mt-3 mb-1">גודל כפתור</label>
-        <select id="btnSize" class="w-full border p-2">
-          <option value="28px">קטן</option>
-          <option value="36px">בינוני</option>
-          <option value="48px">גדול</option>
-          <option value="60px">ענק</option>
-        </select>
+        <label class="small-label mt-3 mb-1">גודל טקסט px</label>
+        <input id="btnSizeText" type="number" class="w-full border p-2" value="${parseInt(sample.style.fontSize)}">
         <label class="small-label mt-3 mb-1">פונט</label>
-        <select id="btnFont" class="w-full border p-2">
-          <option value="Arial">Arial</option>
-          <option value="Tahoma">Tahoma</option>
-          <option value="Rubik">Rubik</option>
-          <option value="Verdana">Verdana</option>
-        </select>
-        <label class="small-label mt-3 mb-1">צורת כפתור</label>
-        <select id="btnRadius" class="w-full border p-2">
-          <option value="0px">מרובע</option>
-          <option value="8px">פינות מעוגלות</option>
-          <option value="20px">עיגול בינוני</option>
-          <option value="9999px">עיגול מלא</option>
-        </select>
+        <input id="btnFont" type="text" class="w-full border p-2" value="${sample.style.fontFamily}">
+        <label class="small-label mt-3 mb-1">צורת כפתור (border-radius)</label>
+        <input id="btnRadius" type="text" class="w-full border p-2" value="${sample.style.borderRadius}">
       </div>`;
 
-      document.getElementById('btnBg').addEventListener('input', e=>{
-        targetButtons.forEach(b=>b.style.backgroundColor=e.target.value);
-      });
-      document.getElementById('btnColor').addEventListener('input', e=>{
-        targetButtons.forEach(b=>b.style.color=e.target.value);
-      });
-      document.getElementById('btnTextSize').addEventListener('change', e=>{
-        targetButtons.forEach(b=>b.style.fontSize=e.target.value);
-      });
-      document.getElementById('btnSize').addEventListener('change', e=>{
-        targetButtons.forEach(b=>b.style.padding = `0 ${parseInt(e.target.value)/2}px`);
-        targetButtons.forEach(b=>b.style.height = e.target.value);
-      });
-      document.getElementById('btnFont').addEventListener('change', e=>{
-        targetButtons.forEach(b=>b.style.fontFamily = e.target.value);
-      });
-      document.getElementById('btnRadius').addEventListener('change', e=>{
-        targetButtons.forEach(b=>b.style.borderRadius = e.target.value);
-      });
+      document.getElementById('btnBg').addEventListener('input', e=>targetButtons.forEach(b=>b.style.backgroundColor=e.target.value));
+      document.getElementById('btnColor').addEventListener('input', e=>targetButtons.forEach(b=>b.style.color=e.target.value));
+      document.getElementById('btnSizeText').addEventListener('input', e=>targetButtons.forEach(b=>b.style.fontSize=e.target.value+'px'));
+      document.getElementById('btnFont').addEventListener('input', e=>targetButtons.forEach(b=>b.style.fontFamily=e.target.value));
+      document.getElementById('btnRadius').addEventListener('input', e=>targetButtons.forEach(b=>b.style.borderRadius=e.target.value));
     }
   }
 
