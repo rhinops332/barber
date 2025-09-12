@@ -949,7 +949,7 @@ def orders():
         "orders.html",
         week_slots=week_slots,
         business_name=business_name,
-        design_settings=design_settings
+        design=design_settings
     )
     
 @app.route("/admin_design")
