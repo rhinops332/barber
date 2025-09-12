@@ -900,15 +900,58 @@ def admin_appointments():
 
 @app.route("/orders")
 def orders():
-    business_name = session.get('business_name')
+    business_name = session.get("business_name")
     if not business_name:
         return redirect("/login")
 
+    # ניקוי נתונים ישנים
     disable_past_hours()
     clear_old_info()
-    week_slots = generate_week_slots(business_name)
-    return render_template("orders.html", week_slots=week_slots, business_name=business_name)
 
+    # שליפת זמני השבוע
+    week_slots = generate_week_slots(business_name)
+
+    # --- שליפת הגדרות עיצוב ---
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("SELECT id FROM businesses WHERE name=%s", (business_name,))
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        return "Business not found", 404
+
+    business_id = row[0]
+
+    columns = [
+        "day_button_shape", "day_button_color", "day_button_size",
+        "day_button_text_size", "day_button_text_color", "day_button_font_family",
+        "slot_button_shape", "slot_button_color", "slot_button_size",
+        "slot_button_text_size", "slot_button_text_color", "slot_button_font_family",
+        "heading_font_family", "subheading_font_family",
+        "heading_font_size", "subheading_font_size",
+        "heading_color", "subheading_color",
+        "heading_text", "subheading_text",
+        "body_background_color"
+    ]
+
+    cur.execute(f"""
+        SELECT {", ".join(columns)}
+        FROM design_settings
+        WHERE business_id=%s
+    """, (business_id,))
+    design_row = cur.fetchone()
+    conn.close()
+
+    design_settings = dict(zip(columns, design_row)) if design_row else {}
+
+    return render_template(
+        "orders.html",
+        week_slots=week_slots,
+        business_name=business_name,
+        design_settings=design_settings
+    )
+    
 @app.route("/admin_design")
 def admin_design():
     business_name = session.get('business_name')
