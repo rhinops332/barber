@@ -6,22 +6,23 @@
 <title>HairBoss - Book Appointment</title>
 <style>
   body {
-    font-family: Arial, sans-serif;
+    font-family: {{ design.body_font_family|default("Arial, sans-serif") }};
     max-width: 700px;
     margin: 30px auto;
     padding: 20px;
-    background: #f0f4ff;
+    background: {{ design.body_background_color|default("#f0f4ff") }};
     color: #2c3e50;
   }
+  
   h1 {
-  font-size: 32px;
-  font-family: 'Georgia', serif;
-  color: #2980b9;
+    font-size: {{ design.heading_font_size|default("32px") }};
+    font-family: {{ design.heading_font_family|default("'Georgia', serif") }};
+    color: {{ design.heading_color|default("#2980b9") }};
   }
-  h2{
-  font-size: 24px;
-  font-family: 'Verdana', sans-serif;
-  color: #555;
+  h2 {
+    font-size: {{ design.subheading_font_size|default("24px") }};
+    font-family: {{ design.subheading_font_family|default("'Verdana', sans-serif") }};
+    color: {{ design.subheading_color|default("#555") }};
   }
   
   #days-buttons {
@@ -30,14 +31,14 @@
     gap: 10px;
     margin-bottom: 20px;
   }
-  .day-btn {
-    font-family: 'Tahoma', sans-serif;
-    font-size: 15px;
+ .day-btn {
+    font-family: {{ design.day_button_font_family|default("'Tahoma', sans-serif") }};
+    font-size: {{ design.day_button_text_size|default("15px") }};
     padding: 12px 0;
     border: none;
-    border-radius: 10px;
-    background: #3498db;
-    color: white;
+    border-radius: {{ design.day_button_shape|default("10px") }};
+    background: {{ design.day_button_color|default("#3498db") }};
+    color: {{ design.day_button_text_color|default("white") }};
     font-weight: bold;
     cursor: pointer;
     transition: 0.2s;
@@ -50,14 +51,14 @@
     margin-bottom: 20px;
   }
   .slot-btn {
-    font-family: 'Verdana', sans-serif;
-    font-size: 14px;
+    font-family: {{ design.slot_button_font_family|default("'Verdana', sans-serif") }};
+    font-size: {{ design.slot_button_text_size|default("14px") }};
     padding: 8px 14px;
     margin: 5px;
     border: none;
-    border-radius: 6px;
-    background: #2ecc71;
-    color: white;
+    border-radius: {{ design.slot_button_shape|default("6px") }};
+    background: {{ design.slot_button_color|default("#2ecc71") }};
+    color: {{ design.slot_button_text_color|default("white") }};
     cursor: pointer;
     transition: transform 0.15s ease;
   }
@@ -259,8 +260,8 @@
 </head>
 <body>
 
-<h1> {{ business_name }}</h1>
-<h2>Book Your Appointment</h2>
+<h1> {{ design.heading_text}}</h1>
+<h2>{{design.subheading_text}}</h2>
 
 <div id="response"></div>
 
