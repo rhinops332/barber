@@ -7,7 +7,8 @@
   table { width: 100%; border-collapse: collapse; margin-top: 20px; }
   th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
   th { background-color: #f0f0f0; }
-  button { padding: 5px 10px; margin: 2px; }
+  button { padding: 5px 10px; margin: 2px; cursor: pointer; }
+  button:hover { background-color: #eee; }
 </style>
 </head>
 <body>
@@ -53,6 +54,7 @@
 <button id="add-service">הוסף שירות</button>
 
 <script>
+// שמירה של שירות
 function saveService(row) {
     const id = row.dataset.id;
     const data = {
@@ -60,8 +62,8 @@ function saveService(row) {
         duration_minutes: parseInt(row.querySelector(".duration").innerText),
         active: row.querySelector(".active").checked
     };
-    // אם זה שירות ברירת מחדל עם id=0, נקרא קודם לפונקציית הוספה
-    if (id == "0") {
+
+    if (id == "0") { // שירות ברירת מחדל
         fetch(`/services/add`, {
             method: "POST",
             headers: {'Content-Type': 'application/json'},
@@ -69,7 +71,7 @@ function saveService(row) {
         })
         .then(res => res.json())
         .then(resp => {
-            row.dataset.id = resp.id; // עדכון ה-id החדש
+            row.dataset.id = resp.id; // עדכון מזהה חדש
         });
     } else {
         fetch(`/services/edit/${id}`, {
@@ -80,6 +82,7 @@ function saveService(row) {
     }
 }
 
+// מחיקת שירות
 function deleteService(row) {
     const id = row.dataset.id;
     if(id == "0") { row.remove(); return; } // ברירת מחדל פשוט מוסרת
@@ -90,7 +93,7 @@ function deleteService(row) {
     });
 }
 
-// חיבור כפתורים קיימים
+// חיבור כפתורי שמירה ומחיקה קיימים
 document.querySelectorAll(".save-btn").forEach(btn => {
     btn.onclick = () => saveService(btn.closest("tr"));
 });
@@ -98,7 +101,7 @@ document.querySelectorAll(".delete-btn").forEach(btn => {
     btn.onclick = () => deleteService(btn.closest("tr"));
 });
 
-// כפתור להוספה
+// כפתור להוספת שירות חדש
 document.getElementById("add-service").onclick = () => {
     const tbody = document.querySelector("#services-table tbody");
     const row = document.createElement("tr");
