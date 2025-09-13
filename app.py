@@ -1010,7 +1010,7 @@ def services_list():
     cur = conn.cursor()
     cur.execute("""
         SELECT id, name, duration_minutes, active
-        FROM sservices
+        FROM services
         WHERE business_id=%s
         ORDER BY id
     """, (business_id,))
@@ -1028,7 +1028,7 @@ def add_service():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-            INSERT INTO sservices (business_id, name, duration_minutes)
+            INSERT INTO services (business_id, name, duration_minutes)
             VALUES (%s, %s, %s)
         """, (business_id, name, int(duration)))
         conn.commit()
@@ -1046,7 +1046,7 @@ def edit_service(service_id):
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("""
-        UPDATE sservices
+        UPDATE services
         SET name=%s, duration_minutes=%s
         WHERE id=%s AND business_id=%s
     """, (name, int(duration), service_id, business_id))
@@ -1062,7 +1062,7 @@ def delete_service(service_id):
         return redirect("/login")
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("DELETE FROM sservices WHERE id=%s AND business_id=%s", (service_id, business_id))
+    cur.execute("DELETE FROM services WHERE id=%s AND business_id=%s", (service_id, business_id))
     conn.commit()
     conn.close()
     return redirect("/services")
