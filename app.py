@@ -1000,12 +1000,12 @@ def admin_design():
 
 
 
+# רשימת שירותים
 @app.route("/services")
 def services_list():
     business_id = session.get("business_id")
     if not business_id:
         return redirect("/login")
-
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("""
@@ -1018,17 +1018,10 @@ def services_list():
     conn.close()
     return render_template("services.html", services=services, business_id=business_id)
 
-
-
-
-
-# --- שירותים --- #
-
-
-
-
-@app.route("/services/add/<int:business_id>", methods=["POST"])
-def add_service(business_id):
+# הוספה
+@app.route("/services/add", methods=["POST"])
+def add_service():
+    business_id = session.get("business_id")
     name = request.form.get("name", "").strip()
     duration = request.form.get("duration", "").strip()
     if name and duration.isdigit():
@@ -1040,34 +1033,39 @@ def add_service(business_id):
         """, (business_id, name, int(duration)))
         conn.commit()
         conn.close()
-    return redirect(f"/services/{business_id}")
+    return redirect("/services")
 
-
+# עריכה
 @app.route("/services/edit/<int:service_id>", methods=["POST"])
 def edit_service(service_id):
+    business_id = session.get("business_id")
     name = request.form.get("name", "").strip()
     duration = request.form.get("duration", "").strip()
+    if not business_id:
+        return redirect("/login")
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("""
         UPDATE sservices
         SET name=%s, duration_minutes=%s
-        WHERE id=%s
-    """, (name, int(duration), service_id))
+        WHERE id=%s AND business_id=%s
+    """, (name, int(duration), service_id, business_id))
     conn.commit()
     conn.close()
-    # צריך לדעת לאיזה עסק שייך השירות כדי לחזור אליו
-    return redirect(request.referrer or "/")
+    return redirect("/services")
 
-
+# מחיקה
 @app.route("/services/delete/<int:service_id>", methods=["POST"])
 def delete_service(service_id):
+    business_id = session.get("business_id")
+    if not business_id:
+        return redirect("/login")
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("DELETE FROM sservices WHERE id=%s", (service_id,))
+    cur.execute("DELETE FROM sservices WHERE id=%s AND business_id=%s", (service_id, business_id))
     conn.commit()
     conn.close()
-    return redirect(request.referrer or "/")
+    return redirect("/services")
 
 
 
