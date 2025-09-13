@@ -1114,7 +1114,7 @@ def services_edit(service_id):
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("""
-        SELECT s.id FROM sservices s
+        SELECT s.id FROM services s
         JOIN businesses b ON s.business_id = b.id
         WHERE s.id = %s AND b.name = %s
     """, (service_id, business_name))
@@ -1143,7 +1143,7 @@ def services_delete(service_id):
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("""
-        SELECT s.id FROM sservices s
+        SELECT s.id FROM services s
         JOIN businesses b ON s.business_id = b.id
         WHERE s.id = %s AND b.name = %s
     """, (service_id, business_name))
