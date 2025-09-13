@@ -351,6 +351,34 @@ def save_service(service_id, data):
     conn.close()
 
 
+# --- פונקציות לסוגי שירותים ---
+
+def add_service(business_id, data):
+    """
+    data = {'name': 'פגישה', 'duration_minutes': 30, 'active': True}
+    """
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO sservices (business_id, name, duration_minutes, active)
+        VALUES (%s, %s, %s, %s) RETURNING id
+    """, (business_id, data['name'], data['duration_minutes'], data.get('active', True)))
+    service_id = cur.fetchone()[0]
+    conn.commit()
+    cur.close()
+    conn.close()
+    return service_id
+
+def delete_service(service_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM sservices WHERE id = %s", (service_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+
 # --- ניקוי המסד ומחיקת מידע מיותר ---
 
 def disable_past_hours():
@@ -1031,6 +1059,40 @@ def admin_design():
     return render_template("admin_design.html", design_settings=design_settings)
 
 
+@app.route("/admin_services")
+def admin_services():
+    if not session.get("is_admin"):
+        return redirect("/login")
+    business_id = session.get("business_id")
+    services = load_services(business_id)
+    return render_template("admin_services.html", services=services)
+
+# --- ניהול שינויים של שירותים ---
+
+
+@app.route("/admin_services/add", methods=["POST"])
+def admin_services_add():
+    if not session.get("is_admin"):
+        return jsonify({"error": "not authorized"}), 403
+    business_id = session.get("business_id")
+    data = request.get_json()
+    service_id = add_service(business_id, data)
+    return jsonify({"id": service_id})
+
+@app.route("/admin_services/edit/<int:service_id>", methods=["POST"])
+def admin_services_edit(service_id):
+    if not session.get("is_admin"):
+        return jsonify({"error": "not authorized"}), 403
+    data = request.get_json()
+    save_service(service_id, data)
+    return jsonify({"success": True})
+
+@app.route("/admin_services/delete/<int:service_id>", methods=["POST"])
+def admin_services_delete(service_id):
+    if not session.get("is_admin"):
+        return jsonify({"error": "not authorized"}), 403
+    delete_service(service_id)
+    return jsonify({"success": True})
 
 
 
