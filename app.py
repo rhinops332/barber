@@ -1000,8 +1000,12 @@ def admin_design():
 
 
 
-@app.route("/services/<int:business_id>")
-def services_list(business_id):
+@app.route("/services")
+def services_list():
+    business_id = session.get("business_id")
+    if not business_id:
+        return redirect("/login")
+
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("""
@@ -1013,6 +1017,7 @@ def services_list(business_id):
     services = cur.fetchall()
     conn.close()
     return render_template("services.html", services=services, business_id=business_id)
+
 
 
 
