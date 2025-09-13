@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8">
+  <title>ניהול שירותים</title>
+  <style>
+    body { font-family: Arial; max-width: 800px; margin: 30px auto; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+    th { background: #f7f7f7; }
+    input[type=text], input[type=number] { padding: 5px; }
+    button { padding: 6px 10px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>ניהול שירותים</h1>
+
+  <form method="post" action="/services/add/{{ business_id }}">
+    <input type="text" name="name" placeholder="שם השירות" required>
+    <input type="number" name="duration" placeholder="משך (דקות)" required>
+    <button type="submit">הוסף</button>
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>שם</th>
+        <th>משך (דקות)</th>
+        <th>פעולות</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in services %}
+      <tr>
+        <form method="post" action="/services/edit/{{ s[0] }}">
+          <td><input type="text" name="name" value="{{ s[1] }}"></td>
+          <td><input type="number" name="duration" value="{{ s[2] }}"></td>
+          <td>
+            <button type="submit">שמור</button>
+        </form>
+        <form method="post" action="/services/delete/{{ s[0] }}" style="display:inline">
+            <button type="submit" onclick="return confirm('למחוק את השירות?')">🗑</button>
+        </form>
+          </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>
