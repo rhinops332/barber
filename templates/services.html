@@ -1,33 +1,121 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="he">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>שירותים</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<title>ניהול שירותים</title>
+<style>
+  table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+  th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+  th { background-color: #f0f0f0; }
+  button { padding: 5px 10px; margin: 2px; }
+</style>
 </head>
-<body class="bg-gray-100 p-6 font-sans">
+<body>
 
-<h1 class="text-2xl font-bold mb-4">רשימת שירותים</h1>
+<h2>ניהול שירותים</h2>
 
-<table class="min-w-full bg-white border border-gray-300 rounded-lg overflow-hidden">
-  <thead class="bg-gray-200">
+<table id="services-table">
+  <thead>
     <tr>
-      <th class="py-2 px-4 border-b">שם השירות</th>
-      <th class="py-2 px-4 border-b">משך (דקות)</th>
-      <th class="py-2 px-4 border-b">פעיל</th>
+      <th>שם</th>
+      <th>משך בדקות</th>
+      <th>פעיל</th>
+      <th>פעולות</th>
     </tr>
   </thead>
   <tbody>
-    {% for service in services %}
-    <tr class="text-center {% if not service[3] %}bg-gray-100{% endif %}">
-      <td class="py-2 px-4 border-b">{{ service[1] }}</td>
-      <td class="py-2 px-4 border-b">{{ service[2] }}</td>
-      <td class="py-2 px-4 border-b">{% if service[3] %}✅{% else %}❌{% endif %}</td>
+    {% if services|length == 0 %}
+    <tr data-id="0">
+      <td contenteditable="true" class="name">פגישה</td>
+      <td contenteditable="true" class="duration">30</td>
+      <td><input type="checkbox" class="active" checked></td>
+      <td>
+        <button class="save-btn">שמור</button>
+        <button class="delete-btn">מחק</button>
+      </td>
+    </tr>
+    {% else %}
+    {% for s in services %}
+    <tr data-id="{{ s.id }}">
+      <td contenteditable="true" class="name">{{ s.name }}</td>
+      <td contenteditable="true" class="duration">{{ s.duration_minutes }}</td>
+      <td><input type="checkbox" class="active" {% if s.active %}checked{% endif %}></td>
+      <td>
+        <button class="save-btn">שמור</button>
+        <button class="delete-btn">מחק</button>
+      </td>
     </tr>
     {% endfor %}
+    {% endif %}
   </tbody>
 </table>
+
+<button id="add-service">הוסף שירות</button>
+
+<script>
+function saveService(row) {
+    const id = row.dataset.id;
+    const data = {
+        name: row.querySelector(".name").innerText,
+        duration_minutes: parseInt(row.querySelector(".duration").innerText),
+        active: row.querySelector(".active").checked
+    };
+    // אם זה שירות ברירת מחדל עם id=0, נקרא קודם לפונקציית הוספה
+    if (id == "0") {
+        fetch(`/admin_services/add`, {
+            method: "POST",
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        })
+        .then(res => res.json())
+        .then(resp => {
+            row.dataset.id = resp.id; // עדכון ה-id החדש
+        });
+    } else {
+        fetch(`/admin_services/edit/${id}`, {
+            method: "POST",
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        }).then(res => res.json()).then(console.log);
+    }
+}
+
+function deleteService(row) {
+    const id = row.dataset.id;
+    if(id == "0") { row.remove(); return; } // ברירת מחדל פשוט מוסרת
+    fetch(`/admin_services/delete/${id}`, {
+        method: "POST"
+    }).then(res => res.json()).then(data => {
+        if(data.success) row.remove();
+    });
+}
+
+// חיבור כפתורים קיימים
+document.querySelectorAll(".save-btn").forEach(btn => {
+    btn.onclick = () => saveService(btn.closest("tr"));
+});
+document.querySelectorAll(".delete-btn").forEach(btn => {
+    btn.onclick = () => deleteService(btn.closest("tr"));
+});
+
+// כפתור להוספה
+document.getElementById("add-service").onclick = () => {
+    const tbody = document.querySelector("#services-table tbody");
+    const row = document.createElement("tr");
+    row.dataset.id = "0"; // מזהה זמני
+    row.innerHTML = `
+      <td contenteditable="true" class="name">שירות חדש</td>
+      <td contenteditable="true" class="duration">30</td>
+      <td><input type="checkbox" class="active" checked></td>
+      <td>
+        <button class="save-btn">שמור</button>
+        <button class="delete-btn">מחק</button>
+      </td>`;
+    tbody.appendChild(row);
+    row.querySelector(".save-btn").onclick = () => saveService(row);
+    row.querySelector(".delete-btn").onclick = () => deleteService(row);
+}
+</script>
 
 </body>
 </html>
