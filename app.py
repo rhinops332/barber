@@ -324,7 +324,7 @@ def load_services(business_id):
     cur = conn.cursor()
     cur.execute("""
         SELECT id, name, duration_minutes, active
-        FROM sservices
+        FROM services
         WHERE business_id = %s
         ORDER BY id
     """, (business_id,))
@@ -344,7 +344,7 @@ def save_service(service_id, data):
     cur = conn.cursor()
     columns = [f"{key} = %s" for key in data.keys()]
     values = list(data.values())
-    query = f"UPDATE sservices SET {', '.join(columns)} WHERE id = %s"
+    query = f"UPDATE services SET {', '.join(columns)} WHERE id = %s"
     cur.execute(query, values + [service_id])
     conn.commit()
     cur.close()
@@ -360,7 +360,7 @@ def add_service(business_id, data):
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("""
-        INSERT INTO sservices (business_id, name, duration_minutes, active)
+        INSERT INTO services (business_id, name, duration_minutes, active)
         VALUES (%s, %s, %s, %s) RETURNING id
     """, (business_id, data['name'], data['duration_minutes'], data.get('active', True)))
     service_id = cur.fetchone()[0]
@@ -372,7 +372,7 @@ def add_service(business_id, data):
 def delete_service(service_id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("DELETE FROM sservices WHERE id = %s", (service_id,))
+    cur.execute("DELETE FROM services WHERE id = %s", (service_id,))
     conn.commit()
     cur.close()
     conn.close()
