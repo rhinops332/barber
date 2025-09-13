@@ -1070,30 +1070,92 @@ def services():
 # --- ניהול שינויים של שירותים ---
 
 
+# --- ניהול שירותים (CRUD) ---
+
 @app.route("/services/add", methods=["POST"])
 def services_add():
     if not session.get("is_admin"):
         return jsonify({"error": "not authorized"}), 403
-    business_id = session.get("business_id")
+
+    # בדיקה של שם העסק ב-session
+    business_name = session.get("business_name")
+    if not business_name:
+        return jsonify({"error": "business_name missing"}), 400
+
+    # קבלת ה-business_id לפי שם העסק
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM businesses WHERE name = %s", (business_name,))
+    row = cur.fetchone()
+    if not row:
+        cur.close()
+        conn.close()
+        return jsonify({"error": "business not found"}), 404
+    business_id = row[0]
+
     data = request.get_json()
     service_id = add_service(business_id, data)
+
+    cur.close()
+    conn.close()
     return jsonify({"id": service_id})
+
 
 @app.route("/services/edit/<int:service_id>", methods=["POST"])
 def services_edit(service_id):
     if not session.get("is_admin"):
         return jsonify({"error": "not authorized"}), 403
+
+    # ניתן לבדוק שהשירות שייך לעסק
+    business_name = session.get("business_name")
+    if not business_name:
+        return jsonify({"error": "business_name missing"}), 400
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT s.id FROM sservices s
+        JOIN businesses b ON s.business_id = b.id
+        WHERE s.id = %s AND b.name = %s
+    """, (service_id, business_name))
+    if not cur.fetchone():
+        cur.close()
+        conn.close()
+        return jsonify({"error": "service not found or does not belong to business"}), 404
+    cur.close()
+    conn.close()
+
     data = request.get_json()
     save_service(service_id, data)
     return jsonify({"success": True})
+
 
 @app.route("/services/delete/<int:service_id>", methods=["POST"])
 def services_delete(service_id):
     if not session.get("is_admin"):
         return jsonify({"error": "not authorized"}), 403
+
+    # בדיקה שהשירות שייך לעסק
+    business_name = session.get("business_name")
+    if not business_name:
+        return jsonify({"error": "business_name missing"}), 400
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT s.id FROM sservices s
+        JOIN businesses b ON s.business_id = b.id
+        WHERE s.id = %s AND b.name = %s
+    """, (service_id, business_name))
+    if not cur.fetchone():
+        cur.close()
+        conn.close()
+        return jsonify({"error": "service not found or does not belong to business"}), 404
+    cur.close()
+    conn.close()
+
     delete_service(service_id)
     return jsonify({"success": True})
-
 
 
 
