@@ -62,7 +62,7 @@ function saveService(row) {
     };
     // אם זה שירות ברירת מחדל עם id=0, נקרא קודם לפונקציית הוספה
     if (id == "0") {
-        fetch(`/admin_services/add`, {
+        fetch(`/services/add`, {
             method: "POST",
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(data)
@@ -72,7 +72,7 @@ function saveService(row) {
             row.dataset.id = resp.id; // עדכון ה-id החדש
         });
     } else {
-        fetch(`/admin_services/edit/${id}`, {
+        fetch(`/services/edit/${id}`, {
             method: "POST",
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(data)
@@ -83,7 +83,7 @@ function saveService(row) {
 function deleteService(row) {
     const id = row.dataset.id;
     if(id == "0") { row.remove(); return; } // ברירת מחדל פשוט מוסרת
-    fetch(`/admin_services/delete/${id}`, {
+    fetch(`/services/delete/${id}`, {
         method: "POST"
     }).then(res => res.json()).then(data => {
         if(data.success) row.remove();
