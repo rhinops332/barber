@@ -1000,7 +1000,75 @@ def admin_design():
 
 
 
+@app.route("/services/<int:business_id>")
+def services_list(business_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, name, duration_minutes, active
+        FROM sservices
+        WHERE business_id=%s
+        ORDER BY id
+    """, (business_id,))
+    services = cur.fetchall()
+    conn.close()
+    return render_template("services.html", services=services, business_id=business_id)
+
+
+
+
+# --- שירותים --- #
+
+
+
+
+@app.route("/services/add/<int:business_id>", methods=["POST"])
+def add_service(business_id):
+    name = request.form.get("name", "").strip()
+    duration = request.form.get("duration", "").strip()
+    if name and duration.isdigit():
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO sservices (business_id, name, duration_minutes)
+            VALUES (%s, %s, %s)
+        """, (business_id, name, int(duration)))
+        conn.commit()
+        conn.close()
+    return redirect(f"/services/{business_id}")
+
+
+@app.route("/services/edit/<int:service_id>", methods=["POST"])
+def edit_service(service_id):
+    name = request.form.get("name", "").strip()
+    duration = request.form.get("duration", "").strip()
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE sservices
+        SET name=%s, duration_minutes=%s
+        WHERE id=%s
+    """, (name, int(duration), service_id))
+    conn.commit()
+    conn.close()
+    # צריך לדעת לאיזה עסק שייך השירות כדי לחזור אליו
+    return redirect(request.referrer or "/")
+
+
+@app.route("/services/delete/<int:service_id>", methods=["POST"])
+def delete_service(service_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM sservices WHERE id=%s", (service_id,))
+    conn.commit()
+    conn.close()
+    return redirect(request.referrer or "/")
+
+
+
 # --- ניהול שגרה שבועית ---
+
+
 
 @app.route("/weekly_schedule", methods=["POST"])
 def update_weekly_schedule():
