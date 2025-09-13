@@ -3,62 +3,31 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ניהול שירותים</title>
+<title>שירותים</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 p-6 font-sans">
 
-<div class="max-w-2xl mx-auto bg-white shadow p-6 rounded">
-  <h1 class="text-2xl font-bold mb-4">שירותים</h1>
+<h1 class="text-2xl font-bold mb-4">רשימת שירותים</h1>
 
-  <table class="w-full border-collapse">
-    <thead>
-      <tr class="bg-gray-200">
-        <th class="p-2 text-right">שם השירות</th>
-        <th class="p-2 text-right">משך (דקות)</th>
-        <th class="p-2 text-center">פעולות</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% if services %}
-        {% for service in services %}
-          <tr class="border-b">
-            <td class="p-2 text-right">{{ service.name }}</td>
-            <td class="p-2 text-right">{{ service.duration_minutes }}</td>
-            <td class="p-2 text-center">
-              <form action="/services/edit/{{ service.id }}" method="POST" class="inline">
-                <input type="hidden" name="name" value="{{ service.name }}">
-                <input type="hidden" name="duration" value="{{ service.duration_minutes }}">
-                <button type="submit" class="text-blue-600 hover:underline">ערוך</button>
-              </form>
-              <form action="/services/delete/{{ service.id }}" method="POST" class="inline">
-                <button type="submit" class="text-red-600 hover:underline">מחק</button>
-              </form>
-            </td>
-          </tr>
-        {% endfor %}
-      {% else %}
-        <!-- שירות ברירת מחדל אם אין -->
-        <tr class="border-b">
-          <td class="p-2 text-right">פגישה</td>
-          <td class="p-2 text-right">30</td>
-          <td class="p-2 text-center">
-            <span class="text-gray-400">אין פעולות</span>
-          </td>
-        </tr>
-      {% endif %}
-    </tbody>
-  </table>
-
-  <h2 class="text-xl font-semibold mt-6 mb-2">הוסף שירות חדש</h2>
-  <form action="/services/add/{{ business_id }}" method="POST" class="flex flex-col gap-2">
-    <input type="text" name="name" placeholder="שם השירות" class="border p-2 rounded">
-    <input type="number" name="duration" placeholder="משך בדקות" class="border p-2 rounded">
-    <button type="submit" class="bg-green-600 text-white p-2 rounded hover:bg-green-700">הוסף שירות</button>
-  </form>
-
-  <button onclick="location.href='/main_admin'" class="mt-4 text-gray-700 hover:underline">חזור למנהל</button>
-</div>
+<table class="min-w-full bg-white border border-gray-300 rounded-lg overflow-hidden">
+  <thead class="bg-gray-200">
+    <tr>
+      <th class="py-2 px-4 border-b">שם השירות</th>
+      <th class="py-2 px-4 border-b">משך (דקות)</th>
+      <th class="py-2 px-4 border-b">פעיל</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for service in services %}
+    <tr class="text-center {% if not service[3] %}bg-gray-100{% endif %}">
+      <td class="py-2 px-4 border-b">{{ service[1] }}</td>
+      <td class="py-2 px-4 border-b">{{ service[2] }}</td>
+      <td class="py-2 px-4 border-b">{% if service[3] %}✅{% else %}❌{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
 
 </body>
 </html>
