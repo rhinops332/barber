@@ -319,6 +319,38 @@ def save_business_settings(business_id, settings):
     conn.close()
 
 
+def load_services(business_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, name, duration_minutes, active
+        FROM sservices
+        WHERE business_id = %s
+        ORDER BY id
+    """, (business_id,))
+    rows = cur.fetchall()
+    colnames = [desc[0] for desc in cur.description]
+    cur.close()
+    conn.close()
+    services = [dict(zip(colnames, row)) for row in rows]
+    return services
+
+
+def save_service(service_id, data):
+    """
+    data = {'name': 'פגישה', 'duration_minutes': 30, 'active': True}
+    """
+    conn = get_db_connection()
+    cur = conn.cursor()
+    columns = [f"{key} = %s" for key in data.keys()]
+    values = list(data.values())
+    query = f"UPDATE sservices SET {', '.join(columns)} WHERE id = %s"
+    cur.execute(query, values + [service_id])
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
 # --- ניקוי המסד ומחיקת מידע מיותר ---
 
 def disable_past_hours():
@@ -1000,72 +1032,6 @@ def admin_design():
 
 
 
-# רשימת שירותים
-@app.route("/services")
-def services_list():
-    business_id = session.get("business_id")
-    if not business_id:
-        return redirect("/login")
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("""
-        SELECT id, name, duration_minutes, active
-        FROM services
-        WHERE business_id=%s
-        ORDER BY id
-    """, (business_id,))
-    services = cur.fetchall()
-    conn.close()
-    return render_template("services.html", services=services, business_id=business_id)
-
-# הוספה
-@app.route("/services/add", methods=["POST"])
-def add_service():
-    business_id = session.get("business_id")
-    name = request.form.get("name", "").strip()
-    duration = request.form.get("duration", "").strip()
-    if name and duration.isdigit():
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO services (business_id, name, duration_minutes)
-            VALUES (%s, %s, %s)
-        """, (business_id, name, int(duration)))
-        conn.commit()
-        conn.close()
-    return redirect("/services")
-
-# עריכה
-@app.route("/services/edit/<int:service_id>", methods=["POST"])
-def edit_service(service_id):
-    business_id = session.get("business_id")
-    name = request.form.get("name", "").strip()
-    duration = request.form.get("duration", "").strip()
-    if not business_id:
-        return redirect("/login")
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("""
-        UPDATE services
-        SET name=%s, duration_minutes=%s
-        WHERE id=%s AND business_id=%s
-    """, (name, int(duration), service_id, business_id))
-    conn.commit()
-    conn.close()
-    return redirect("/services")
-
-# מחיקה
-@app.route("/services/delete/<int:service_id>", methods=["POST"])
-def delete_service(service_id):
-    business_id = session.get("business_id")
-    if not business_id:
-        return redirect("/login")
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM services WHERE id=%s AND business_id=%s", (service_id, business_id))
-    conn.commit()
-    conn.close()
-    return redirect("/services")
 
 
 
