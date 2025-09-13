@@ -1059,19 +1059,19 @@ def admin_design():
     return render_template("admin_design.html", design_settings=design_settings)
 
 
-@app.route("/admin_services")
-def admin_services():
+@app.route("/services")
+def services():
     if not session.get("is_admin"):
         return redirect("/login")
     business_id = session.get("business_id")
     services = load_services(business_id)
-    return render_template("admin_services.html", services=services)
+    return render_template("services.html", services=services)
 
 # --- ניהול שינויים של שירותים ---
 
 
-@app.route("/admin_services/add", methods=["POST"])
-def admin_services_add():
+@app.route("/services/add", methods=["POST"])
+def services_add():
     if not session.get("is_admin"):
         return jsonify({"error": "not authorized"}), 403
     business_id = session.get("business_id")
@@ -1079,16 +1079,16 @@ def admin_services_add():
     service_id = add_service(business_id, data)
     return jsonify({"id": service_id})
 
-@app.route("/admin_services/edit/<int:service_id>", methods=["POST"])
-def admin_services_edit(service_id):
+@app.route("/services/edit/<int:service_id>", methods=["POST"])
+def services_edit(service_id):
     if not session.get("is_admin"):
         return jsonify({"error": "not authorized"}), 403
     data = request.get_json()
     save_service(service_id, data)
     return jsonify({"success": True})
 
-@app.route("/admin_services/delete/<int:service_id>", methods=["POST"])
-def admin_services_delete(service_id):
+@app.route("/services/delete/<int:service_id>", methods=["POST"])
+def services_delete(service_id):
     if not session.get("is_admin"):
         return jsonify({"error": "not authorized"}), 403
     delete_service(service_id)
