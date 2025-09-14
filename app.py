@@ -1478,75 +1478,96 @@ def book_appointment():
     name = data.get("name", "").strip()
     phone = data.get("phone", "").strip()
     date = data.get("date", "").strip()
-    time = data.get("time", "").strip()
-    service = data.get("service", "").strip()
+    start_time = data.get("time", "").strip()
+    service_id = data.get("service", "").strip()
 
-    if not all([name, phone, date, time, service]):
+    if not all([name, phone, date, start_time, service_id]):
         return jsonify({"error": "Missing fields"}), 400
 
-    if service not in services_prices:
-        return jsonify({"error": "Unknown service"}), 400
-
-    business_name = session.get('business_name')
-    if not business_name:
+    business_id = session.get("business_id")
+    if not business_id:
         return redirect("/login")
 
-    if not is_slot_available(business_name, date, time):
-        return jsonify({"error": "This time slot is not available"}), 400
+    # --- טען את השירותים מה-DB ---
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT id, name, duration_minutes, price FROM sservices WHERE business_id=%s AND active=TRUE",
+        (business_id,),
+    )
+    rows = cur.fetchall()
+    services = {str(r[0]): {"name": r[1], "duration": r[2], "price": r[3]} for r in rows}
+    cur.close()
+    conn.close()
 
-    # טען תורים קיימים
-    appointments = load_appointments(business_name)
+    service = services.get(service_id)
+    if not service:
+        return jsonify({"error": "Unknown or inactive service"}), 400
+
+    slot_length = 30  # דקות
+    slots_needed = math.ceil(service["duration"] / slot_length)
+
+    # --- טען תורים קיימים ---
+    appointments = load_appointments(business_id)
     date_appointments = appointments.get(date, [])
 
-    # בדיקה אם השעה כבר קיימת
-    if any(a["time"] == time for a in date_appointments):
-        return jsonify({"error": "This time slot is already booked"}), 400
+    # חישוב כל הזמנים שתופס השירות
+    start_dt = datetime.strptime(f"{date} {start_time}", "%Y-%m-%d %H:%M")
+    slots = [
+        (start_dt + timedelta(minutes=i * slot_length)).strftime("%H:%M")
+        for i in range(slots_needed)
+    ]
 
-    # הוספת תור חדש
-    appointment = {
-        "name": name,
-        "phone": phone,
-        "date": date,
-        "time": time,
-        "service": service,
-        "price": services_prices[service]
-    }
-    date_appointments.append(appointment)
+    # ודא שכל הסלוטים פנויים
+    for s in slots:
+        if any(a["time"] == s for a in date_appointments):
+            return jsonify({"error": "Some time slots are already booked"}), 400
+
+    # הוספת התור
+    for s in slots:
+        date_appointments.append(
+            {
+                "name": name,
+                "phone": phone,
+                "date": date,
+                "time": s,
+                "service": service["name"],
+                "price": service["price"],
+                "start": start_time,
+            }
+        )
     appointments[date] = date_appointments
-    save_appointments(business_name, appointments)
+    save_appointments(business_id, appointments)
 
-    # טען overrides
-    overrides = load_overrides(business_name)
+    # --- עדכון overrides ---
+    overrides = load_overrides(business_id)
     if date not in overrides:
         overrides[date] = {"booked": [], "add": [], "remove": [], "edit_from": [], "edit_to": []}
 
-    # ודא שהשעה מופיעה ב-booked כ-string
-    if time not in overrides[date]["booked"]:
-        overrides[date]["booked"].append(time)
+    for s in slots:
+        if s not in overrides[date]["booked"]:
+            overrides[date]["booked"].append(s)
+        if s in overrides[date]["add"]:
+            overrides[date]["add"].remove(s)
+        if s not in overrides[date]["remove"]:
+            overrides[date]["remove"].append(s)
 
-    # הסרת זמן מ-add אם קיים
-    if time in overrides[date]["add"]:
-        overrides[date]["add"].remove(time)
-    # הוספת זמן ל-remove אם לא קיים
-    if time not in overrides[date]["remove"]:
-        overrides[date]["remove"].append(time)
+    save_overrides(business_id, overrides)
 
-    save_overrides(business_name, overrides)
-
-    # שליחת מייל (אם מוגדר)
     try:
-        send_email(name, phone, date, time, service, services_prices[service])
+        send_email(name, phone, date, start_time, service["name"], service["price"])
     except Exception as e:
         print("Error sending email:", e)
 
-    return jsonify({
-        "message": f"Appointment booked for {date} at {time} for {service}.",
-        "date": date,
-        "time": time,
-        "service": service,
-        "can_cancel": True,
-        "cancel_endpoint": "/cancel_appointment"
-    })
+    return jsonify(
+        {
+            "message": f"Appointment booked for {date} at {start_time} for {service['name']}.",
+            "date": date,
+            "time": start_time,
+            "service": service["name"],
+            "slots": slots,
+        }
+    )
 
 
 
