@@ -286,10 +286,9 @@
     <input type="text" id="phone" placeholder="Phone Number" required />
     <select id="service" required>
       <option value="">Select Service</option>
-      <option>Men's Haircut</option>
-      <option>Women's Haircut</option>
-      <option>Blow Dry</option>
-      <option>Color</option>
+      {% for service in services %}
+      <option value="{{ service.name }}">{{ service.name }}</option>
+      {% endfor %}
     </select>
     <input type="hidden" id="date" />
     <input type="hidden" id="time" />
