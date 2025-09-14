@@ -341,20 +341,22 @@ async function loadAvailability() {
 }
 
 async function loadServices() {
-  const res = await fetch('/api/services');
-  const services = await res.json();
-  const select = document.getElementById('service');
-  select.innerHTML = '<option value="">Select Service</option>'; // נקה קודם
-  services.forEach(s => {
-    const option = document.createElement('option');
-    option.value = s.id;
-    option.textContent = `${s.name} (${s.duration} min) - ₪${s.price}`;
-    select.appendChild(option);
-  });
+  try {
+    const res = await fetch('/api/services');
+    if (!res.ok) throw new Error('Failed to load services');
+    const services = await res.json();
+    const select = document.getElementById('service');
+    select.innerHTML = '<option value="">Select Service</option>';
+    services.forEach(s => {
+      const option = document.createElement('option');
+      option.value = s.id;
+      option.textContent = `${s.name} (${s.duration} min) - ₪${s.price}`;
+      select.appendChild(option);
+    });
+  } catch (e) {
+    console.error(e);
+  }
 }
-
-// קריאה לפונקציה בעת טעינת הדף
-loadServices();
 
   
 function createDayButtons() {
