@@ -341,22 +341,19 @@ async function loadAvailability() {
 }
 
 async function loadServices() {
-  try {
     const res = await fetch('/api/services');
-    if (!res.ok) throw new Error('Failed to load services');
+    if (!res.ok) return;
     const services = await res.json();
     const select = document.getElementById('service');
     select.innerHTML = '<option value="">Select Service</option>';
     services.forEach(s => {
-      const option = document.createElement('option');
-      option.value = s.id;
-      option.textContent = `${s.name} (${s.duration} min) - ₪${s.price}`;
-      select.appendChild(option);
+        const option = document.createElement('option');
+        option.value = s.id;
+        option.textContent = `${s.name} (${s.duration} min) - ₪${s.price}`;
+        select.appendChild(option);
     });
-  } catch (e) {
-    console.error(e);
-  }
 }
+
 
   
 function createDayButtons() {
