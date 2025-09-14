@@ -1578,7 +1578,7 @@ def api_services():
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute(
-        "SELECT id, name, duration_minutes, price FROM sservices WHERE business_id=%s AND active=TRUE",
+        "SELECT id, name, duration_minutes, price FROM services WHERE business_id=%s AND active=TRUE",
         (business_id,),
     )
     rows = cur.fetchall()
