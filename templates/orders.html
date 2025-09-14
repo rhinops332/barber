@@ -286,9 +286,6 @@
     <input type="text" id="phone" placeholder="Phone Number" required />
     <select id="service" required>
       <option value="">Select Service</option>
-      {% for service in services %}
-      <option value="{{ service.name }}">{{ service.name }}</option>
-      {% endfor %}
     </select>
     <input type="hidden" id="date" />
     <input type="hidden" id="time" />
@@ -343,6 +340,23 @@ async function loadAvailability() {
   }
 }
 
+async function loadServices() {
+  const res = await fetch('/api/services');
+  const services = await res.json();
+  const select = document.getElementById('service');
+  select.innerHTML = '<option value="">Select Service</option>'; // נקה קודם
+  services.forEach(s => {
+    const option = document.createElement('option');
+    option.value = s.id;
+    option.textContent = `${s.name} (${s.duration} min) - ₪${s.price}`;
+    select.appendChild(option);
+  });
+}
+
+// קריאה לפונקציה בעת טעינת הדף
+loadServices();
+
+  
 function createDayButtons() {
   const container = document.getElementById('days-buttons');
   container.innerHTML = '';
