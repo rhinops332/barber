@@ -1495,17 +1495,30 @@ def book_appointment():
     if not all([name, phone, date, start_time, service_id]):
         return jsonify({"error": "Missing fields"}), 400
 
-    business_id = session.get("business_id")
-    if not business_id:
+    business_name = session.get("business_name")
+    if not business_name:
         return redirect("/login")
 
-    # --- טען שירותים פעילים מהמסד ---
+    # --- קבלת business_id לפי שם העסק ---
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM businesses WHERE name = %s", (business_name,))
+    row = cur.fetchone()
+    if not row:
+        cur.close()
+        conn.close()
+        return jsonify({"error": "Business not found"}), 404
+    business_id = row[0]
+    cur.close()
+    conn.close()
+
+    # --- טען השירותים הקיימים ---
     services = load_services(business_id)
-    service = next((s for s in services if str(s["id"]) == service_id and s["active"]), None)
+    service = next((s for s in services if str(s["id"]) == service_id), None)
     if not service:
         return jsonify({"error": "Unknown or inactive service"}), 400
 
-    slot_length = 30  # דקות לכל "סלוט"
+    slot_length = 30  # דקות
     slots_needed = math.ceil(service["duration_minutes"] / slot_length)
 
     # --- טען תורים קיימים ---
@@ -1516,12 +1529,12 @@ def book_appointment():
     start_dt = datetime.strptime(f"{date} {start_time}", "%Y-%m-%d %H:%M")
     slots = [(start_dt + timedelta(minutes=i * slot_length)).strftime("%H:%M") for i in range(slots_needed)]
 
-    # בדיקת זמינות סלוטים
+    # ודא שכל הסלוטים פנויים
     for s in slots:
         if any(a["time"] == s for a in date_appointments):
-            return jsonify({"error": "Some time slots are already booked"}), 400
+            return jsonify({"error": f"Some time slots are already booked ({s})"}), 400
 
-    # הוספת התור
+    # --- הוספת התור ---
     for s in slots:
         date_appointments.append({
             "name": name,
@@ -1529,8 +1542,8 @@ def book_appointment():
             "date": date,
             "time": s,
             "service": service["name"],
-            "price": service["price"],
-            "start": start_time,
+            "price": service.get("price", 0),
+            "start": start_time
         })
     appointments[date] = date_appointments
     save_appointments(business_id, appointments)
@@ -1547,12 +1560,11 @@ def book_appointment():
             overrides[date]["add"].remove(s)
         if s not in overrides[date]["remove"]:
             overrides[date]["remove"].append(s)
-
     save_overrides(business_id, overrides)
 
     # --- שליחת מייל ---
     try:
-        send_email(name, phone, date, start_time, service["name"], service["price"])
+        send_email(name, phone, date, start_time, service["name"], service.get("price", 0))
     except Exception as e:
         print("Error sending email:", e)
 
@@ -1561,8 +1573,9 @@ def book_appointment():
         "date": date,
         "time": start_time,
         "service": service["name"],
-        "slots": slots,
+        "slots": slots
     })
+
 
 
 
