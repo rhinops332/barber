@@ -1482,6 +1482,7 @@ def bot_knowledge():
 
 
 # --- ניהול הזמנות ---
+import math
 
 @app.route("/book", methods=["POST"])
 def book_appointment():
