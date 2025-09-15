@@ -4,13 +4,23 @@
 <meta charset="UTF-8">
 <title>ניהול שירותים</title>
 <style>
-  body { font-family: Arial, sans-serif; margin: 20px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+  body { font-family: Arial, sans-serif; margin: 20px; background: #f9f9f9; }
+  h2 { color: #333; }
+  table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
   th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
   th { background-color: #f0f0f0; }
-  input[type="text"], input[type="number"] { width: 90%; }
-  button { padding: 5px 10px; margin: 2px; cursor: pointer; }
-  button:hover { background-color: #eee; }
+  input[type="text"], input[type="number"] { width: 90%; padding: 4px; }
+  button { padding: 5px 10px; margin: 2px; cursor: pointer; border: none; border-radius: 3px; }
+  button.save-btn { background-color: #4CAF50; color: white; }
+  button.save-btn:hover { background-color: #45a049; }
+  button.delete-btn { background-color: #f44336; color: white; }
+  button.delete-btn:hover { background-color: #e53935; }
+  button#add-service { margin-top: 10px; background-color: #2196F3; color: white; }
+  button#add-service:hover { background-color: #1976D2; }
+  .alert { display: inline-block; padding: 4px 8px; margin-left: 5px; border-radius: 3px; font-size: 0.9em; opacity: 0; transition: opacity 0.3s; }
+  .alert.show { opacity: 1; }
+  .alert.success { background-color: #4CAF50; color: white; }
+  .alert.error { background-color: #f44336; color: white; }
 </style>
 </head>
 <body>
@@ -25,6 +35,7 @@
       <th>מחיר</th>
       <th>פעיל</th>
       <th>פעולות</th>
+      <th>סטטוס</th>
     </tr>
   </thead>
   <tbody>
@@ -38,6 +49,7 @@
         <button class="save-btn">שמור</button>
         <button class="delete-btn">מחק</button>
       </td>
+      <td><span class="alert" id="alert-{{ s.id }}"></span></td>
     </tr>
     {% endfor %}
   </tbody>
@@ -46,6 +58,13 @@
 <button id="add-service">הוסף שירות</button>
 
 <script>
+function showAlert(row, message, type='success') {
+    const alertSpan = row.querySelector('.alert');
+    alertSpan.textContent = message;
+    alertSpan.className = `alert ${type} show`;
+    setTimeout(() => { alertSpan.className = `alert ${type}`; }, 2000);
+}
+
 // שמירה של שירות
 function saveService(row) {
     const id = row.dataset.id;
@@ -56,20 +75,26 @@ function saveService(row) {
         active: row.querySelector(".active").checked
     };
 
-    if (id == "0") { // שירות חדש
+    if (id == "0") {
         fetch(`/services/add`, {
             method: "POST",
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(data)
         })
         .then(res => res.json())
-        .then(resp => { row.dataset.id = resp.id; });
+        .then(resp => {
+            row.dataset.id = resp.id;
+            showAlert(row, "שמור בהצלחה!");
+        });
     } else {
         fetch(`/services/edit/${id}`, {
             method: "POST",
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(data)
-        }).then(res => res.json()).then(console.log);
+        })
+        .then(res => res.json())
+        .then(resp => { showAlert(row, "שמור בהצלחה!"); })
+        .catch(() => showAlert(row, "שגיאה בשמירה", "error"));
     }
 }
 
@@ -79,12 +104,18 @@ function deleteService(row) {
     if(id == "0") { row.remove(); return; }
     fetch(`/services/delete/${id}`, {
         method: "POST"
-    }).then(res => res.json()).then(data => {
-        if(data.success) row.remove();
+    }).then(res => res.json())
+    .then(data => {
+        if(data.success) {
+            showAlert(row, "נמחק בהצלחה!");
+            setTimeout(() => row.remove(), 500);
+        } else {
+            showAlert(row, "שגיאה במחיקה", "error");
+        }
     });
 }
 
-// חיבור כפתורי שמירה ומחיקה קיימים
+// חיבור כפתורים קיימים
 document.querySelectorAll(".save-btn").forEach(btn => {
     btn.onclick = () => saveService(btn.closest("tr"));
 });
@@ -96,7 +127,7 @@ document.querySelectorAll(".delete-btn").forEach(btn => {
 document.getElementById("add-service").onclick = () => {
     const tbody = document.querySelector("#services-table tbody");
     const row = document.createElement("tr");
-    row.dataset.id = "0"; // מזהה זמני
+    row.dataset.id = "0";
     row.innerHTML = `
       <td><input type="text" class="name" value="שירות חדש"></td>
       <td><input type="number" class="duration" value="30"></td>
@@ -105,7 +136,8 @@ document.getElementById("add-service").onclick = () => {
       <td>
         <button class="save-btn">שמור</button>
         <button class="delete-btn">מחק</button>
-      </td>`;
+      </td>
+      <td><span class="alert"></span></td>`;
     tbody.appendChild(row);
     row.querySelector(".save-btn").onclick = () => saveService(row);
     row.querySelector(".delete-btn").onclick = () => deleteService(row);
