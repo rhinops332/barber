@@ -964,25 +964,31 @@ def orders():
     if not business_name:
         return redirect("/login")
 
-    # ניקוי נתונים ישנים
     disable_past_hours()
     clear_old_info()
 
-    # שליפת זמני השבוע
     week_slots = generate_week_slots(business_name)
 
-    # --- שליפת הגדרות עיצוב ---
     conn = get_db_connection()
     cur = conn.cursor()
 
+    # --- שליפת business_id ---
     cur.execute("SELECT id FROM businesses WHERE name=%s", (business_name,))
     row = cur.fetchone()
     if not row:
         conn.close()
         return "Business not found", 404
-
     business_id = row[0]
 
+    # --- שליפת שירותים ---
+    cur.execute("""
+        SELECT id, name, duration_minutes, price
+        FROM services
+        WHERE business_id=%s AND active=TRUE
+    """, (business_id,))
+    services = cur.fetchall()
+
+    # --- שליפת עיצוב ---
     columns = [
         "day_button_shape", "day_button_color", "day_button_size",
         "day_button_text_size", "day_button_text_color", "day_button_font_family",
@@ -994,7 +1000,6 @@ def orders():
         "heading_text", "subheading_text",
         "body_background_color"
     ]
-
     cur.execute(f"""
         SELECT {", ".join(columns)}
         FROM design_settings
@@ -1009,8 +1014,10 @@ def orders():
         "orders.html",
         week_slots=week_slots,
         business_name=business_name,
-        design=design_settings
+        design=design_settings,
+        services=services   # 👈 מעבירים את השירותים ל־HTML
     )
+
     
 @app.route("/admin_design")
 def admin_design():
@@ -1569,28 +1576,6 @@ def book_appointment():
         }
     )
 
-@app.route("/api/services")
-def api_services():
-    business_id = session.get("business_id")
-    if not business_id:
-        return jsonify({"error": "not authorized"}), 403
-
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT id, name, duration_minutes, price FROM services WHERE business_id=%s AND active=TRUE",
-        (business_id,),
-    )
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
-
-    services = [
-        {"id": str(r[0]), "name": r[1], "duration": r[2], "price": r[3]}
-        for r in rows
-    ]
-    return jsonify(services)
-
 
 
 @app.route('/cancel_appointment', methods=['POST'])
@@ -1780,7 +1765,7 @@ def index():
         return redirect("/login")  # או עמוד ברירת מחדל
 
     week_slots = generate_week_slots(business_name)
-    return render_template("index.html", week_slots=week_slots, services=services_prices)
+    return render_template("index.html", week_slots=week_slots)
 # --- API - שאלות לבוט ---
 
 @app.route("/ask", methods=["POST"])
