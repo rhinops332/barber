@@ -1496,7 +1496,7 @@ def book_appointment():
     if not all([name, phone, date, start_time, service_id]):
         return jsonify({"error": "Missing fields"}), 400
 
-    business_name = session.get("business_name")
+    business_name = str(session.get("business_name"))
     if not business_name:
         return redirect("/login")
 
