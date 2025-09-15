@@ -22,14 +22,6 @@ BUSINESSES_FILE = "businesses.json"
 BUSINESSES_ROOT = os.path.join(os.getcwd(), "businesses")
 
 
-services_prices = {
-    "Men's Haircut": 80,
-    "Women's Haircut": 120,
-    "Blow Dry": 70,
-    "Color": 250
-}
-
-
 # --- פונקציות עזר ---
 
 def load_weekly_schedule(business_name):
