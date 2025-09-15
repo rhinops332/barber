@@ -1,1 +1,116 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+<meta charset="UTF-8">
+<title>ניהול שירותים</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+  th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+  th { background-color: #f0f0f0; }
+  input[type="text"], input[type="number"] { width: 90%; }
+  button { padding: 5px 10px; margin: 2px; cursor: pointer; }
+  button:hover { background-color: #eee; }
+</style>
+</head>
+<body>
 
+<h2>ניהול שירותים</h2>
+
+<table id="services-table">
+  <thead>
+    <tr>
+      <th>שם</th>
+      <th>משך בדקות</th>
+      <th>מחיר</th>
+      <th>פעיל</th>
+      <th>פעולות</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for s in services %}
+    <tr data-id="{{ s.id }}">
+      <td><input type="text" class="name" value="{{ s.name }}"></td>
+      <td><input type="number" class="duration" value="{{ s.duration_minutes }}"></td>
+      <td><input type="number" class="price" value="{{ s.price|default(0) }}"></td>
+      <td><input type="checkbox" class="active" {% if s.active %}checked{% endif %}></td>
+      <td>
+        <button class="save-btn">שמור</button>
+        <button class="delete-btn">מחק</button>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<button id="add-service">הוסף שירות</button>
+
+<script>
+// שמירה של שירות
+function saveService(row) {
+    const id = row.dataset.id;
+    const data = {
+        name: row.querySelector(".name").value,
+        duration_minutes: parseInt(row.querySelector(".duration").value),
+        price: parseFloat(row.querySelector(".price").value),
+        active: row.querySelector(".active").checked
+    };
+
+    if (id == "0") { // שירות חדש
+        fetch(`/services/add`, {
+            method: "POST",
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        })
+        .then(res => res.json())
+        .then(resp => { row.dataset.id = resp.id; });
+    } else {
+        fetch(`/services/edit/${id}`, {
+            method: "POST",
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        }).then(res => res.json()).then(console.log);
+    }
+}
+
+// מחיקת שירות
+function deleteService(row) {
+    const id = row.dataset.id;
+    if(id == "0") { row.remove(); return; }
+    fetch(`/services/delete/${id}`, {
+        method: "POST"
+    }).then(res => res.json()).then(data => {
+        if(data.success) row.remove();
+    });
+}
+
+// חיבור כפתורי שמירה ומחיקה קיימים
+document.querySelectorAll(".save-btn").forEach(btn => {
+    btn.onclick = () => saveService(btn.closest("tr"));
+});
+document.querySelectorAll(".delete-btn").forEach(btn => {
+    btn.onclick = () => deleteService(btn.closest("tr"));
+});
+
+// כפתור להוספת שירות חדש
+document.getElementById("add-service").onclick = () => {
+    const tbody = document.querySelector("#services-table tbody");
+    const row = document.createElement("tr");
+    row.dataset.id = "0"; // מזהה זמני
+    row.innerHTML = `
+      <td><input type="text" class="name" value="שירות חדש"></td>
+      <td><input type="number" class="duration" value="30"></td>
+      <td><input type="number" class="price" value="0"></td>
+      <td><input type="checkbox" class="active" checked></td>
+      <td>
+        <button class="save-btn">שמור</button>
+        <button class="delete-btn">מחק</button>
+      </td>`;
+    tbody.appendChild(row);
+    row.querySelector(".save-btn").onclick = () => saveService(row);
+    row.querySelector(".delete-btn").onclick = () => deleteService(row);
+};
+</script>
+
+</body>
+</html>
