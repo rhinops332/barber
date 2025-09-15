@@ -323,7 +323,7 @@ def load_services(business_id):
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("""
-        SELECT id, name, duration_minutes, active
+        SELECT id, name, duration_minutes, price, active
         FROM services
         WHERE business_id = %s
         ORDER BY id
@@ -338,14 +338,18 @@ def load_services(business_id):
 
 def save_service(service_id, data):
     """
-    data = {'name': 'פגישה', 'duration_minutes': 30, 'active': True}
+    data = {'name': 'פגישה', 'duration_minutes': 30, 'price': 150, 'active': True}
     """
     conn = get_db_connection()
     cur = conn.cursor()
+
+    # נבנה את ה־SET לפי המפתחות ב־data
     columns = [f"{key} = %s" for key in data.keys()]
     values = list(data.values())
+
     query = f"UPDATE services SET {', '.join(columns)} WHERE id = %s"
     cur.execute(query, values + [service_id])
+
     conn.commit()
     cur.close()
     conn.close()
@@ -355,19 +359,27 @@ def save_service(service_id, data):
 
 def add_service(business_id, data):
     """
-    data = {'name': 'פגישה', 'duration_minutes': 30, 'active': True}
+    data = {'name': 'פגישה', 'duration_minutes': 30, 'price': 0, 'active': True}
     """
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("""
-        INSERT INTO services (business_id, name, duration_minutes, active)
-        VALUES (%s, %s, %s, %s) RETURNING id
-    """, (business_id, data['name'], data['duration_minutes'], data.get('active', True)))
+        INSERT INTO services (business_id, name, duration_minutes, price, active)
+        VALUES (%s, %s, %s, %s, %s)
+        RETURNING id
+    """, (
+        business_id,
+        data['name'],
+        data['duration_minutes'],
+        data.get('price', 0),
+        data.get('active', True)
+    ))
     service_id = cur.fetchone()[0]
     conn.commit()
     cur.close()
     conn.close()
     return service_id
+
 
 def delete_service(service_id):
     conn = get_db_connection()
