@@ -328,7 +328,7 @@ def load_services(business_id):
     return services
 
 
-def save_service(service_id, data):
+def save_services(service_id, data):
     """
     data = {'name': 'פגישה', 'duration_minutes': 30, 'price': 150, 'active': True}
     """
@@ -382,19 +382,29 @@ def delete_service(service_id):
     conn.close()
 
 
-@app.route("/select_service")
-def select_service():
-    # כאן טוענים את רשימת השירותים מבסיס הנתונים או מקובץ
-    services = load_services()  # פונקציה שמחזירה [(id, name), ...]
-    return render_template("select_service.html", services=services)
 
 @app.route("/save_service", methods=["POST"])
 def save_service():
-    chosen = request.form.get("service")
-    if not chosen:
+    chosen_id = request.form.get("service")
+    chosen_time = request.form.get("time")  # שדה הזמן אם קיים בטופס
+
+    if not chosen_id or not chosen_time:
         return redirect(url_for("select_service"))
-    session["chosen_service"] = chosen  # שמירה בסשן
-    return redirect(url_for("book_page"))  # פונקציית ההזמנות שלך
+
+    business_id = session.get("business_id")
+    services = load_services(business_id)
+    chosen_service = next((s for s in services if str(s["id"]) == chosen_id), None)
+
+    if not chosen_service:
+        return redirect(url_for("select_service"))
+
+    # שמירה ב-session
+    session["chosen_service_name"] = chosen_service["name"]
+    session["chosen_service_time"] = chosen_time
+
+    return redirect(url_for("orders"))
+
+
 
 # --- ניקוי המסד ומחיקת מידע מיותר ---
 
@@ -609,8 +619,6 @@ def create_default_business_settings(business_id, business_name, conn):
 
 
 
-
-
 # --- ניהול שבועי ושינויים ---
 
 def get_booked_times(appointments):
@@ -628,6 +636,17 @@ def generate_week_slots(business_name, with_sources=False):
     today = datetime.today()
     week_slots = {}
     heb_days = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
+
+    # --- לוקחים את השירות והזמן שנבחרו מה-session ---
+    service_duration_minutes = 0
+    service_name = None
+    if "chosen_service" in session:
+        service_id = session["chosen_service"]
+        service_info = get_service_info(business_name, service_id)  # dict עם duration_minutes ו-name
+        service_duration_minutes = service_info.get("duration_minutes", 0)
+        service_name = service_info.get("name")
+
+    chosen_time = session.get("chosen_service_time")  # אם רוצים להשתמש בהמשך
 
     for i in range(7):
         current_date = today + timedelta(days=i)
@@ -648,24 +667,53 @@ def generate_week_slots(business_name, with_sources=False):
         all_times = sorted(set(scheduled + added + edited_to_times))
         final_times = []
 
-        for t in all_times:
+        for idx, t in enumerate(all_times):
+            # בדיקה בסיסית אם השעה זמינה
             if t in edited_to_times:
-                if with_sources:
-                    final_times.append({"time": t, "available": True, "source": "edited"})
-                else:
-                    final_times.append({"time": t, "available": True})
+                available = True
+            elif t in edited_from_times or disabled_day or t in removed or t in booked_times:
                 continue
-            if t in edited_from_times:
-                continue
-            available = not (disabled_day or t in removed or t in booked_times)
+            else:
+                available = True
+
+            # --- בדיקה לפי משך השירות ---
+            if service_duration_minutes > 0:
+                total_minutes = 0
+                current_idx = idx
+                conflict = False
+                while total_minutes < service_duration_minutes:
+                    if current_idx >= len(all_times):
+                        conflict = True  # חורג מעבר לשעה האחרונה
+                        break
+                    next_time = all_times[current_idx]
+                    if next_time in removed or next_time in booked_times or next_time in edited_from_times:
+                        conflict = True
+                        break
+                    # חישוב דיפרנציאל בדקות בין השעות
+                    t_dt = datetime.strptime(all_times[current_idx], "%H:%M")
+                    if current_idx + 1 < len(all_times):
+                        next_dt = datetime.strptime(all_times[current_idx + 1], "%H:%M")
+                        diff = (next_dt - t_dt).total_seconds() / 60
+                    else:
+                        diff = service_duration_minutes
+                    total_minutes += diff
+                    current_idx += 1
+                if conflict:
+                    continue  # אל תוסיף את השעה ל-final_times
+
+            # הוספה ל-final_times
             if with_sources:
                 source = get_source(t, scheduled, added, removed, list(zip(edited_from_times, edited_to_times)), disabled_day, booked_times)
-                final_times.append({"time": t, "available": available, "source": source})
+                final_times.append({"time": t, "available": True, "source": source,
+                                    "service_name": service_name,
+                                    "service_time": chosen_time})
             else:
-                if available:
-                    final_times.append({"time": t, "available": True})
+                final_times.append({"time": t, "available": True,
+                                    "service_name": service_name,
+                                    "service_time": chosen_time})
 
         week_slots[date_str] = {"day_name": day_name, "times": final_times}
+
     return week_slots
 
 
@@ -1091,6 +1139,12 @@ def services():
     services = load_services(business_id)
     return render_template("services.html", services=services)
 
+@app.route("/select_service")
+def select_service():
+    # כאן טוענים את רשימת השירותים מבסיס הנתונים או מקובץ
+    services = load_services()  # פונקציה שמחזירה [(id, name), ...]
+    return render_template("select_service.html", services=services)
+
 
 
 
@@ -1150,7 +1204,7 @@ def services_edit(service_id):
     conn.close()
 
     data = request.get_json()
-    save_service(service_id, data)
+    save_services(service_id, data)
     return jsonify({"success": True})
 
 
