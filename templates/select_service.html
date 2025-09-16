@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="he">
+<head>
+    <meta charset="utf-8">
+    <title>בחירת שירות</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 40px; }
+        h1 { color: #333; }
+        form { display: inline-block; margin-top: 30px; }
+        select, button {
+            font-size: 1.1rem;
+            padding: 10px 14px;
+            margin: 8px;
+            border-radius: 8px;
+        }
+        button { background: #4CAF50; color: white; border: none; cursor: pointer; }
+        button:hover { background: #45a049; }
+    </style>
+</head>
+<body>
+    <h1>בחר שירות</h1>
+
+    <form method="POST" action="{{ url_for('save_service') }}">
+        <select id="service" name="service" required>
+            <option value="">בחר שירות</option>
+            {% for s in services %}
+                <option value="{{ s[0] }}">{{ s[1] }}</option>
+            {% endfor %}
+        </select>
+        <br>
+        <button type="submit">המשך להזמנת תור</button>
+    </form>
+</body>
+</html>
