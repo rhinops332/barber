@@ -382,6 +382,19 @@ def delete_service(service_id):
     conn.close()
 
 
+@app.route("/select_service")
+def select_service():
+    # כאן טוענים את רשימת השירותים מבסיס הנתונים או מקובץ
+    services = load_services()  # פונקציה שמחזירה [(id, name), ...]
+    return render_template("select_service.html", services=services)
+
+@app.route("/save_service", methods=["POST"])
+def save_service():
+    chosen = request.form.get("service")
+    if not chosen:
+        return redirect(url_for("select_service"))
+    session["chosen_service"] = chosen  # שמירה בסשן
+    return redirect(url_for("book_page"))  # פונקציית ההזמנות שלך
 
 # --- ניקוי המסד ומחיקת מידע מיותר ---
 
