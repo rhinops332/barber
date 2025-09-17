@@ -275,7 +275,6 @@
   <p><b>שעה:</b> <span id="selected-time"></span></p>
   <p><b>שם מלא:</b> <span id="detail-name"></span></p>
   <p><b>מספר טלפון:</b> <span id="detail-phone"></span></p>
-  <p><b>שירות:</b> <span id="detail-service"></span></p>
 </div>
   
 <div id="selected-time-display" style="margin-top: 10px; font-weight: bold; font-size: 16px; color: #2980b9; min-height: 24px;"></div>
@@ -284,12 +283,6 @@
   <form id="bookingForm">
     <input type="text" id="name" placeholder="Full Name" required />
     <input type="text" id="phone" placeholder="Phone Number" required />
-    <select id="service" required>
-      <option value="">Select Service</option>
-      {% for s in services %}
-         <option value="{{ s[0] }}">{{ s[1] }}</option>
-      {% endfor %}
-    </select>
     <input type="hidden" id="date" />
     <input type="hidden" id="time" />
     <button type="submit">Book Appointment</button>
