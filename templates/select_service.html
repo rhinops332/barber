@@ -26,11 +26,11 @@
     <h1>בחר שירות</h1>
 
     <form method="POST" action="{{ url_for('save_service') }}">
-        <select id="service" name="service_id" required>
+        <select id="service" name="service" required>
             <option value="">בחר שירות</option>
             {% for s in services %}
-                <option value="{{ s.id }}">
-                    {{ s.name }}{% if s.duration_minutes %} ({{ s.duration_minutes }} דק׳){% endif %}
+                <option value="{{ s['id'] }}">
+                    {{ s['name'] }}{% if s['duration_minutes'] %} ({{ s['duration_minutes'] }} דק׳){% endif %}
                 </option>
             {% endfor %}
         </select>
