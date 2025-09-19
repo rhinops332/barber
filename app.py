@@ -1547,11 +1547,10 @@ def bot_knowledge():
 
 @app.route("/book", methods=["POST"])
 def book_appointment():
-    data = request.get_json()
-    name = data.get("name", "").strip()
-    phone = data.get("phone", "").strip()
-    date = data.get("date", "").strip()
-    time = data.get("time", "").strip()
+    name = request.form.get("name", "").strip()
+    phone = request.form.get("phone", "").strip()
+    date = request.form.get("date", "").strip()
+    time = request.form.get("time", "").strip()
 
     service = session.get("chosen_service_name")
     price = session.get("chosen_service_price")
