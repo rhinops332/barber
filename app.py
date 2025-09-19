@@ -382,29 +382,6 @@ def delete_service(service_id):
     conn.close()
 
 
-
-@app.route("/save_service", methods=["POST"])
-def save_service():
-    chosen_id = request.form.get("service")
-
-    if not chosen_id:
-        return redirect(url_for("select_service"))
-
-    business_id = session.get("business_id")
-    services = load_services(business_id)
-    chosen_service = next((s for s in services if str(s["id"]) == chosen_id), None)
-
-    if not chosen_service:
-        return redirect(url_for("select_service"))
-
-    # שמירה ב-session – שם השירות ומשך השירות
-    session["chosen_service_name"] = chosen_service["name"]
-    session["chosen_service_time"] = chosen_service["duration_minutes"]
-
-    return redirect(url_for("orders"))
-
-
-
 # --- ניקוי המסד ומחיקת מידע מיותר ---
 
 def disable_past_hours():
@@ -1145,7 +1122,25 @@ def select_service():
     services = load_services(business_id) 
     return render_template("select_service.html", services=services)
 
+@app.route("/save_service", methods=["POST"])
+def save_service():
+    chosen_id = request.form.get("service")
 
+    if not chosen_id:
+        return redirect(url_for("select_service"))
+
+    business_id = session.get("business_id")
+    services = load_services(business_id)
+    chosen_service = next((s for s in services if str(s["id"]) == chosen_id), None)
+
+    if not chosen_service:
+        return redirect(url_for("select_service"))
+
+    # שמירה ב-session – שם השירות ומשך השירות
+    session["chosen_service_name"] = chosen_service["name"]
+    session["chosen_service_time"] = chosen_service["duration_minutes"]
+
+    return redirect(url_for("orders"))
 
 
 # --- ניהול שירותים (CRUD) ---
