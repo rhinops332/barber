@@ -1553,26 +1553,26 @@ def book_appointment():
     date = data.get("date", "").strip()
     time = data.get("time", "").strip()
 
-    # קח את השירות שנבחר מה-session
     service = session.get("chosen_service_name")
-    price = session.get("chosen_service_price")  # צריך לשמור ב-session גם את המחיר
+    price = session.get("chosen_service_price")
 
     if not all([name, phone, date, time, service, price]):
-        return jsonify({"error": "Missing fields"}), 400
+        return redirect(url_for("select_time", error="חסרים פרטים להזמנה"))
 
     business_name = session.get('business_name')
     if not business_name:
         return redirect("/login")
 
     if not is_slot_available(business_name, date, time):
-        return jsonify({"error": "This time slot is not available"}), 400
+        return redirect(url_for("select_time", error="השעה שנבחרה לא זמינה"))
 
     appointments = load_appointments(business_name)
     date_appointments = appointments.get(date, [])
 
     if any(a["time"] == time for a in date_appointments):
-        return jsonify({"error": "This time slot is already booked"}), 400
+        return redirect(url_for("select_time", error="השעה כבר תפוסה"))
 
+    # הוספת התור
     appointment = {
         "name": name,
         "phone": phone,
@@ -1585,6 +1585,7 @@ def book_appointment():
     appointments[date] = date_appointments
     save_appointments(business_name, appointments)
 
+    # עדכון overrides
     overrides = load_overrides(business_name)
     if date not in overrides:
         overrides[date] = {"booked": [], "add": [], "remove": [], "edit_from": [], "edit_to": []}
@@ -1598,19 +1599,18 @@ def book_appointment():
 
     save_overrides(business_name, overrides)
 
+    # שליחת מייל
     try:
         send_email(name, phone, date, time, service, price)
     except Exception as e:
         print("Error sending email:", e)
 
-    return jsonify({
-        "message": f"Appointment booked for {date} at {time} for {service}.",
-        "date": date,
-        "time": time,
-        "service": service,
-        "can_cancel": True,
-        "cancel_endpoint": "/cancel_appointment"
-    })
+    # שמירת הודעה ב-session להצגה בדף הבחירה
+    session["success_message"] = f"הזמנתך ל־{service} בתאריך {date} בשעה {time} בוצעה בהצלחה."
+    session["can_cancel"] = True
+    session["cancel_info"] = {"date": date, "time": time, "service": service}
+
+    return redirect(url_for("select_time"))
 
 
 
