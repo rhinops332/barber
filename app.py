@@ -386,9 +386,8 @@ def delete_service(service_id):
 @app.route("/save_service", methods=["POST"])
 def save_service():
     chosen_id = request.form.get("service")
-    chosen_time = request.form.get("time")  # שדה הזמן אם קיים בטופס
 
-    if not chosen_id or not chosen_time:
+    if not chosen_id:
         return redirect(url_for("select_service"))
 
     business_id = session.get("business_id")
@@ -398,9 +397,9 @@ def save_service():
     if not chosen_service:
         return redirect(url_for("select_service"))
 
-    # שמירה ב-session
+    # שמירה ב-session – שם השירות ומשך השירות
     session["chosen_service_name"] = chosen_service["name"]
-    session["chosen_service_time"] = chosen_time
+    session["chosen_service_time"] = chosen_service["duration_minutes"]
 
     return redirect(url_for("orders"))
 
