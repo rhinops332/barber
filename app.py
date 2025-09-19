@@ -1552,13 +1552,13 @@ def book_appointment():
     phone = data.get("phone", "").strip()
     date = data.get("date", "").strip()
     time = data.get("time", "").strip()
-    service = data.get("service", "").strip()
 
-    if not all([name, phone, date, time, service]):
+    # קח את השירות שנבחר מה-session
+    service = session.get("chosen_service_name")
+    price = session.get("chosen_service_price")  # צריך לשמור ב-session גם את המחיר
+
+    if not all([name, phone, date, time, service, price]):
         return jsonify({"error": "Missing fields"}), 400
-
-    if service not in services_prices:
-        return jsonify({"error": "Unknown service"}), 400
 
     business_name = session.get('business_name')
     if not business_name:
@@ -1567,48 +1567,39 @@ def book_appointment():
     if not is_slot_available(business_name, date, time):
         return jsonify({"error": "This time slot is not available"}), 400
 
-    # טען תורים קיימים
     appointments = load_appointments(business_name)
     date_appointments = appointments.get(date, [])
 
-    # בדיקה אם השעה כבר קיימת
     if any(a["time"] == time for a in date_appointments):
         return jsonify({"error": "This time slot is already booked"}), 400
 
-    # הוספת תור חדש
     appointment = {
         "name": name,
         "phone": phone,
         "date": date,
         "time": time,
         "service": service,
-        "price": services_prices[service]
+        "price": price
     }
     date_appointments.append(appointment)
     appointments[date] = date_appointments
     save_appointments(business_name, appointments)
 
-    # טען overrides
     overrides = load_overrides(business_name)
     if date not in overrides:
         overrides[date] = {"booked": [], "add": [], "remove": [], "edit_from": [], "edit_to": []}
 
-    # ודא שהשעה מופיעה ב-booked כ-string
     if time not in overrides[date]["booked"]:
         overrides[date]["booked"].append(time)
-
-    # הסרת זמן מ-add אם קיים
     if time in overrides[date]["add"]:
         overrides[date]["add"].remove(time)
-    # הוספת זמן ל-remove אם לא קיים
     if time not in overrides[date]["remove"]:
         overrides[date]["remove"].append(time)
 
     save_overrides(business_name, overrides)
 
-    # שליחת מייל (אם מוגדר)
     try:
-        send_email(name, phone, date, time, service, services_prices[service])
+        send_email(name, phone, date, time, service, price)
     except Exception as e:
         print("Error sending email:", e)
 
