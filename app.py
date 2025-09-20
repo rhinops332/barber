@@ -1556,20 +1556,20 @@ def book_appointment():
     price = session.get("chosen_service_price")
 
     if not all([name, phone, date, time, service, price]):
-        return redirect(url_for("select_time", error="חסרים פרטים להזמנה"))
+        return redirect(url_for("select_service", error="חסרים פרטים להזמנה"))
 
     business_name = session.get('business_name')
     if not business_name:
         return redirect("/login")
 
     if not is_slot_available(business_name, date, time):
-        return redirect(url_for("select_time", error="השעה שנבחרה לא זמינה"))
+        return redirect(url_for("select_service", error="השעה שנבחרה לא זמינה"))
 
     appointments = load_appointments(business_name)
     date_appointments = appointments.get(date, [])
 
     if any(a["time"] == time for a in date_appointments):
-        return redirect(url_for("select_time", error="השעה כבר תפוסה"))
+        return redirect(url_for("select_service", error="השעה כבר תפוסה"))
 
     # הוספת התור
     appointment = {
