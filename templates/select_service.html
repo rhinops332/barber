@@ -20,22 +20,51 @@
             cursor: pointer;
         }
         button:hover { background: #45a049; }
-        .success { color: green; margin-bottom: 20px; }
+        .message { 
+            background-color: #dff0d8; 
+            color: #3c763d; 
+            padding: 10px 20px; 
+            border-radius: 6px; 
+            margin-bottom: 20px; 
+            display: inline-block;
+        }
+        .cancel-btn {
+            background-color: #f44336;
+        }
+        .cancel-btn:hover {
+            background-color: #d32f2f;
+        }
     </style>
 </head>
 <body>
     <h1>בחר שירות</h1>
 
-    {% if session.get("success_message") %}
-        <div class="success">{{ session.get("success_message") }}</div>
-        {% set session["success_message"] = None %}
+    <!-- הודעת הצלחה -->
+    {% if session.get('success_message') %}
+        <div class="message">{{ session.get('success_message') }}</div>
+        {% set _ = session.pop('success_message') %}
     {% endif %}
 
+    <!-- כפתור ביטול תור -->
+    {% if session.get('can_cancel') and session.get('cancel_info') %}
+        <form method="POST" action="{{ url_for('cancel_appointment') }}">
+            <input type="hidden" name="date" value="{{ session['cancel_info']['date'] }}">
+            <input type="hidden" name="time" value="{{ session['cancel_info']['time'] }}">
+            <input type="hidden" name="service" value="{{ session['cancel_info']['service'] }}">
+            <button type="submit" class="cancel-btn">בטל את ההזמנה האחרונה</button>
+        </form>
+        {% set _ = session.pop('can_cancel') %}
+        {% set _ = session.pop('cancel_info') %}
+    {% endif %}
+
+    <!-- רשימת השירותים -->
     <form method="POST" action="{{ url_for('save_service') }}">
         <select id="service" name="service_id" required>
             <option value="">בחר שירות</option>
             {% for s in services %}
-                <option value="{{ s['id'] }}">{{ s['name'] }} ({{ s['duration_minutes'] }} דק׳)</option>
+                <option value="{{ s['id'] }}">
+                    {{ s['name'] }}{% if s['duration_minutes'] %} ({{ s['duration_minutes'] }} דק׳){% endif %}
+                </option>
             {% endfor %}
         </select>
         <br>
