@@ -287,10 +287,6 @@
     <input type="hidden" id="time" name="time" />
 
 
-    <!-- 👇 הוספת שדות השירות והמחיר -->
-    <input type="hidden" id="service" name="service" value="{{ session.get('chosen_service_name', '') }}">
-    <input type="hidden" id="price" name="price" value="{{ session.get('chosen_service_price', '') }}">
-
     <button type="submit">Book Appointment</button>
   </form>
 </div>
