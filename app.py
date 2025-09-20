@@ -1139,6 +1139,7 @@ def save_service():
     # שמירה ב-session – שם השירות ומשך השירות
     session["chosen_service_name"] = chosen_service["name"]
     session["chosen_service_time"] = chosen_service["duration_minutes"]
+    session["chosen_service_price"] = chosen_service["price"]
 
     return redirect(url_for("orders"))
 
