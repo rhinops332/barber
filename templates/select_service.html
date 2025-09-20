@@ -4,12 +4,7 @@
     <meta charset="utf-8">
     <title>בחירת שירות</title>
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            text-align: center; 
-            padding: 40px; 
-            direction: rtl; 
-        }
+        body { font-family: Arial, sans-serif; text-align: center; padding: 40px; direction: rtl; }
         h1 { color: #333; }
         form { display: inline-block; margin-top: 30px; }
         select, button {
@@ -25,39 +20,46 @@
             cursor: pointer;
         }
         button:hover { background: #45a049; }
-
-        .message {
-            margin: 15px 0;
-            padding: 10px;
-            border-radius: 8px;
+        .message { 
+            background-color: #dff0d8; 
+            color: #3c763d; 
+            padding: 10px 20px; 
+            border-radius: 6px; 
+            margin-bottom: 20px; 
+            display: inline-block;
         }
-        .error { background-color: #f8d7da; color: #721c24; }
-        .success { background-color: #d4edda; color: #155724; }
+        .cancel-btn {
+            background-color: #f44336;
+        }
+        .cancel-btn:hover {
+            background-color: #d32f2f;
+        }
     </style>
 </head>
 <body>
     <h1>בחר שירות</h1>
 
-    <!-- הודעות שגיאה -->
-    {% if request.args.get('error') %}
-        <div class="message error">{{ request.args.get('error') }}</div>
-    {% endif %}
-
-    <!-- הודעות הצלחה -->
+    <!-- הודעת הצלחה -->
     {% if session.get('success_message') %}
-        <div class="message success">{{ session.pop('success_message') }}</div>
-        {% if session.get('can_cancel') %}
-            <form method="POST" action="{{ url_for('cancel_appointment') }}">
-                <input type="hidden" name="date" value="{{ session['cancel_info']['date'] }}">
-                <input type="hidden" name="time" value="{{ session['cancel_info']['time'] }}">
-                <input type="hidden" name="service" value="{{ session['cancel_info']['service'] }}">
-                <button type="submit">בטל תור</button>
-            </form>
-        {% endif %}
+        <div class="message">{{ session.get('success_message') }}</div>
+        {% set _ = session.pop('success_message') %}
     {% endif %}
 
+    <!-- כפתור ביטול תור -->
+    {% if session.get('can_cancel') and session.get('cancel_info') %}
+        <form method="POST" action="{{ url_for('cancel_appointment') }}">
+            <input type="hidden" name="date" value="{{ session['cancel_info']['date'] }}">
+            <input type="hidden" name="time" value="{{ session['cancel_info']['time'] }}">
+            <input type="hidden" name="service" value="{{ session['cancel_info']['service'] }}">
+            <button type="submit" class="cancel-btn">בטל את ההזמנה האחרונה</button>
+        </form>
+        {% set _ = session.pop('can_cancel') %}
+        {% set _ = session.pop('cancel_info') %}
+    {% endif %}
+
+    <!-- רשימת השירותים -->
     <form method="POST" action="{{ url_for('save_service') }}">
-        <select id="service" name="service" required>
+        <select id="service" name="service_id" required>
             <option value="">בחר שירות</option>
             {% for s in services %}
                 <option value="{{ s['id'] }}">
