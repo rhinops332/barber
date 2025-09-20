@@ -1609,7 +1609,7 @@ def book_appointment():
     session["can_cancel"] = True
     session["cancel_info"] = {"date": date, "time": time, "service": service}
 
-    return redirect(url_for("select_time"))
+    return redirect(url_for("select_service"))
 
 
 
