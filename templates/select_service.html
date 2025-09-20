@@ -20,12 +20,12 @@
             cursor: pointer;
         }
         button:hover { background: #45a049; }
-        .message {
-            background-color: #dff0d8;
-            color: #3c763d;
-            padding: 10px 20px;
-            border-radius: 6px;
-            margin-bottom: 20px;
+        .message { 
+            background-color: #dff0d8; 
+            color: #3c763d; 
+            padding: 10px 20px; 
+            border-radius: 6px; 
+            margin-bottom: 20px; 
             display: inline-block;
         }
     </style>
@@ -33,14 +33,13 @@
 <body>
     <h1>בחר שירות</h1>
 
-    {# הודעת הצלחה אחרי שמזמינים שעה #}
-    {% if session.get('success_message') %}
-        <div class="message">{{ session.get('success_message') }}</div>
-        {% set _ = session.pop('success_message') %}
+    <!-- הצגת הודעות אם יש -->
+    {% if error %}
+        <div class="message" style="background-color:#f2dede; color:#a94442;">{{ error }}</div>
     {% endif %}
 
     <form method="POST" action="{{ url_for('save_service') }}">
-        <select id="service" name="service_id" required>
+        <select id="service" name="service" required>
             <option value="">בחר שירות</option>
             {% for s in services %}
                 <option value="{{ s['id'] }}">
