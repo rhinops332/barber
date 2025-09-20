@@ -13,7 +13,6 @@
     background: {{ design.body_background_color|default("#f0f4ff") }};
     color: #2c3e50;
   }
-  
   h1 {
     font-size: {{ design.heading_font_size|default("32px") }};
     font-family: {{ design.heading_font_family|default("'Georgia', serif") }};
@@ -24,14 +23,13 @@
     font-family: {{ design.subheading_font_family|default("'Verdana', sans-serif") }};
     color: {{ design.subheading_color|default("#555") }};
   }
-  
   #days-buttons {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
     gap: 10px;
     margin-bottom: 20px;
   }
- .day-btn {
+  .day-btn {
     font-family: {{ design.day_button_font_family|default("'Tahoma', sans-serif") }};
     font-size: {{ design.day_button_text_size|default("15px") }};
     padding: 12px 0;
@@ -43,13 +41,8 @@
     cursor: pointer;
     transition: 0.2s;
   }
-  .day-btn:hover, .day-btn.active {
-    background: #2980b9;
-  }
-  #availability {
-    text-align: center;
-    margin-bottom: 20px;
-  }
+  .day-btn:hover, .day-btn.active { background:#2980b9; }
+  #availability { text-align:center; margin-bottom:20px; }
   .slot-btn {
     font-family: {{ design.slot_button_font_family|default("'Verdana', sans-serif") }};
     font-size: {{ design.slot_button_text_size|default("14px") }};
@@ -62,212 +55,141 @@
     cursor: pointer;
     transition: transform 0.15s ease;
   }
-  .slot-btn.unavailable {
-    background: #bbb;
-    cursor: default;
-  }
-  .slot-btn:hover:not(.unavailable) {
-    background: #27ae60;
-  }
+  .slot-btn.unavailable { background:#bbb; cursor:default; }
+  .slot-btn:hover:not(.unavailable){ background:#27ae60; }
   .slot-btn.selected {
-    animation: growBtn 0.2s forwards;
-    border: 2px solid black;   
-    box-shadow: 0 0 8px rgba(0,0,0,0.4);  
+    animation: growBtn .2s forwards;
+    border:2px solid black;
+    box-shadow:0 0 8px rgba(0,0,0,0.4);
   }
-  @keyframes growBtn {
-    from { transform: scale(1); }
-    to { transform: scale(1.2); }
-  }
+  @keyframes growBtn { from{transform:scale(1);} to{transform:scale(1.2);} }
   #form-container {
-    display: none;
-    margin-top: 20px;
-    background: white;
-    padding: 15px;
-    border-radius: 10px;
-    box-shadow: 0 0 8px #ccc;
+    display:none;
+    margin-top:20px;
+    background:white;
+    padding:15px;
+    border-radius:10px;
+    box-shadow:0 0 8px #ccc;
   }
-  form input, form select {
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 12px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
+  form input,form select {
+    width:100%;
+    padding:10px;
+    margin-bottom:12px;
+    border-radius:6px;
+    border:1px solid #ccc;
   }
   form button {
-    width: 100%;
-    padding: 12px;
-    background: #2980b9;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
+    width:100%;
+    padding:12px;
+    background:#2980b9;
+    color:white;
+    border:none;
+    border-radius:8px;
+    font-weight:bold;
+    cursor:pointer;
   }
-  form button:hover {
-    background: #1f6391;
-  }
-  #response {
-    text-align: center;
-    font-weight: bold;
-    margin-bottom: 10px;
-  }
+  form button:hover{background:#1f6391;}
+  #response{text-align:center;font-weight:bold;margin-bottom:10px;}
   #booking-details {
-    margin-top: 20px;
-    background: #fff;
-    padding: 15px;
-    border-radius: 10px;
-    box-shadow: 0 0 8px #ccc;
-    max-width: 400px;
-    margin-left: auto;
-    margin-right: auto;
-    text-align: right;
-    direction: rtl;
-    font-size: 16px;
-    display: none;
+    margin-top:20px;
+    background:#fff;
+    padding:15px;
+    border-radius:10px;
+    box-shadow:0 0 8px #ccc;
+    max-width:400px;
+    margin-left:auto;
+    margin-right:auto;
+    text-align:right;
+    direction:rtl;
+    font-size:16px;
+    display:none;
   }
-  #booking-details h3 {
-    margin-bottom: 10px;
-    color: #2980b9;
-  }
+  #booking-details h3 {margin-bottom:10px;color:#2980b9;}
   #botBtn {
-    display: block;
-    margin: 20px auto 0;
-    padding: 12px;
-    background: #27ae60;
-    color: white;
-    border: none;
-    border-radius: 10px;
-    font-weight: bold;
-    cursor: pointer;
-    width: 260px;
+    display:block;
+    margin:20px auto 0;
+    padding:12px;
+    background:#27ae60;
+    color:white;
+    border:none;
+    border-radius:10px;
+    font-weight:bold;
+    cursor:pointer;
+    width:260px;
   }
   #bot-window {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    width: 320px;
-    height: 400px;
-    background: white;
-    border: 1px solid #ccc;
-    border-radius: 10px;
-    box-shadow: 0 0 14px rgba(0,0,0,0.18);
-    padding: 10px;
-    box-sizing: border-box;
-    display: none;
-    resize: both;
-    font-size: 14px;
-    z-index: 10000;
+    position:fixed;
+    bottom:20px;
+    right:20px;
+    width:320px;
+    height:400px;
+    background:white;
+    border:1px solid #ccc;
+    border-radius:10px;
+    box-shadow:0 0 14px rgba(0,0,0,0.18);
+    padding:10px;
+    box-sizing:border-box;
+    display:none;
+    resize:both;
+    font-size:14px;
+    z-index:10000;
   }
   #bot-header {
-    position: relative;
-    text-align: center;
-    border-bottom: 1px solid #eee;
-    margin-bottom: 8px;
-    padding-bottom: 6px;
+    position:relative;
+    text-align:center;
+    border-bottom:1px solid #eee;
+    margin-bottom:8px;
+    padding-bottom:6px;
   }
-  #bot-expand {
-    position: absolute;
-    left: 8px;
-    top: 8px;
-    background: none;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-    color: #555;
+  #bot-expand,#bot-close {
+    position:absolute;
+    background:none;
+    border:none;
+    font-size:20px;
+    cursor:pointer;
+    color:#555;
+    top:8px;
   }
-  #bot-close {
-    position: absolute;
-    right: 8px;
-    top: 8px;
-    background: none;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-    color: #555;
-  }
+  #bot-expand{left:8px;}
+  #bot-close{right:8px;}
   #bot-messages {
-    height: 290px;
-    overflow-y: auto;
-    border: 1px solid #ddd;
-    padding: 8px;
-    background: #fafafa;
-    border-radius: 6px;
-    margin-bottom: 10px;
+    height:290px;
+    overflow-y:auto;
+    border:1px solid #ddd;
+    padding:8px;
+    background:#fafafa;
+    border-radius:6px;
+    margin-bottom:10px;
   }
-  #bot-input {
-    display: flex;
-    gap: 8px;
-  }
+  #bot-input{display:flex;gap:8px;}
   #bot-input input {
-    flex-grow: 1;
-    padding: 8px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
+    flex-grow:1;
+    padding:8px;
+    border-radius:6px;
+    border:1px solid #ccc;
   }
   #bot-input button {
-    background: #27ae60;
-    border: none;
-    border-radius: 6px;
-    padding: 8px 14px;
-    color: white;
-    font-weight: bold;
-    cursor: pointer;
+    background:#27ae60;
+    border:none;
+    border-radius:6px;
+    padding:8px 14px;
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
   }
-  #bot-input button:hover {
-    background: #1e8449;
-  }
-
-  /* חלונית אישור ביטול תור */
-  #overlay {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.3);
-    z-index: 9999;
-    display: none;
-  }
-  #cancel-confirmation {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    width: 320px;
-    transform: translate(-50%, -50%);
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 0 15px rgba(0,0,0,0.25);
-    padding: 20px;
-    z-index: 10000;
-    display: none;
-    text-align: center;
-    font-size: 16px;
-  }
-  #cancel-confirmation button {
-    margin: 10px 10px 0 10px;
-    padding: 10px 16px;
-    border: none;
-    border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
-  }
-  #cancel-confirmation .confirm-btn {
-    background-color: #e74c3c;
-    color: white;
-  }
-  #cancel-confirmation .cancel-btn {
-    background-color: #ccc;
-    color: #333;
-  }
+  #bot-input button:hover{background:#1e8449;}
 </style>
 </head>
 <body>
 
-<h1> {{ design.heading_text}}</h1>
+<h1>{{design.heading_text}}</h1>
 <h2>{{design.subheading_text}}</h2>
 
 <div id="response"></div>
 
 <div id="days-buttons"></div>
 <div id="availability">
-  <h3 id="selected-date-title" style="text-align:center; margin-bottom: 10px;"></h3>
+  <h3 id="selected-date-title" style="text-align:center;margin-bottom:10px;"></h3>
   <div id="slots-container" style="text-align:center;"></div>
 </div>
 
@@ -276,8 +198,9 @@
   <p><b>שם מלא:</b> <span id="detail-name"></span></p>
   <p><b>מספר טלפון:</b> <span id="detail-phone"></span></p>
 </div>
-  
-<div id="selected-time-display" style="margin-top: 10px; font-weight: bold; font-size: 16px; color: #2980b9; min-height: 24px;"></div>
+
+<div id="selected-time-display"
+     style="margin-top:10px;font-weight:bold;font-size:16px;color:#2980b9;min-height:24px;"></div>
 
 <div id="form-container">
   <form id="bookingForm">
@@ -285,8 +208,6 @@
     <input type="text" id="phone" placeholder="Phone Number" required />
     <input type="hidden" id="date" name="date" />
     <input type="hidden" id="time" name="time" />
-
-
     <button type="submit">Book Appointment</button>
   </form>
 </div>
@@ -306,327 +227,118 @@
   </div>
 </div>
 
-<!-- חלונית אישור ביטול תור -->
-<div id="overlay"></div>
-<div id="cancel-confirmation">
-  <p>בטוח שברצונך לבטל את התור?</p>
-  <button class="confirm-btn">כן, בטל תור</button>
-  <button class="cancel-btn">לא, חזור</button>
-</div>
-
 <script>
-let allDates = [];
-let availabilityData = {};
-let chosenDate = '';
-let chosenTime = '';
-let selectedButton = null;  // לשמור את הכפתור שנבחר
+let allDates=[],availabilityData={},chosenDate='',chosenTime='',selectedButton=null;
 
-function formatHebrewDay(dateStr) {
-  const date = new Date(dateStr);
-  const days = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
-  return days[date.getDay()];
+function formatHebrewDay(d){
+  const dt=new Date(d);
+  return ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'][dt.getDay()];
 }
-
-async function loadAvailability() {
-  const res = await fetch('/availability');
-  const data = await res.json();
-  availabilityData = data;
-  allDates = Object.keys(data);
+async function loadAvailability(){
+  const res=await fetch('/availability');
+  const data=await res.json();
+  availabilityData=data;
+  allDates=Object.keys(data);
   createDayButtons();
-  if (allDates.length > 0) {
-    showDayAvailability(allDates[0]);
-  }
+  if(allDates.length)showDayAvailability(allDates[0]);
 }
-
-  
-function createDayButtons() {
-  const container = document.getElementById('days-buttons');
-  container.innerHTML = '';
-  allDates.forEach(dateStr => {
-    const wrapper = document.createElement('div');
-    wrapper.style.textAlign = 'center';
-
-    const label = document.createElement('div');
-    label.textContent = formatHebrewDay(dateStr);
-    label.style.fontSize = '14px';
-    label.style.marginBottom = '4px';
-
-    const btn = document.createElement('button');
-    btn.textContent = new Date(dateStr).toLocaleDateString('he-IL', {
-      day: '2-digit',
-      month: '2-digit'
-    });
-    btn.className = 'day-btn';
-    btn.onclick = () => {
+function createDayButtons(){
+  const c=document.getElementById('days-buttons');
+  c.innerHTML='';
+  allDates.forEach(dateStr=>{
+    const w=document.createElement('div');
+    w.style.textAlign='center';
+    const lbl=document.createElement('div');
+    lbl.textContent=formatHebrewDay(dateStr);
+    lbl.style.fontSize='14px';
+    lbl.style.marginBottom='4px';
+    const btn=document.createElement('button');
+    btn.textContent=new Date(dateStr).toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'});
+    btn.className='day-btn';
+    btn.onclick=()=>{
       showDayAvailability(dateStr);
-      Array.from(document.getElementsByClassName('day-btn')).forEach(b => b.classList.remove('active'));
+      Array.from(document.getElementsByClassName('day-btn')).forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
       clearBookingDetailsAndForm();
     };
-
-    wrapper.appendChild(label);
-    wrapper.appendChild(btn);
-    container.appendChild(wrapper);
+    w.append(lbl,btn);
+    c.appendChild(w);
   });
-  if (container.children.length) {
-    container.querySelector('.day-btn').classList.add('active');
-  }
+  if(c.children.length)c.querySelector('.day-btn').classList.add('active');
 }
-
-function clearBookingDetailsAndForm() {
-  document.getElementById('booking-details').style.display = 'none';
-  if(selectedButton) {
-    selectedButton.classList.remove('selected');
-    selectedButton = null;
-  }
-  document.getElementById('form-container').style.display = 'none';
-  document.getElementById('response').textContent = '';
-  chosenTime = '';
-  document.getElementById('date').value = '';
-  document.getElementById('time').value = '';
-  document.getElementById('selected-time-display').textContent = '';
+function clearBookingDetailsAndForm(){
+  document.getElementById('booking-details').style.display='none';
+  if(selectedButton){selectedButton.classList.remove('selected');selectedButton=null;}
+  document.getElementById('form-container').style.display='none';
+  document.getElementById('response').textContent='';
+  chosenTime='';
+  document.getElementById('date').value='';
+  document.getElementById('time').value='';
+  document.getElementById('selected-time-display').textContent='';
 }
-
-function showDayAvailability(date) {
-  chosenDate = date;
-  const container = document.getElementById('slots-container');
-  const dayName = formatHebrewDay(date);
-  const formattedDate = new Date(date).toLocaleDateString('he-IL', {
-    day: '2-digit',
-    month: '2-digit'
-  });
-  document.getElementById('selected-date-title').textContent = `${dayName} - ${formattedDate}`;
-
-  container.innerHTML = '';
-  const slots = availabilityData[date]?.times || availabilityData[date] || [];
-  if (!slots.length) {
-    container.innerHTML = '<p>אין שעות פנויות</p>';
-    return;
-  }
-
-  slots.forEach(slot => {
-    const btn = document.createElement('button');
-    btn.textContent = slot.time;
-    btn.className = slot.available ? 'slot-btn available' : 'slot-btn unavailable';
-    btn.disabled = !slot.available;
-    btn.onclick = () => {
-      if (selectedButton) {
-        selectedButton.classList.remove('selected');
-      }
-      btn.classList.add('selected');
-      selectedButton = btn;
-
-      chosenTime = slot.time;
-      document.getElementById('date').value = chosenDate;
-      document.getElementById('time').value = chosenTime;
-
-      document.getElementById('selected-time-display').textContent = `השעה שנבחרה: ${slot.time}`;
-
-      showBookingDetails(chosenDate, chosenTime);
-
-      document.getElementById('form-container').style.display = 'block';
-      document.getElementById('response').textContent = '';
+function showDayAvailability(date){
+  chosenDate=date;
+  const c=document.getElementById('slots-container');
+  document.getElementById('selected-date-title').textContent=
+    `${formatHebrewDay(date)} - ${new Date(date).toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'})}`;
+  c.innerHTML='';
+  const slots=availabilityData[date]?.times||availabilityData[date]||[];
+  if(!slots.length){c.innerHTML='<p>אין שעות פנויות</p>';return;}
+  slots.forEach(slot=>{
+    const b=document.createElement('button');
+    b.textContent=slot.time;
+    b.className=slot.available?'slot-btn available':'slot-btn unavailable';
+    b.disabled=!slot.available;
+    b.onclick=()=>{
+      if(selectedButton)selectedButton.classList.remove('selected');
+      b.classList.add('selected');selectedButton=b;
+      chosenTime=slot.time;
+      document.getElementById('date').value=chosenDate;
+      document.getElementById('time').value=chosenTime;
+      document.getElementById('selected-time-display').textContent=`השעה שנבחרה: ${slot.time}`;
+      document.getElementById('form-container').style.display='block';
+      document.getElementById('response').textContent='';
     };
-    container.appendChild(btn);
+    c.appendChild(b);
   });
 }
-
-function createCancelButton(date, time, name, phone) {
-  const cancelBtn = document.createElement('button');
-  cancelBtn.textContent = 'בטל תור';
-  cancelBtn.style.marginTop = '10px';
-  cancelBtn.style.padding = '8px 16px';
-  cancelBtn.style.backgroundColor = '#e74c3c';
-  cancelBtn.style.color = 'white';
-  cancelBtn.style.border = 'none';
-  cancelBtn.style.borderRadius = '6px';
-  cancelBtn.style.cursor = 'pointer';
-
-  cancelBtn.onclick = () => {
-    openCancelConfirmation(date, time, name, phone);
-  };
-
-  return cancelBtn;
-}
-
-function openCancelConfirmation(date, time, name, phone) {
-  const overlay = document.getElementById('overlay');
-  const modal = document.getElementById('cancel-confirmation');
-  overlay.style.display = 'block';
-  modal.style.display = 'block';
-
-  const confirmBtn = modal.querySelector('.confirm-btn');
-  const cancelBtn = modal.querySelector('.cancel-btn');
-
-  // נקה מאזינים קיימים כדי לא ליצור כפילויות
-  confirmBtn.replaceWith(confirmBtn.cloneNode(true));
-  cancelBtn.replaceWith(cancelBtn.cloneNode(true));
-
-  const newConfirmBtn = modal.querySelector('.confirm-btn');
-  const newCancelBtn = modal.querySelector('.cancel-btn');
-
-  newConfirmBtn.onclick = async () => {
-    try {
-      const resCancel = await fetch('/cancel_appointment', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({date, time, name, phone})
-      });
-      const cancelData = await resCancel.json();
-
-      if (cancelData.message) {
-        // שנה את תוכן החלונית
-        const modal = document.getElementById('cancel-confirmation');
-        modal.innerHTML = `
-          <p>התור בוטל בהצלחה.</p>
-          <button class="close-btn">סגור</button>
-        `;
-
-        // החלף מאזין לכפתור הסגירה
-        const closeBtn = modal.querySelector('.close-btn');
-        closeBtn.onclick = () => {
-          closeCancelConfirmation();
-          // לאחר הסגירה אפשר לשחזר את תוכן החלונית המקורי, אם רוצים
-          resetCancelConfirmationContent();
-        };
-
-        // טען מחדש את הזמינות והסר טפסים
-        document.getElementById('form-container').style.display = 'none';
-        clearBookingDetailsAndForm();
-        await loadAvailability();
-      } else if (cancelData.error) {
-        alert('שגיאה בביטול התור: ' + cancelData.error);
-        closeCancelConfirmation();
-      }
-    } catch (e) {
-      alert('שגיאה בבקשת הביטול');
-      closeCancelConfirmation();
-    }
-  };
-
-
-  newCancelBtn.onclick = () => {
-    closeCancelConfirmation();
-  };
-}
-
-function closeCancelConfirmation() {
-  document.getElementById('overlay').style.display = 'none';
-  document.getElementById('cancel-confirmation').style.display = 'none';
-}
-
-async function showBookingDetails(date, time) {
-  // תחפש את הפרטים בהזמנות שהגיעו מהשרת דרך /appointments?date=...
-  const res = await fetch(`/appointments?date=${date}`);
-  if (!res.ok) {
-    document.getElementById('booking-details').style.display = 'none';
-    return;
-  }
-  const data = await res.json();
-  const appointments = data[date] || [];
-
-  // חפש הזמנה תואמת שעה
-  const appt = appointments.find(a => a.time === time);
-  if (appt) {
-    document.getElementById('selected-time').textContent = time;
-    document.getElementById('detail-name').textContent = appt.name;
-    document.getElementById('detail-phone').textContent = appt.phone;
-    document.getElementById('detail-service').textContent = appt.service;
-    document.getElementById('booking-details').style.display = 'block';
-  } else {
-    document.getElementById('booking-details').style.display = 'none';
-  }
-}
-
-document.getElementById('bookingForm').onsubmit = async e => {
+document.getElementById('bookingForm').onsubmit=async e=>{
   e.preventDefault();
-  const name = document.getElementById('name').value;
-  const phone = document.getElementById('phone').value;
-  const service = document.getElementById('service').value;
-  const date = document.getElementById('date').value;
-  const time = document.getElementById('time').value;
-
-  if (!date || !time) {
-    alert('You must select a time slot.');
-    return;
-  }
-
-  const res = await fetch('/book', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({name, phone, date, time, service})
-  });
-  const data = await res.json();
-  const responseDiv = document.getElementById('response');
-  if (data.message) {
-    responseDiv.style.color = 'green';
-    responseDiv.textContent = data.message;
-
-    // הוסף כפתור ביטול מתחת להודעה
-    const cancelBtn = createCancelButton(date, time, name, phone);
-    responseDiv.appendChild(document.createElement('br'));
-    responseDiv.appendChild(cancelBtn);
-
-    // לאחר הזמנה מוצלחת טען שוב את הזמינות (כלומר מעדכן שהשעה תפוסה)  
+  const name=document.getElementById('name').value.trim();
+  const phone=document.getElementById('phone').value.trim();
+  const date=document.getElementById('date').value;
+  const time=document.getElementById('time').value;
+  if(!date||!time){alert('You must select a time slot.');return;}
+  const res=await fetch('/book',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,phone,date,time})});
+  const data=await res.json();
+  const r=document.getElementById('response');
+  if(data.message){
+    r.style.color='green';r.textContent=data.message;
     await loadAvailability();
-
-    // הסתר את טופס ההזמנה
-    document.getElementById('form-container').style.display = 'none';
-
-    // הצג את פרטי ההזמנה החדשה מתחת
-    showBookingDetails(date, time);
-
-    // סמן את הכפתור של השעה החדשה (כמו לחיצה)
-    const buttons = document.querySelectorAll('#slots-container button.slot-btn.available');
-    buttons.forEach(b => {
-      if (b.textContent === time) {
-        if (selectedButton) selectedButton.classList.remove('selected');
-        b.classList.add('selected');
-        selectedButton = b;
-      }
-    });
-  } else {
-    responseDiv.style.color = 'red';
-    responseDiv.textContent = data.error;
+    document.getElementById('form-container').style.display='none';
+  }else{
+    r.style.color='red';r.textContent=data.error;
   }
 };
-
-function toggleBotWindow() {
-  const bot = document.getElementById('bot-window');
-  bot.style.display = bot.style.display === 'block' ? 'none' : 'block';
+function toggleBotWindow(){
+  const b=document.getElementById('bot-window');
+  b.style.display=b.style.display==='block'?'none':'block';
 }
-
-async function sendBotMessage() {
-  const input = document.getElementById('bot-user-input');
-  const message = input.value.trim();
-  if (!message) return;
-
-  const messagesDiv = document.getElementById('bot-messages');
-  messagesDiv.innerHTML += `<div><b>You:</b> ${message}</div>`;
-  input.value = '';
-  const res = await fetch('/ask', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({message})
-  });
-  const data = await res.json();
-  if (data.answer) {
-    messagesDiv.innerHTML += `<div><b>Bot:</b> ${data.answer}</div>`;
-  }
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+async function sendBotMessage(){
+  const inp=document.getElementById('bot-user-input');
+  const msg=inp.value.trim();if(!msg)return;
+  const msgs=document.getElementById('bot-messages');
+  msgs.innerHTML+=`<div><b>You:</b> ${msg}</div>`;inp.value='';
+  const res=await fetch('/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
+  const data=await res.json();
+  if(data.answer)msgs.innerHTML+=`<div><b>Bot:</b> ${data.answer}</div>`;
+  msgs.scrollTop=msgs.scrollHeight;
 }
-
-function resizeBot() {
-  const bot = document.getElementById('bot-window');
-  if (bot.style.width === '520px') {
-    bot.style.width = '320px';
-    bot.style.height = '400px';
-  } else {
-    bot.style.width = '520px';
-    bot.style.height = '520px';
-  }
+function resizeBot(){
+  const b=document.getElementById('bot-window');
+  if(b.style.width==='520px'){b.style.width='320px';b.style.height='400px';}
+  else{b.style.width='520px';b.style.height='520px';}
 }
-
 loadAvailability();
 </script>
 
