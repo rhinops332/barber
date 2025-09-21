@@ -409,6 +409,9 @@ def delete_service(service_id):
 # --- ניקוי המסד ומחיקת מידע מיותר ---
 
 def disable_past_hours():
+    """
+    מוחקת מהמסד את כל השעות שכבר עברו – גם מהשגרה השבועית וגם מהשינויים החד־פעמיים.
+    """
     tz = ZoneInfo("Asia/Jerusalem")
     now = datetime.now(tz)
     today_str = now.strftime("%Y-%m-%d")
@@ -417,78 +420,33 @@ def disable_past_hours():
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # כל העסקים
+    # שליפת כל העסקים
     cur.execute("SELECT id FROM businesses")
     businesses = [row[0] for row in cur.fetchall()]
 
     for business_id in businesses:
-        # השגרה
-        cur.execute(
-            "SELECT day, start_time FROM weekly_schedule WHERE business_id=%s",
-            (business_id,),
-        )
-        weekly_rows = cur.fetchall()
-        weekly_schedule = {str(i): [] for i in range(7)}
-        for day, start_time in weekly_rows:
-            if start_time:
-                weekly_schedule[str(day)].append(start_time.strftime("%H:%M"))
+        weekday = now.weekday()
 
-        # השינויים
-        cur.execute(
-            "SELECT date, start_time, type FROM overrides WHERE business_id=%s",
-            (business_id,),
-        )
-        override_rows = cur.fetchall()
-        overrides = {}
-        for date_val, start_time_val, typ in override_rows:
-            if not date_val or not start_time_val:
-                continue
-            date_s = date_val.strftime("%Y-%m-%d")
-            time_s = start_time_val.strftime("%H:%M")
-            overrides.setdefault(date_s, {
-                "booked": [], "add": [], "remove": [], "edit_from": [], "edit_to": []
-            })
-            overrides[date_s].setdefault(typ, []).append(time_s)
+        # מחיקה משגרה שבועית (weekly_schedule) של שעות היום שעברו
+        cur.execute("""
+            DELETE FROM weekly_schedule
+            WHERE business_id=%s
+              AND day=%s
+              AND start_time < %s
+        """, (business_id, weekday, current_time_str))
 
-        weekday = str(now.weekday())
-        today_schedule = weekly_schedule.get(weekday, [])
-
-        today_override = overrides.get(today_str, {
-            "booked": [], "add": [], "remove": [], "edit_from": [], "edit_to": []
-        })
-
-        # כל השעות שיש להיום – כולל שגרה, תוספות ועריכות
-        all_today_times = (
-            set(today_schedule)
-            | set(today_override.get("add", []))
-            | set(today_override.get("edit_to", []))
-        )
-
-        # מסמנים כשעה שעברה
-        for t in all_today_times:
-            if t < current_time_str and t not in today_override["remove"]:
-                today_override["remove"].append(t)
-
-        overrides[today_str] = today_override
-
-        # מחיקה והכנסה מחדש למסד
-        cur.execute(
-            "DELETE FROM overrides WHERE business_id=%s AND date=%s",
-            (business_id, today_str),
-        )
-        for key in ["booked", "add", "remove", "edit_from", "edit_to"]:
-            for time_val in today_override.get(key, []):
-                cur.execute(
-                    "INSERT INTO overrides (business_id, date, start_time, end_time, type) "
-                    "VALUES (%s, %s, %s, %s, %s)",
-                    (business_id, today_str, time_val, time_val, key),
-                )
+        # מחיקה מהשינויים החד־פעמיים (overrides) של שעות היום שעברו
+        cur.execute("""
+            DELETE FROM overrides
+            WHERE business_id=%s
+              AND date=%s
+              AND start_time < %s
+        """, (business_id, today_str, current_time_str))
 
     conn.commit()
     cur.close()
     conn.close()
-    print(f"[{now:%H:%M:%S}] Past hours disabled for all businesses.")
-
+    print(f"[{now:%H:%M:%S}] Past hours deleted for all businesses.")
     
 def clear_old_info():
     tz = ZoneInfo("Asia/Jerusalem")
