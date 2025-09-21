@@ -347,6 +347,30 @@ def save_services(service_id, data):
     conn.close()
 
 
+
+@app.route("/save_service", methods=["POST"])
+def save_service():
+    chosen_id = request.form.get("service")
+
+    if not chosen_id:
+        return redirect(url_for("select_service"))
+
+    business_id = session.get("business_id")
+    services = load_services(business_id)
+    chosen_service = next((s for s in services if str(s["id"]) == chosen_id), None)
+
+    if not chosen_service:
+        return redirect(url_for("select_service"))
+
+    # שמירה ב-session – שם השירות ומשך השירות
+    session["chosen_service_name"] = chosen_service["name"]
+    session["chosen_service_time"] = chosen_service["duration_minutes"]
+    session["chosen_service_price"] = chosen_service["price"]
+
+    return redirect(url_for("orders"))
+
+
+
 # --- פונקציות לסוגי שירותים ---
 
 def add_service(business_id, data):
@@ -647,7 +671,7 @@ def generate_week_slots(business_name, with_sources=False):
             # בדיקה בסיסית אם השעה זמינה
             if t in edited_to_times:
                 available = True
-            elif t in edited_from_times or disabled_day or t in removed or t in booked_times:
+            elif t in disabled_day or t in removed or t in booked_times:
                 continue
             else:
                 available = True
@@ -1121,27 +1145,6 @@ def select_service():
     business_id = session.get("business_id")
     services = load_services(business_id) 
     return render_template("select_service.html", services=services)
-
-@app.route("/save_service", methods=["POST"])
-def save_service():
-    chosen_id = request.form.get("service")
-
-    if not chosen_id:
-        return redirect(url_for("select_service"))
-
-    business_id = session.get("business_id")
-    services = load_services(business_id)
-    chosen_service = next((s for s in services if str(s["id"]) == chosen_id), None)
-
-    if not chosen_service:
-        return redirect(url_for("select_service"))
-
-    # שמירה ב-session – שם השירות ומשך השירות
-    session["chosen_service_name"] = chosen_service["name"]
-    session["chosen_service_time"] = chosen_service["duration_minutes"]
-    session["chosen_service_price"] = chosen_service["price"]
-
-    return redirect(url_for("orders"))
 
 
 # --- ניהול שירותים (CRUD) ---
