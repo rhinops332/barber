@@ -204,12 +204,12 @@
 
 <div id="form-container">
   <form id="bookingForm" method="POST" action="{{ url_for('book_appointment') }}">
-    <input type="text" name="name" id="name" placeholder="Full Name" required />
-    <input type="text" name="phone" id="phone" placeholder="Phone Number" required />
-    <input type="hidden" name="date" id="date" />
-    <input type="hidden" name="time" id="time" />
+    <input type="text" id="name" name="name" placeholder="Full Name" required />
+    <input type="text" id="phone" name="phone" placeholder="Phone Number" required />
+    <input type="hidden" id="date" name="date" />
+    <input type="hidden" id="time" name="time" />
     <button type="submit">Book Appointment</button>
-  </form>
+</form>
 </div>
 
 
