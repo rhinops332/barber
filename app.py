@@ -1548,27 +1548,30 @@ def bot_knowledge():
 
 @app.route("/book", methods=["POST"])
 def book_appointment():
-    data = request.get_json(silent=True) or {}
-    name = data.get("name", "").strip()
-    phone = data.get("phone", "").strip()
-    date = data.get("date", "").strip()
-    time = data.get("time", "").strip()
+    # קריאה מהטופס במקום מ-JSON
+    name = request.form.get("name", "").strip()
+    phone = request.form.get("phone", "").strip()
+    date = request.form.get("date", "").strip()
+    time = request.form.get("time", "").strip()
 
     service = session.get("chosen_service_name")
     price = session.get("chosen_service_price")
 
+    if not all([name, phone, date, time, service, price]):
+        return redirect(url_for("select_service", error="חסרים פרטים להזמנה"))
+
     business_name = session.get('business_name')
-    if not all([name, phone, date, time, service, price, business_name]):
-        return jsonify({"error": "חסרים פרטים להזמנה"}), 400
+    if not business_name:
+        return redirect("/login")
 
     if not is_slot_available(business_name, date, time):
-        return jsonify({"error": "השעה שנבחרה לא זמינה"}), 400
+        return redirect(url_for("select_service", error="השעה שנבחרה לא זמינה"))
 
     appointments = load_appointments(business_name)
     date_appointments = appointments.get(date, [])
 
     if any(a["time"] == time for a in date_appointments):
-        return jsonify({"error": "השעה כבר תפוסה"}), 400
+        return redirect(url_for("select_service", error="השעה כבר תפוסה"))
 
     # הוספת התור
     appointment = {
@@ -1603,16 +1606,12 @@ def book_appointment():
     except Exception as e:
         print("Error sending email:", e)
 
-    # שמירת ההודעה
-    message = f"הזמנתך ל־{service} בתאריך {date} בשעה {time} בוצעה בהצלחה."
+    # שמירת הודעה ב-session להצגה בדף הבחירה
+    session["success_message"] = f"הזמנתך ל־{service} בתאריך {date} בשעה {time} בוצעה בהצלחה."
     session["can_cancel"] = True
     session["cancel_info"] = {"date": date, "time": time, "service": service}
 
-    # מחזיר JSON עם הודעה וכתובת redirect
-    return jsonify({
-        "message": message,
-        "redirect": url_for("select_service")
-    })
+    return redirect(url_for("select_service"))
 
 
 
