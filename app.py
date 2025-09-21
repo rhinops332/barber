@@ -1557,32 +1557,18 @@ def book_appointment():
     service = session.get("chosen_service_name")
     price = session.get("chosen_service_price")
 
-
-    print("---- DEBUG BOOKING ----")
-    print("name:", repr(name))
-    print("phone:", repr(phone))
-    print("date:", repr(date))
-    print("time:", repr(time))
-    print("service:", repr(service))
-    print("price:", repr(price))
-    print("----------------------")
-
-
-    if not all([name, phone, date, time, service, price]):
-        return redirect(url_for("select_service", error="חסרים פרטים להזמנה"))
-
     business_name = session.get('business_name')
-    if not business_name:
-        return redirect("/login")
+    if not all([name, phone, date, time, service, price, business_name]):
+        return jsonify({"error": "חסרים פרטים להזמנה"}), 400
 
     if not is_slot_available(business_name, date, time):
-        return redirect(url_for("select_service", error="השעה שנבחרה לא זמינה"))
+        return jsonify({"error": "השעה שנבחרה לא זמינה"}), 400
 
     appointments = load_appointments(business_name)
     date_appointments = appointments.get(date, [])
 
     if any(a["time"] == time for a in date_appointments):
-        return redirect(url_for("select_service", error="השעה כבר תפוסה"))
+        return jsonify({"error": "השעה כבר תפוסה"}), 400
 
     # הוספת התור
     appointment = {
@@ -1617,12 +1603,16 @@ def book_appointment():
     except Exception as e:
         print("Error sending email:", e)
 
-    # שמירת הודעה ב-session להצגה בדף הבחירה
-    session["success_message"] = f"הזמנתך ל־{service} בתאריך {date} בשעה {time} בוצעה בהצלחה."
+    # שמירת ההודעה
+    message = f"הזמנתך ל־{service} בתאריך {date} בשעה {time} בוצעה בהצלחה."
     session["can_cancel"] = True
     session["cancel_info"] = {"date": date, "time": time, "service": service}
 
-    return redirect(url_for("select_service"))
+    # מחזיר JSON עם הודעה וכתובת redirect
+    return jsonify({
+        "message": message,
+        "redirect": url_for("select_service")
+    })
 
 
 
