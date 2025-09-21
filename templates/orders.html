@@ -209,9 +209,8 @@
     <input type="hidden" id="date" name="date" />
     <input type="hidden" id="time" name="time" />
     <button type="submit">Book Appointment</button>
-</form>
+  </form>
 </div>
-
 
 <button id="botBtn" onclick="toggleBotWindow()">Need Help? Ask Our AI Bot</button>
 
@@ -303,24 +302,6 @@ function showDayAvailability(date){
     c.appendChild(b);
   });
 }
-document.getElementById('bookingForm').onsubmit=async e=>{
-  e.preventDefault();
-  const name=document.getElementById('name').value.trim();
-  const phone=document.getElementById('phone').value.trim();
-  const date=document.getElementById('date').value;
-  const time=document.getElementById('time').value;
-  if(!date||!time){alert('You must select a time slot.');return;}
-  const res=await fetch('/book',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,phone,date,time})});
-  const data=await res.json();
-  const r=document.getElementById('response');
-  if(data.message){
-    r.style.color='green';r.textContent=data.message;
-    await loadAvailability();
-    document.getElementById('form-container').style.display='none';
-  }else{
-    r.style.color='red';r.textContent=data.error;
-  }
-};
 function toggleBotWindow(){
   const b=document.getElementById('bot-window');
   b.style.display=b.style.display==='block'?'none':'block';
