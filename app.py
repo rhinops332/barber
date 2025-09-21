@@ -1557,6 +1557,17 @@ def book_appointment():
     service = session.get("chosen_service_name")
     price = session.get("chosen_service_price")
 
+
+    print("---- DEBUG BOOKING ----")
+    print("name:", repr(name))
+    print("phone:", repr(phone))
+    print("date:", repr(date))
+    print("time:", repr(time))
+    print("service:", repr(service))
+    print("price:", repr(price))
+    print("----------------------")
+
+
     if not all([name, phone, date, time, service, price]):
         return redirect(url_for("select_service", error="חסרים פרטים להזמנה"))
 
