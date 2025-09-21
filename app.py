@@ -412,7 +412,7 @@ def disable_past_hours():
     tz = ZoneInfo("Asia/Jerusalem")
     now = datetime.now(tz)
     today_str = now.strftime("%Y-%m-%d")
-    current_time_str = now.strftime("%H:%M")
+    now_time = now.time()
 
     conn = get_db_connection()
     cur = conn.cursor()
@@ -422,16 +422,22 @@ def disable_past_hours():
     businesses = [row[0] for row in cur.fetchall()]
 
     for business_id in businesses:
-        # טוען את השגרה השבועית
-        cur.execute("SELECT day, start_time FROM weekly_schedule WHERE business_id=%s", (business_id,))
+        # --- שגרה שבועית ---
+        cur.execute(
+            "SELECT day, start_time FROM weekly_schedule WHERE business_id=%s",
+            (business_id,)
+        )
         weekly_rows = cur.fetchall()
         weekly_schedule = {str(i): [] for i in range(7)}
         for day, start_time in weekly_rows:
             if start_time:
                 weekly_schedule[str(day)].append(start_time.strftime("%H:%M"))
 
-        # טוען את השינויים הקיימים
-        cur.execute("SELECT date, start_time, type FROM overrides WHERE business_id=%s", (business_id,))
+        # --- שינויים (overrides) ---
+        cur.execute(
+            "SELECT date, start_time, type FROM overrides WHERE business_id=%s",
+            (business_id,)
+        )
         override_rows = cur.fetchall()
         overrides = {}
         for date_val, start_time_val, typ in override_rows:
@@ -439,33 +445,50 @@ def disable_past_hours():
                 continue
             date_s = date_val.strftime("%Y-%m-%d")
             time_s = start_time_val.strftime("%H:%M")
-            if date_s not in overrides:
-                overrides[date_s] = {"booked": [], "add": [], "remove": [], "edit_from": [], "edit_to": []}
+            overrides.setdefault(date_s, {
+                "booked": [], "add": [], "remove": [], "edit_from": [], "edit_to": []
+            })
             overrides[date_s].setdefault(typ, []).append(time_s)
 
-        # קביעת היום הנוכחי
-        weekday = str(datetime.now(tz).weekday())
+        weekday = str(now.weekday())
         today_schedule = weekly_schedule.get(weekday, [])
 
-        # מיזוג כל השעות להיום
-        today_override = overrides.get(today_str, {"booked": [], "add": [], "remove": [], "edit_from": [], "edit_to": []})
-        all_today_times = set(today_schedule + today_override.get("add", []) + today_override.get("edit_to", []))
+        today_override = overrides.get(today_str, {
+            "booked": [], "add": [], "remove": [], "edit_from": [], "edit_to": []
+        })
 
-        # מוסיף ל-remove כל שעה שעברה
+        # מיזוג כל השעות שצריך לבדוק – כולל add/edit_to/edit_from
+        all_today_times = set(
+            today_schedule
+            + today_override.get("add", [])
+            + today_override.get("edit_to", [])
+        )
+
+        # השבת שעות שעברו ל־remove
         for t in all_today_times:
-            if t < current_time_str and t not in today_override["remove"]:
+            try:
+                t_time = datetime.strptime(t, "%H:%M").time()
+            except ValueError:
+                continue
+            if t_time < now_time and t not in today_override["remove"]:
                 today_override["remove"].append(t)
 
         overrides[today_str] = today_override
 
-        # מוחק את כל השורות הקיימות להיום
-        cur.execute("DELETE FROM overrides WHERE business_id=%s AND date=%s", (business_id, today_str))
+        # מחיקת נתוני overrides קיימים להיום
+        cur.execute(
+            "DELETE FROM overrides WHERE business_id=%s AND date=%s",
+            (business_id, today_str)
+        )
 
-        # מכניס את כל השינויים המעודכנים להיום
+        # החזרת הנתונים המעודכנים לטבלה
         for key in ["booked", "add", "remove", "edit_from", "edit_to"]:
             for time_val in today_override.get(key, []):
                 cur.execute(
-                    "INSERT INTO overrides (business_id, date, start_time, end_time, type) VALUES (%s, %s, %s, %s, %s)",
+                    """
+                    INSERT INTO overrides (business_id, date, start_time, end_time, type)
+                    VALUES (%s, %s, %s, %s, %s)
+                    """,
                     (business_id, today_str, time_val, time_val, key)
                 )
 
