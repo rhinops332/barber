@@ -1118,7 +1118,10 @@ def services():
 def select_service():
     business_id = session.get("business_id")
     services = load_services(business_id) 
-    return render_template("select_service.html", services=services)
+
+    booking = session.get("booking")  # נוסיף את ההזמנה אם קיימת
+
+    return render_template("select_service.html", services=services, booking=booking)
 
 
 # --- ניהול שירותים (CRUD) ---
