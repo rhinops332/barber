@@ -1,91 +1,86 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="he">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <title>בחירת שירות</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             text-align: center;
-            padding: 40px;
             direction: rtl;
+            background-color: #f8f8f8;
         }
-        h1 { color: #333; }
-        form { display: inline-block; margin-top: 30px; }
-        select, button {
-            font-size: 1.1rem;
-            padding: 10px 14px;
-            margin: 8px;
-            border-radius: 8px;
+        h1 {
+            color: #333;
         }
-        button {
-            background: #4CAF50;
-            color: white;
-            border: none;
+        .services {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        .service {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            padding: 20px;
+            width: 180px;
             cursor: pointer;
+            transition: 0.3s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
-        button:hover { background: #45a049; }
-        .message {
-            background-color: #dff0d8;
-            color: #3c763d;
+        .service:hover {
+            background: #f0f0f0;
+            transform: scale(1.05);
+        }
+        .error {
+            color: red;
+            margin: 15px 0;
+        }
+        .success {
+            color: green;
+            margin: 15px 0;
+        }
+        .back {
+            margin-top: 20px;
+            display: inline-block;
             padding: 10px 20px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            display: inline-block;
+            border-radius: 10px;
+            background: #ddd;
+            text-decoration: none;
+            color: black;
         }
-        .cancel-btn {
-            display: inline-block;
-            margin-top: 10px;
-            background: #f44336;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
+        .back:hover {
+            background: #bbb;
         }
-        .cancel-btn:hover { background: #d32f2f; }
     </style>
 </head>
 <body>
     <h1>בחר שירות</h1>
 
-    <!-- הודעת הצלחה מה־session -->
-    {% if session.get("success_message") %}
-      <div class="message">{{ session.get("success_message") }}</div>
-      {% if session.get("can_cancel") %}
-        <form action="{{ url_for('cancel_booking') }}" method="post">
-            <button type="submit" class="cancel-btn">בטל תור</button>
-        </form>
-      {% endif %}
-    {% endif %}
-
-    <!-- הודעות פלאש (לשגיאות או מידע כללי) -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="message">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-
-    <!-- הודעת שגיאה ישירה -->
     {% if error %}
-      <div class="message" style="background-color:#f2dede; color:#a94442;">
-        {{ error }}
-      </div>
+        <p class="error">{{ error }}</p>
     {% endif %}
 
-    <form method="POST" action="{{ url_for('save_service') }}">
-        <select id="service" name="service" required>
-            <option value="">בחר שירות</option>
-            {% for s in services %}
-                <option value="{{ s['id'] }}">
-                    {{ s['name'] }}{% if s['duration_minutes'] %} ({{ s['duration_minutes'] }} דק׳){% endif %}
-                </option>
-            {% endfor %}
-        </select>
-        <br>
-        <button type="submit">המשך להזמנת תור</button>
-    </form>
+    {% if success_message %}
+        <p class="success">{{ success_message }}</p>
+    {% endif %}
+
+    <div class="services">
+        {% for service in services %}
+            <form action="/book" method="post">
+                <input type="hidden" name="service" value="{{ service.name }}">
+                <div class="service" onclick="this.parentElement.submit()">
+                    <h3>{{ service.name }}</h3>
+                    {% if service.price %}
+                        <p>{{ service.price }} ₪</p>
+                    {% endif %}
+                </div>
+            </form>
+        {% endfor %}
+    </div>
+
+    <a href="/" class="back">חזור לדף הבית</a>
 </body>
 </html>
