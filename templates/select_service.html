@@ -4,7 +4,12 @@
     <meta charset="utf-8">
     <title>בחירת שירות</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; padding: 40px; direction: rtl; }
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 40px;
+            direction: rtl;
+        }
         h1 { color: #333; }
         form { display: inline-block; margin-top: 30px; }
         select, button {
@@ -20,22 +25,54 @@
             cursor: pointer;
         }
         button:hover { background: #45a049; }
-        .message { 
-            background-color: #dff0d8; 
-            color: #3c763d; 
-            padding: 10px 20px; 
-            border-radius: 6px; 
-            margin-bottom: 20px; 
+        .message {
+            background-color: #dff0d8;
+            color: #3c763d;
+            padding: 10px 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
             display: inline-block;
         }
+        .cancel-btn {
+            display: inline-block;
+            margin-top: 10px;
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .cancel-btn:hover { background: #d32f2f; }
     </style>
 </head>
 <body>
     <h1>בחר שירות</h1>
 
-    <!-- הצגת הודעות אם יש -->
+    <!-- הודעת הצלחה מה־session -->
+    {% if session.get("success_message") %}
+      <div class="message">{{ session.get("success_message") }}</div>
+      {% if session.get("can_cancel") %}
+        <form action="{{ url_for('cancel_booking') }}" method="post">
+            <button type="submit" class="cancel-btn">בטל תור</button>
+        </form>
+      {% endif %}
+    {% endif %}
+
+    <!-- הודעות פלאש (לשגיאות או מידע כללי) -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="message">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- הודעת שגיאה ישירה -->
     {% if error %}
-        <div class="message" style="background-color:#f2dede; color:#a94442;">{{ error }}</div>
+      <div class="message" style="background-color:#f2dede; color:#a94442;">
+        {{ error }}
+      </div>
     {% endif %}
 
     <form method="POST" action="{{ url_for('save_service') }}">
