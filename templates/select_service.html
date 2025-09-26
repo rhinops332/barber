@@ -33,10 +33,6 @@
             margin-bottom: 20px;
             display: inline-block;
         }
-        .error-message {
-            background-color: #f2dede;
-            color: #a94442;
-        }
         .cancel-btn {
             display: inline-block;
             margin-top: 10px;
@@ -53,19 +49,30 @@
 <body>
     <h1>בחר שירות</h1>
 
-    <!-- הודעת הצלחה עם אפשרות ביטול -->
-    {% if success_message %}
-      <div class="message">{{ success_message }}</div>
-      {% if can_cancel %}
+    <!-- הודעת הצלחה מה־session -->
+    {% if session.get("success_message") %}
+      <div class="message">{{ session.get("success_message") }}</div>
+      {% if session.get("can_cancel") %}
         <form action="{{ url_for('cancel_booking') }}" method="post">
             <button type="submit" class="cancel-btn">בטל תור</button>
         </form>
       {% endif %}
     {% endif %}
 
-    <!-- הודעת שגיאה (אם יש) -->
+    <!-- הודעות פלאש (לשגיאות או מידע כללי) -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="message">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- הודעת שגיאה ישירה -->
     {% if error %}
-      <div class="message error-message">{{ error }}</div>
+      <div class="message" style="background-color:#f2dede; color:#a94442;">
+        {{ error }}
+      </div>
     {% endif %}
 
     <form method="POST" action="{{ url_for('save_service') }}">
