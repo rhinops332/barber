@@ -1120,12 +1120,11 @@ def select_service():
     if not business_name:
         return redirect("/login")
 
-    services = load_services(business_name)
+    services = load_services(business_name)  # טוען את רשימת השירותים
 
-    # נמשוך את ההודעה מה־session (וננקה אותה)
+    # הודעות הצלחה/שגיאה
     success_message = session.pop("success_message", None)
     can_cancel = session.get("can_cancel")
-
     error = request.args.get("error")
 
     return render_template(
@@ -1135,6 +1134,7 @@ def select_service():
         success_message=success_message,
         can_cancel=can_cancel
     )
+
 
 
 
