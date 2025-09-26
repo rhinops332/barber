@@ -1597,10 +1597,10 @@ def book_appointment():
     save_overrides(business_name, overrides)
 
     # שליחת מייל
-    try:
-        send_email(name, phone, date, time, service, price)
-    except Exception as e:
-        print("Error sending email:", e)
+    #try:
+       # send_email(name, phone, date, time, service, price)
+  #  except Exception as e:
+    #    print("Error sending email:", e)
 
     # שמירת הודעה ב-session להצגה בדף הבחירה
     session["success_message"] = f"הזמנתך ל־{service} בתאריך {date} בשעה {time} בוצעה בהצלחה."
