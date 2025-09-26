@@ -1611,53 +1611,44 @@ def book_appointment():
 
 
 
-@app.route('/cancel_appointment', methods=['POST'])
-def cancel_appointment():
-    data = request.get_json()
-    date = data.get('date')
-    time = data.get('time')
-    name = data.get('name')
-    phone = data.get('phone')
-    
-    try:
-        appointments = load_business_json(session.get('business_name'), "appointments.json")
-    except FileNotFoundError:
-        appointments = {}
+@app.route("/cancel_booking", methods=["POST"])
+def cancel_booking():
+    business_name = session.get("business_name")
+    if not business_name:
+        return redirect("/login")
 
-    day_appointments = appointments.get(date, [])
+    booking = session.get("booking")
+    if not booking:
+        # אין הזמנה לבטל
+        return redirect(url_for("select_service", error="אין תור לביטול"))
 
-    new_day_appointments = [
-        appt for appt in day_appointments
-        if not (appt['time'] == time and appt['name'] == name and appt['phone'] == phone)
-    ]
+    date = booking.get("date")
+    time = booking.get("time")
 
-    if len(new_day_appointments) == len(day_appointments):
-        return jsonify({'error': 'Appointment not found'}), 404
+    # טען את כל הפגישות ושינויים חד-פעמיים
+    appointments = load_appointments(business_name)
+    overrides = load_overrides(business_name)
 
-    appointments[date] = new_day_appointments
+    # הסר את התור מהפגישות
+    if date in appointments:
+        appointments[date] = [a for a in appointments[date] if a["time"] != time]
+        if not appointments[date]:
+            del appointments[date]
+        save_appointments(business_name, appointments)
 
-    save_business_json(session.get('business_name'), "appointments.json", appointments)
+    # הסר מה־overrides (booked) אם קיים
+    if date in overrides and "booked" in overrides[date]:
+        if time in overrides[date]["booked"]:
+            overrides[date]["booked"].remove(time)
+            save_overrides(business_name, overrides)
 
+    # מחק את ההזמנה מה־session
+    session.pop("booking", None)
+    session.pop("can_cancel", None)
 
-    try:
-        with open(OVERRIDES_FILE, 'r', encoding='utf-8') as f:
-            overrides = json.load(f)
-    except FileNotFoundError:
-        overrides = {}
-
-    if date not in overrides:
-        overrides[date] = {"add": [], "remove": [], "edit": []}
-
-    if time in overrides[date].get("remove", []):
-        overrides[date]["remove"].remove(time)
-
-    if time not in overrides[date].get("add", []):
-        overrides[date]["add"].append(time)
-
-    with open(OVERRIDES_FILE, 'w', encoding='utf-8') as f:
-        json.dump(overrides, f, ensure_ascii=False, indent=2)
-
-    return jsonify({'message': f'Appointment on {date} at {time} canceled successfully.'})
+    # הפנה חזרה ל־select_service עם הודעת הצלחה
+    session["success_message"] = f"התור בתאריך {date} בשעה {time} בוטל בהצלחה."
+    return redirect(url_for("select_service"))
 
 
 # --- עיצוב דף ההזמנות ---
