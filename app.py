@@ -1116,12 +1116,26 @@ def services():
 
 @app.route("/select_service")
 def select_service():
-    business_id = session.get("business_id")
-    services = load_services(business_id) 
+    business_name = session.get('business_name')
+    if not business_name:
+        return redirect("/login")
 
-    booking = session.get("booking")  # נוסיף את ההזמנה אם קיימת
+    services = load_services(business_name)
 
-    return render_template("select_service.html", services=services, booking=booking)
+    # נמשוך את ההודעה מה־session (וננקה אותה)
+    success_message = session.pop("success_message", None)
+    can_cancel = session.get("can_cancel")
+
+    error = request.args.get("error")
+
+    return render_template(
+        "select_service.html",
+        services=services,
+        error=error,
+        success_message=success_message,
+        can_cancel=can_cancel
+    )
+
 
 
 # --- ניהול שירותים (CRUD) ---
