@@ -1,103 +1,94 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="he">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <title>בחירת שירות</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 40px;
             direction: rtl;
+            text-align: center;
+            background: #f9f9f9;
         }
-        h1 { color: #333; }
-        form { display: inline-block; margin-top: 30px; }
-        select, button {
-            font-size: 1.1rem;
-            padding: 10px 14px;
-            margin: 8px;
+        .container {
+            max-width: 600px;
+            margin: 30px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 { margin-bottom: 20px; }
+        .service-option {
+            margin: 10px 0;
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .alert {
+            margin: 15px 0;
+            padding: 10px;
             border-radius: 8px;
         }
-        button {
-            background: #4CAF50;
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .btn-danger {
+            background: #dc3545;
             color: white;
-            border: none;
-            cursor: pointer;
-        }
-        button:hover { background: #45a049; }
-        .message {
-            background-color: #dff0d8;
-            color: #3c763d;
-            padding: 10px 20px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            display: inline-block;
-        }
-        .error-message {
-            background-color: #f2dede;
-            color: #a94442;
-        }
-        .cancel-btn {
-            display: inline-block;
-            margin-top: 10px;
-            background: #f44336;
-            color: white;
-            border: none;
             padding: 8px 16px;
-            border-radius: 6px;
+            border: none;
+            border-radius: 8px;
             cursor: pointer;
         }
-        .cancel-btn:hover { background: #d32f2f; }
+        .btn-danger:hover {
+            background: #c82333;
+        }
     </style>
 </head>
 <body>
-    <h1>בחר שירות</h1>
+    <div class="container">
+        <h1>בחר שירות</h1>
 
-    <!-- הודעת הצלחה מה-session (או שנשלחה מה־cancel) -->
-    {% if session.get("success_message") %}
-      <div class="message">{{ session.get("success_message") }}</div>
-      {# אם רצית להציג גם כפתור ביטול מתוך session.can_cancel:#}
-      {% if session.get("can_cancel") %}
-        <form action="{{ url_for('cancel_booking') }}" method="post" style="margin-top:10px;">
-            <button type="submit" class="cancel-btn">בטל תור</button>
-        </form>
-      {% endif %}
-    {% endif %}
+        <!-- הודעת הצלחה + ביטול -->
+        {% if success_message %}
+          <div class="alert alert-success">
+            <p>{{ success_message }}</p>
+            {% if can_cancel and cancel_info %}
+              <form method="POST" action="{{ url_for('cancel_appointment') }}">
+                <input type="hidden" name="date" value="{{ cancel_info.date }}">
+                <input type="hidden" name="time" value="{{ cancel_info.time }}">
+                <button type="submit" class="btn-danger">בטל הזמנה</button>
+              </form>
+            {% endif %}
+          </div>
+        {% endif %}
 
-    <!-- אם משתמש שומר את ההזמנה תחת booking -->
-    {% if booking %}
-      <div class="message">
-        הזמנתך לשירות "{{ booking.service }}" בתאריך {{ booking.date }} בשעה {{ booking.time }} נקבעה.
-      </div>
-      <form action="{{ url_for('cancel_booking') }}" method="post">
-          <button type="submit" class="cancel-btn">בטל תור</button>
-      </form>
-    {% endif %}
+        <!-- הודעת שגיאה -->
+        {% if error %}
+          <div class="alert alert-danger">
+            <p>{{ error }}</p>
+          </div>
+        {% endif %}
 
-    <!-- הודעות פלאש ושגיאות -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="message {{ 'error-message' if category!='success' else '' }}">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-
-    {% if error %}
-      <div class="message error-message">{{ error }}</div>
-    {% endif %}
-
-    <form method="POST" action="{{ url_for('save_service') }}">
-        <select id="service" name="service" required>
-            <option value="">בחר שירות</option>
-            {% for s in services %}
-                <option value="{{ s['id'] }}">
-                    {{ s['name'] }}{% if s.get('duration_minutes') %} ({{ s['duration_minutes'] }} דק׳){% endif %}
-                </option>
+        <!-- רשימת שירותים -->
+        <form method="POST" action="{{ url_for('choose_service') }}">
+            {% for service in services %}
+              <div class="service-option">
+                <label>
+                  <input type="radio" name="service" value="{{ service.name }}|{{ service.price }}" required>
+                  {{ service.name }} - {{ service.price }}₪
+                </label>
+              </div>
             {% endfor %}
-        </select>
-        <br>
-        <button type="submit">המשך להזמנת תור</button>
-    </form>
+            <button type="submit">המשך</button>
+        </form>
+    </div>
 </body>
 </html>
