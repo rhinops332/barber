@@ -1539,7 +1539,6 @@ def bot_knowledge():
 
 @app.route("/book", methods=["POST"])
 def book_appointment():
-    # קריאה מהטופס במקום מ-JSON
     name = request.form.get("name", "").strip()
     phone = request.form.get("phone", "").strip()
     date = request.form.get("date", "").strip()
@@ -1564,7 +1563,6 @@ def book_appointment():
     if any(a["time"] == time for a in date_appointments):
         return redirect(url_for("select_service", error="השעה כבר תפוסה"))
 
-    # הוספת התור
     appointment = {
         "name": name,
         "phone": phone,
@@ -1586,27 +1584,30 @@ def book_appointment():
         overrides[date]["booked"].append(time)
     if time in overrides[date]["add"]:
         overrides[date]["add"].remove(time)
-    if time not in overrides[date]["remove"]:
-        overrides[date]["remove"].append(time)
+    if time in overrides[date]["remove"]:
+        overrides[date]["remove"].remove(time)
 
     save_overrides(business_name, overrides)
 
-    # שליחת מייל
-    #try:
-       # send_email(name, phone, date, time, service, price)
-  #  except Exception as e:
-    #    print("Error sending email:", e)
+    try:
+        send_email(name, phone, date, time, service, price)
+    except Exception as e:
+        print("Error sending email:", e)
 
-    # שמירת הודעה ב-session להצגה בדף הבחירה
     session["success_message"] = f"הזמנתך ל־{service} בתאריך {date} בשעה {time} בוצעה בהצלחה."
     session["can_cancel"] = True
-    session["cancel_info"] = {"date": date, "time": time, "service": service}
+    session["cancel_info"] = {
+        "name": name,
+        "phone": phone,
+        "date": date,
+        "time": time,
+        "service": service
+    }
 
     return redirect(url_for("select_service"))
 
 
-
-# cancel_booking route
+# --- ביטול תור ---
 @app.route("/cancel_booking", methods=["POST"])
 def cancel_booking():
     business_name = session.get("business_name")
