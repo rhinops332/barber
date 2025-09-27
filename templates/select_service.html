@@ -4,31 +4,60 @@
     <meta charset="utf-8">
     <title>בחירת שירות</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; padding: 40px; direction: rtl; }
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 40px;
+            direction: rtl;
+        }
         h1 { color: #333; }
         form { display: inline-block; margin-top: 30px; }
-        select, button { font-size: 1.1rem; padding: 10px 14px; margin: 8px; border-radius: 8px; }
-        button { background: #4CAF50; color: white; border: none; cursor: pointer; }
+        select, button {
+            font-size: 1.1rem;
+            padding: 10px 14px;
+            margin: 8px;
+            border-radius: 8px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
         button:hover { background: #45a049; }
-        .message { background-color: #dff0d8; color: #3c763d; padding: 10px 20px; border-radius: 6px; margin-bottom: 20px; display: inline-block; }
-        .cancel-btn { display: inline-block; margin-top: 10px; background: #f44336; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+        .message {
+            background-color: #dff0d8;
+            color: #3c763d;
+            padding: 10px 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+        .cancel-btn {
+            display: inline-block;
+            margin-top: 10px;
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
         .cancel-btn:hover { background: #d32f2f; }
     </style>
 </head>
 <body>
     <h1>בחר שירות</h1>
 
-    <!-- הודעת הצלחה -->
     {% if success_message %}
-      <div class="message">{{ success_message }}</div>
-      {% if can_cancel %}
-        <form action="{{ url_for('cancel_booking') }}" method="post">
-            <button type="submit" class="cancel-btn">בטל תור</button>
-        </form>
-      {% endif %}
+        <div class="message">{{ success_message }}</div>
+        {% if can_cancel %}
+            <form action="{{ url_for('cancel_booking') }}" method="post">
+                <button type="submit" class="cancel-btn">בטל תור</button>
+            </form>
+        {% endif %}
     {% endif %}
 
-    <!-- הודעת שגיאה -->
     {% if error %}
       <div class="message" style="background-color:#f2dede; color:#a94442;">
         {{ error }}
@@ -40,7 +69,7 @@
             <option value="">בחר שירות</option>
             {% for s in services %}
                 <option value="{{ s['id'] }}">
-                    {{ s['name'] }}{% if s.get('duration_minutes') %} ({{ s['duration_minutes'] }} דק׳){% endif %}
+                    {{ s['name'] }}{% if s['duration_minutes'] %} ({{ s['duration_minutes'] }} דק׳){% endif %}
                 </option>
             {% endfor %}
         </select>
