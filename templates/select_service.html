@@ -53,7 +53,7 @@
     {% if success_message %}
         <div class="message">{{ success_message }}</div>
         {% if can_cancel %}
-            <form action="{{ url_for('cancel_booking') }}" method="post">
+            <form action="{{ url_for('cancel_appointment') }}" method="post">
                 <button type="submit" class="cancel-btn">בטל תור</button>
             </form>
         {% endif %}
