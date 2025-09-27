@@ -1120,13 +1120,8 @@ def select_service():
     if not business_id:
         return redirect("/login")
 
-    # טוען את השירותים לפי business_id
-    services = load_services(business_id)  
-
-    # לוקח את ההזמנה אם קיימת
-    booking = session.get("booking")  
-
-    # לוקח את הודעת שגיאה אם יש
+    services = load_services(business_id) 
+    booking = session.get("booking")     
     error = request.args.get("error")
 
     return render_template(
@@ -1611,45 +1606,49 @@ def book_appointment():
 
 
 
+# cancel_booking route
 @app.route("/cancel_booking", methods=["POST"])
 def cancel_booking():
     business_name = session.get("business_name")
-    if not business_name:
+    business_id = session.get("business_id")
+    if not business_name and not business_id:
         return redirect("/login")
 
     booking = session.get("booking")
     if not booking:
-        # אין הזמנה לבטל
+        # אין מה לבטל
         return redirect(url_for("select_service", error="אין תור לביטול"))
 
     date = booking.get("date")
     time = booking.get("time")
 
-    # טען את כל הפגישות ושינויים חד-פעמיים
-    appointments = load_appointments(business_name)
-    overrides = load_overrides(business_name)
-
-    # הסר את התור מהפגישות
+    # 1) הסרה מה־appointments
+    appointments = load_appointments(business_name or business_id)
     if date in appointments:
-        appointments[date] = [a for a in appointments[date] if a["time"] != time]
+        before_count = len(appointments[date])
+        appointments[date] = [a for a in appointments[date] if a.get("time") != time]
         if not appointments[date]:
             del appointments[date]
-        save_appointments(business_name, appointments)
+        save_appointments(business_name or business_id, appointments)
 
-    # הסר מה־overrides (booked) אם קיים
-    if date in overrides and "booked" in overrides[date]:
-        if time in overrides[date]["booked"]:
+    # 2) הסרה מה־overrides (booked) אם קיים
+    overrides = load_overrides(business_name or business_id)
+    if date in overrides:
+        if "booked" in overrides[date] and time in overrides[date]["booked"]:
             overrides[date]["booked"].remove(time)
-            save_overrides(business_name, overrides)
+        # גם אם היה ב-"add" (תוספות) אולי כדאי להסיר
+        if "add" in overrides[date] and time in overrides[date]["add"]:
+            overrides[date]["add"].remove(time)
+        save_overrides(business_name or business_id, overrides)
 
-    # מחק את ההזמנה מה־session
+    # 3) ניקוי ה-session (הסרת ההזמנה ונתוני ביטול)
     session.pop("booking", None)
     session.pop("can_cancel", None)
-
-    # הפנה חזרה ל־select_service עם הודעת הצלחה
+    session.pop("cancel_info", None)
+    # ושמירת הודעה שתוצג בדף
     session["success_message"] = f"התור בתאריך {date} בשעה {time} בוטל בהצלחה."
-    return redirect(url_for("select_service"))
 
+    return redirect(url_for("select_service"))
 
 # --- עיצוב דף ההזמנות ---
 
