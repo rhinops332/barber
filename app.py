@@ -1120,7 +1120,7 @@ def select_service():
     if not business_name:
         return redirect("/login")
 
-    services = load_services(business_name)
+    services = load_services(business_name) or []  # תמיד רשימה
 
     # הודעות הצלחה/שגיאה
     success_message = session.pop("success_message", None)
