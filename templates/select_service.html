@@ -78,7 +78,7 @@
         {% endif %}
 
         <!-- רשימת שירותים -->
-        <form method="POST" action="{{ url_for('choose_service') }}">
+        <form method="POST" action="{{ url_for('select_service') }}">
             {% for service in services %}
               <div class="service-option">
                 <label>
