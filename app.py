@@ -1126,7 +1126,7 @@ def select_service():
 
     # בדיקה אם קיימת הזמנה שהמשתמש יכול לבטל
     booking = session.get("booking")  # או session.get("cancel_info") לפי מה שמגדיר ביטול
-    can_cancel = bool(booking)
+    can_cancel = bool(booking or success_message)
     
     # הודעה להצלחה או שגיאה
     success_message = session.pop("success_message", None)
