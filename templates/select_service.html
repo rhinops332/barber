@@ -49,6 +49,7 @@
 <body>
     <h1>בחר שירות</h1>
 
+    <!-- הודעת הצלחה והצגת כפתור ביטול -->
     {% if success_message %}
         <div class="message">{{ success_message }}</div>
         {% if can_cancel %}
@@ -58,6 +59,7 @@
         {% endif %}
     {% endif %}
 
+    <!-- הודעת שגיאה -->
     {% if error %}
       <div class="message" style="background-color:#f2dede; color:#a94442;">
         {{ error }}
