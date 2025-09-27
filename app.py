@@ -1124,12 +1124,14 @@ def select_service():
     services = load_services(business_id) or []
 
     # בדיקה אם קיימת הזמנה שהמשתמש יכול לבטל
-    booking = session.get("booking")  # או session.get("cancel_info") לפי מה שמגדיר ביטול
-    can_cancel = bool(booking)
-    
+    booking = session.get("booking")  # מידע על ההזמנה הנוכחית, אם קיים
+
     # הודעה להצלחה או שגיאה
     success_message = session.pop("success_message", None)
     error = request.args.get("error")
+
+    # מאפשר ביטול אם קיימת הזמנה או אם יש הודעת הצלחה
+    can_cancel = bool(booking or success_message)
 
     return render_template(
         "select_service.html",
@@ -1139,7 +1141,6 @@ def select_service():
         success_message=success_message,
         error=error
     )
-
 
 
 # --- ניהול שירותים (CRUD) ---
