@@ -1124,13 +1124,14 @@ def select_service():
     # טוען את השירותים
     services = load_services(business_id) or []
 
+    # הודעה להצלחה או שגיאה
+    success_message = session.pop("success_message", None)
+    error = request.args.get("error")
+    
     # בדיקה אם קיימת הזמנה שהמשתמש יכול לבטל
     booking = session.get("booking")  # או session.get("cancel_info") לפי מה שמגדיר ביטול
     can_cancel = bool(booking or success_message)
     
-    # הודעה להצלחה או שגיאה
-    success_message = session.pop("success_message", None)
-    error = request.args.get("error")
 
     return render_template(
         "select_service.html",
