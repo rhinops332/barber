@@ -33,6 +33,10 @@
             margin-bottom: 20px;
             display: inline-block;
         }
+        .error-message {
+            background-color: #f2dede;
+            color: #a94442;
+        }
         .cancel-btn {
             display: inline-block;
             margin-top: 10px;
@@ -49,30 +53,38 @@
 <body>
     <h1>בחר שירות</h1>
 
-    <!-- הודעת הצלחה מה־session -->
+    <!-- הודעת הצלחה מה-session (או שנשלחה מה־cancel) -->
     {% if session.get("success_message") %}
       <div class="message">{{ session.get("success_message") }}</div>
+      {# אם רצית להציג גם כפתור ביטול מתוך session.can_cancel:#}
       {% if session.get("can_cancel") %}
-        <form action="{{ url_for('cancel_booking') }}" method="post">
+        <form action="{{ url_for('cancel_booking') }}" method="post" style="margin-top:10px;">
             <button type="submit" class="cancel-btn">בטל תור</button>
         </form>
       {% endif %}
     {% endif %}
 
-    <!-- הודעות פלאש (לשגיאות או מידע כללי) -->
+    <!-- אם משתמש שומר את ההזמנה תחת booking -->
+    {% if booking %}
+      <div class="message">
+        הזמנתך לשירות "{{ booking.service }}" בתאריך {{ booking.date }} בשעה {{ booking.time }} נקבעה.
+      </div>
+      <form action="{{ url_for('cancel_booking') }}" method="post">
+          <button type="submit" class="cancel-btn">בטל תור</button>
+      </form>
+    {% endif %}
+
+    <!-- הודעות פלאש ושגיאות -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
-          <div class="message">{{ message }}</div>
+          <div class="message {{ 'error-message' if category!='success' else '' }}">{{ message }}</div>
         {% endfor %}
       {% endif %}
     {% endwith %}
 
-    <!-- הודעת שגיאה ישירה -->
     {% if error %}
-      <div class="message" style="background-color:#f2dede; color:#a94442;">
-        {{ error }}
-      </div>
+      <div class="message error-message">{{ error }}</div>
     {% endif %}
 
     <form method="POST" action="{{ url_for('save_service') }}">
@@ -80,7 +92,7 @@
             <option value="">בחר שירות</option>
             {% for s in services %}
                 <option value="{{ s['id'] }}">
-                    {{ s['name'] }}{% if s['duration_minutes'] %} ({{ s['duration_minutes'] }} דק׳){% endif %}
+                    {{ s['name'] }}{% if s.get('duration_minutes') %} ({{ s['duration_minutes'] }} דק׳){% endif %}
                 </option>
             {% endfor %}
         </select>
