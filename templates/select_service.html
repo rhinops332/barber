@@ -10,7 +10,7 @@
             padding: 40px;
             direction: rtl;
         }
-        h1 { color: #333; }
+        h1 { color: #333; margin-top: 30px; }
         form { display: inline-block; margin-top: 30px; }
         select, button {
             font-size: 1.1rem;
@@ -25,17 +25,25 @@
             cursor: pointer;
         }
         button:hover { background: #45a049; }
+        .message-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
         .message {
             background-color: #dff0d8;
             color: #3c763d;
             padding: 10px 20px;
             border-radius: 6px;
-            margin-bottom: 20px;
             display: inline-block;
         }
+        .error-message {
+            background-color: #f2dede;
+            color: #a94442;
+        }
         .cancel-btn {
-            display: inline-block;
-            margin-top: 10px;
             background: #f44336;
             color: white;
             border: none;
@@ -47,25 +55,27 @@
     </style>
 </head>
 <body>
-    <h1>בחר שירות</h1>
 
-    <!-- הודעת הצלחה והצגת כפתור ביטול -->
+    <!-- הודעת הצלחה עם כפתור ביטול לידה -->
     {% if success_message %}
-        <div class="message">{{ success_message }}</div>
-        {% if can_cancel %}
-            <form action="{{ url_for('cancel_appointment') }}" method="post">
-                <button type="submit" class="cancel-btn">בטל תור</button>
-            </form>
-        {% endif %}
+        <div class="message-container">
+            <div class="message">{{ success_message }}</div>
+            {% if can_cancel %}
+                <form action="{{ url_for('cancel_appointment') }}" method="post" style="margin:0;">
+                    <button type="submit" class="cancel-btn">בטל תור</button>
+                </form>
+            {% endif %}
+        </div>
     {% endif %}
 
     <!-- הודעת שגיאה -->
     {% if error %}
-      <div class="message" style="background-color:#f2dede; color:#a94442;">
-        {{ error }}
-      </div>
+        <div class="message-container">
+            <div class="message error-message">{{ error }}</div>
+        </div>
     {% endif %}
 
+    <h1>בחר שירות</h1>
     <form method="POST" action="{{ url_for('save_service') }}">
         <select id="service" name="service" required>
             <option value="">בחר שירות</option>
