@@ -256,7 +256,7 @@
         if (button) {
           if (enable) {
             button.classList.add("enabled");
-            button.innerText = "כבה יום";
+            button.innerText = "מחק יום";
             button.setAttribute("onclick", `event.stopPropagation(); toggleWeeklyDay('${dayKey}', false)`);
           } else {
             button.classList.remove("enabled");
@@ -308,7 +308,7 @@
         <span>{{ day_map[day_key] }}</span>
         <button class="toggle-day-btn {% if weekly_schedule[day_key]|length > 0 %}enabled{% endif %}"
           onclick="event.stopPropagation(); toggleWeeklyDay('{{day_key}}', {{ 'false' if weekly_schedule[day_key]|length > 0 else 'true' }})">
-          {% if weekly_schedule[day_key]|length > 0 %}כבה יום{% else %}הפעל יום{% endif %}
+          {% if weekly_schedule[day_key]|length > 0 %}מחק יום{% else %}הפעל יום{% endif %}
         </button>
       </div>
 
