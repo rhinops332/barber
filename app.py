@@ -615,10 +615,8 @@ def generate_week_slots(business_name, with_sources=False):
     service_duration_minutes = 0
     service_name = None
     if "chosen_service" in session:
-        service_id = session["chosen_service"]
-        service_info = get_service_info(business_name, service_id)  # dict עם duration_minutes ו-name
-        service_duration_minutes = service_info.get("duration_minutes", 0)
-        service_name = service_info.get("name")
+        service_duration_minutes = session["chosen_service_time"]
+        service_name = session["chosen_service_name"]
 
     chosen_time = session.get("chosen_service_time")  # אם רוצים להשתמש בהמשך
 
@@ -643,9 +641,7 @@ def generate_week_slots(business_name, with_sources=False):
 
         for idx, t in enumerate(all_times):
             # בדיקה בסיסית אם השעה זמינה
-            if t in edited_to_times:
-                available = True
-            elif disabled_day or t in removed or t in booked_times:
+            if disabled_day or t in removed or t in booked_times:
                 continue
             else:
                 available = True
@@ -655,9 +651,7 @@ def generate_week_slots(business_name, with_sources=False):
                 total_minutes = 0
                 current_idx = idx
                 conflict = False
-                print("SERVICE INFO:", service_info)
-                print("SERVICE DURATION:", service_duration_minutes)
-
+               
                 while total_minutes < service_duration_minutes:
                     if current_idx >= len(all_times):
                         conflict = True  # חורג מעבר לשעה האחרונה
