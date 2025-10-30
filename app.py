@@ -645,7 +645,7 @@ def generate_week_slots(business_name, with_sources=False):
             # בדיקה בסיסית אם השעה זמינה
             if t in edited_to_times:
                 available = True
-            elif t in edited_from_times or disabled_day or t in removed or t in booked_times:
+            elif t in disabled_day or t in removed or t in booked_times:
                 continue
             else:
                 available = True
@@ -660,7 +660,7 @@ def generate_week_slots(business_name, with_sources=False):
                         conflict = True  # חורג מעבר לשעה האחרונה
                         break
                     next_time = all_times[current_idx]
-                    if next_time in removed or next_time in booked_times or next_time in edited_from_times:
+                    if next_time in removed or next_time in booked_times:
                         conflict = True
                         break
                     # חישוב דיפרנציאל בדקות בין השעות
