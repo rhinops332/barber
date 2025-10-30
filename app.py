@@ -655,6 +655,9 @@ def generate_week_slots(business_name, with_sources=False):
                 total_minutes = 0
                 current_idx = idx
                 conflict = False
+                print("SERVICE INFO:", service_info)
+                print("SERVICE DURATION:", service_duration_minutes)
+
                 while total_minutes < service_duration_minutes:
                     if current_idx >= len(all_times):
                         conflict = True  # חורג מעבר לשעה האחרונה
