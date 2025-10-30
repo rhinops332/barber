@@ -611,14 +611,10 @@ def generate_week_slots(business_name, with_sources=False):
     week_slots = {}
     heb_days = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
 
-    # --- לוקחים את השירות והזמן שנבחרו מה-session ---
-    service_duration_minutes = 0
-    service_name = None
-    if "chosen_service" in session:
-        service_duration_minutes = session["chosen_service_time"]
-        service_name = session["chosen_service_name"]
-
-    chosen_time = session.get("chosen_service_time")  # אם רוצים להשתמש בהמשך
+    # --- שירות נבחר ---
+    service_duration_minutes = session.get("chosen_service_duration", 0)
+    service_name = session.get("chosen_service_name")
+    chosen_time = session.get("chosen_service_time")
 
     for i in range(7):
         current_date = today + timedelta(days=i)
@@ -640,52 +636,38 @@ def generate_week_slots(business_name, with_sources=False):
         final_times = []
 
         for idx, t in enumerate(all_times):
-            # בדיקה בסיסית אם השעה זמינה
             if disabled_day or t in removed or t in booked_times:
                 continue
-            else:
-                available = True
 
-            # --- בדיקה לפי משך השירות ---
+            # בדיקה אם יש מספיק זמן רציף לשירות
             if service_duration_minutes > 0:
-                total_minutes = 0
-                current_idx = idx
+                start_dt = datetime.strptime(t, "%H:%M")
+                end_dt = start_dt + timedelta(minutes=service_duration_minutes)
                 conflict = False
-               
-                while total_minutes < service_duration_minutes:
-                    if current_idx >= len(all_times):
-                        conflict = True  # חורג מעבר לשעה האחרונה
+                for next_t in all_times[idx:]:
+                    next_dt = datetime.strptime(next_t, "%H:%M")
+                    if next_dt >= end_dt:
                         break
-                    next_time = all_times[current_idx]
-                    if next_time in removed or next_time in booked_times:
+                    if next_t in removed or next_t in booked_times:
                         conflict = True
                         break
-                    # חישוב דיפרנציאל בדקות בין השעות
-                    t_dt = datetime.strptime(all_times[current_idx], "%H:%M")
-                    if current_idx + 1 < len(all_times):
-                        next_dt = datetime.strptime(all_times[current_idx + 1], "%H:%M")
-                        diff = (next_dt - t_dt).total_seconds() / 60
-                    else:
-                        diff = service_duration_minutes
-                    total_minutes += diff
-                    current_idx += 1
                 if conflict:
-                    continue  # אל תוסיף את השעה ל-final_times
+                    continue
 
-            # הוספה ל-final_times
+            # הוספה לרשימת הזמנים
+            slot_info = {"time": t, "available": True,
+                         "service_name": service_name,
+                         "service_time": chosen_time}
             if with_sources:
-                source = get_source(t, scheduled, added, removed, list(zip(edited_from_times, edited_to_times)), disabled_day, booked_times)
-                final_times.append({"time": t, "available": True, "source": source,
-                                    "service_name": service_name,
-                                    "service_time": chosen_time})
-            else:
-                final_times.append({"time": t, "available": True,
-                                    "service_name": service_name,
-                                    "service_time": chosen_time})
+                slot_info["source"] = get_source(t, scheduled, added, removed,
+                                                 list(zip(edited_from_times, edited_to_times)),
+                                                 disabled_day, booked_times)
+            final_times.append(slot_info)
 
         week_slots[date_str] = {"day_name": day_name, "times": final_times}
 
     return week_slots
+
 
 
 def is_slot_available(business_name, date, time):
