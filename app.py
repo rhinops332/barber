@@ -611,12 +611,11 @@ def generate_week_slots(business_name, with_sources=False):
     week_slots = {}
     heb_days = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
 
-    # --- לוקחים את השירות והזמן שנבחרו מה-session ---
-    service_duration_minutes = 0
-    service_name = None
-    if "chosen_service" in session:
-        service_duration_minutes = session["chosen_service_time"]
-        service_name = session["chosen_service_name"]
+    # --- שירות נבחר ---
+    
+    service_name = session.get("chosen_service_name")
+    service_duration_minutes = session.get("chosen_service_time")
+    print("service_duration_minutes=" service_duration_minutes)
 
     for i in range(7):
         current_date = today + timedelta(days=i)
@@ -629,45 +628,42 @@ def generate_week_slots(business_name, with_sources=False):
         override = overrides.get(date_str, {"add": [], "remove": [], "edit_from": [], "edit_to": []})
         added = override.get("add", [])
         removed = override.get("remove", [])
+        edited_from_times = override.get("edit_from", [])
+        edited_to_times = override.get("edit_to", [])
         disabled_day = removed == ["__all__"]
 
         booked_times = bookings.get(date_str, [])
-        all_times = sorted(set(scheduled + added))
+        all_times = sorted(set(scheduled + added + edited_to_times))
         final_times = []
 
-        # ממירים booked ו-removed לדקות
-        blocked_minutes = set()
-        for t in booked_times + removed:
-            h, m = map(int, t.split(":"))
-            blocked_minutes.add(h*60 + m)
-
-        for t in all_times:
-            h, m = map(int, t.split(":"))
-            start_minute = h*60 + m
-            end_minute = start_minute + service_duration_minutes
-
-            # בדיקה אם יש חפיפה עם שעות חסומות
-            conflict = any(minute in blocked_minutes for minute in range(start_minute, end_minute))
-            if disabled_day or conflict:
+        for idx, t in enumerate(all_times):
+            if disabled_day or t in removed or t in booked_times:
                 continue
 
-            # הוספה ל-final_times
+            # בדיקה אם יש מספיק זמן רציף לשירות
+            if service_duration_minutes > 0:
+                start_dt = datetime.strptime(t, "%H:%M")
+                end_dt = start_dt + timedelta(minutes=service_duration_minutes)
+                conflict = False
+                for next_t in all_times[idx:]:
+                    next_dt = datetime.strptime(next_t, "%H:%M")
+                    if next_dt >= end_dt:
+                        break
+                    if next_t in removed or next_t in booked_times:
+                        conflict = True
+                        break
+                if conflict:
+                    continue
+
+            # הוספה לרשימת הזמנים
+            slot_info = {"time": t, "available": True,
+                         "service_name": service_name,
+                         "service_time": chosen_time}
             if with_sources:
-                source = get_source(t, scheduled, added, removed, [], disabled_day, booked_times)
-                final_times.append({
-                    "time": t,
-                    "available": True,
-                    "source": source,
-                    "service_name": service_name,
-                    "service_time": session.get("chosen_service_time")
-                })
-            else:
-                final_times.append({
-                    "time": t,
-                    "available": True,
-                    "service_name": service_name,
-                    "service_time": session.get("chosen_service_time")
-                })
+                slot_info["source"] = get_source(t, scheduled, added, removed,
+                                                 list(zip(edited_from_times, edited_to_times)),
+                                                 disabled_day, booked_times)
+            final_times.append(slot_info)
 
         week_slots[date_str] = {"day_name": day_name, "times": final_times}
 
