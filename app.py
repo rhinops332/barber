@@ -615,7 +615,7 @@ def generate_week_slots(business_name, with_sources=False):
     
     service_name = session.get("chosen_service_name")
     service_duration_minutes = session.get("chosen_service_length")
-    print("service_duration_minutes=" service_duration_minutes)
+    print("service_duration_minutes=", service_duration_minutes)
 
     for i in range(7):
         current_date = today + timedelta(days=i)
