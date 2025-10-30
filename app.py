@@ -364,7 +364,7 @@ def save_service():
 
     # שמירה ב-session – שם השירות ומשך השירות
     session["chosen_service_name"] = chosen_service["name"]
-    session["chosen_service_time"] = chosen_service["duration_minutes"]
+    session["chosen_service_length"] = chosen_service["duration_minutes"]
     session["chosen_service_price"] = chosen_service["price"]
 
     return redirect(url_for("orders"))
@@ -614,7 +614,7 @@ def generate_week_slots(business_name, with_sources=False):
     # --- שירות נבחר ---
     
     service_name = session.get("chosen_service_name")
-    service_duration_minutes = session.get("chosen_service_time")
+    service_duration_minutes = session.get("chosen_service_length")
     print("service_duration_minutes=" service_duration_minutes)
 
     for i in range(7):
