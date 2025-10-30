@@ -611,11 +611,16 @@ def generate_week_slots(business_name, with_sources=False):
     week_slots = {}
     heb_days = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
 
-    # --- שירות נבחר ---
-    
-    service_name = session["chosen_service_name"]
-    service_duration_minutes =session["chosen_service_length"]
-    print("service_duration_minutes=", service_duration_minutes)
+    # --- בדיקה אם השירות נבחר ---
+    service_name = session.get("chosen_service_name")
+    service_duration_minutes = session.get("chosen_service_length")
+
+    if not service_name or not service_duration_minutes:
+        # אין שירות נבחר – מחזירים week_slots ריק
+        return week_slots
+
+    service_duration_minutes = int(service_duration_minutes)
+    print("service_duration_minutes =", service_duration_minutes)
 
     for i in range(7):
         current_date = today + timedelta(days=i)
@@ -656,13 +661,20 @@ def generate_week_slots(business_name, with_sources=False):
                     continue
 
             # הוספה לרשימת הזמנים
-            slot_info = {"time": t, "available": True,
-                         "service_name": service_name,
-                         "service_time": chosen_time}
+            slot_info = {
+                "time": t,
+                "available": True,
+                "service_name": service_name,
+                "service_time": t
+            }
+
             if with_sources:
-                slot_info["source"] = get_source(t, scheduled, added, removed,
-                                                 list(zip(edited_from_times, edited_to_times)),
-                                                 disabled_day, booked_times)
+                slot_info["source"] = get_source(
+                    t, scheduled, added, removed,
+                    list(zip(edited_from_times, edited_to_times)),
+                    disabled_day, booked_times
+                )
+
             final_times.append(slot_info)
 
         week_slots[date_str] = {"day_name": day_name, "times": final_times}
