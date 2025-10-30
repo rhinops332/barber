@@ -645,7 +645,7 @@ def generate_week_slots(business_name, with_sources=False):
             # בדיקה בסיסית אם השעה זמינה
             if t in edited_to_times:
                 available = True
-            elif t in disabled_day or t in removed or t in booked_times:
+            elif disabled_day or t in removed or t in booked_times:
                 continue
             else:
                 available = True
