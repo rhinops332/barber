@@ -366,6 +366,8 @@ def save_service():
     session["chosen_service_name"] = chosen_service["name"]
     session["chosen_service_length"] = chosen_service["duration_minutes"]
     session["chosen_service_price"] = chosen_service["price"]
+    print("session["chosen_service_name"]=", session["chosen_service_name"])
+    print("session["chosen_service_length"]=",session["chosen_service_length"])
 
     return redirect(url_for("orders"))
 
