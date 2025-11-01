@@ -1580,6 +1580,7 @@ def book_appointment():
     start_min = time_to_min(time)
 
     for t in all_times:
+        print("t===:",t)
         t_min = time_to_min(t)
 
         if t_min < start_min:
