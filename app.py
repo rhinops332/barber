@@ -611,11 +611,11 @@ def generate_week_slots(business_name, with_sources=False):
     bookings = get_booked_times(appointments)
 
     today = datetime.today()
-    heb_days = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
+    heb_days = ["שני","שלישי","רביעי","חמישי","שישי","שבת","ראשון"]
 
-    service_length = session.get("chosen_service_length", 0)
-    service_name = session.get("chosen_name", "")
-    print(service_name, service_length)
+    service_length = int(session.get("chosen_service_length", 0))
+    service_name = session.get("chosen_service_name", "")
+    print(service_length, service_name)
 
     def time_to_min(t):
         h, m = map(int, t.split(":"))
@@ -633,42 +633,51 @@ def generate_week_slots(business_name, with_sources=False):
         ov = overrides.get(date_str, {})
         add = ov.get("add", [])
         rem = ov.get("remove", [])
+        disabled = "__all__" in rem
         edited_from = ov.get("edit_from", [])
         edited_to = ov.get("edit_to", [])
-        disabled = "__all__" in rem
 
         booked = bookings.get(date_str, [])
+        blocked = set(booked + rem + edited_from)
         all_times = sorted(set(sch + add + edited_to), key=time_to_min)
 
         final = []
         for t in all_times:
-            if disabled:
-                status = "disabled"
-            elif t in booked:
-                status = "booked"
-            elif t in rem or t in edited_from:
-                status = "removed"
-            else:
-                # בדיקה אם יש מספיק זמן פנוי לשירות
-                start = time_to_min(t)
-                end = start + service_length
-                conflict = any(start+5 < time_to_min(x) < end for x in booked + rem + edited_from)
-                status = "available" if not conflict else "conflict"
+            start = time_to_min(t)
+            end = start + service_length
+            available = True
 
-            slot = {
-                "time": t,
-                "available": status == "available",
-                "status": status,
-                "service_name": service_name,
-                "service_length": service_length
-            }
-            if with_sources:
-                slot["source"] = get_source(t, sch, add, rem, list(zip(edited_from, edited_to)), disabled, booked)
-            final.append(slot)
+            # אם כל היום מבוטל
+            if disabled:
+                available = False
+            else:
+                # בדוק אם יש התנגשויות בזמן השירות
+                for block in blocked:
+                    b_min = time_to_min(block)
+                    # אם שעת חסימה כלשהי נופלת בטווח השירות
+                    if start+5 <= b_min < end-5:
+                        available = False
+                        break
+
+            # הוספה לרשימת התוצאות
+            if available or with_sources:
+                slot = {
+                    "time": t,
+                    "available": available,
+                    "status": "available" if available else "unavailable",
+                    "service_name": service_name,
+                    "service_length": service_length,
+                }
+                if with_sources:
+                    slot["source"] = get_source(
+                        t, sch, add, rem, list(zip(edited_from, edited_to)), disabled, booked
+                    )
+                final.append(slot)
 
         week_slots[date_str] = {"day_name": day_name, "times": final}
 
     return week_slots
+
 
 
 
