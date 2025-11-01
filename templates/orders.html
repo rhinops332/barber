@@ -55,7 +55,6 @@
     cursor: pointer;
     transition: transform 0.15s ease;
   }
-  .slot-btn.unavailable { background:#bbb; cursor:default; }
   .slot-btn:hover:not(.unavailable){ background:#27ae60; }
   .slot-btn.selected {
     animation: growBtn .2s forwards;
@@ -276,32 +275,39 @@ function clearBookingDetailsAndForm(){
   document.getElementById('time').value='';
   document.getElementById('selected-time-display').textContent='';
 }
-function showDayAvailability(date){
-  chosenDate=date;
-  const c=document.getElementById('slots-container');
-  document.getElementById('selected-date-title').textContent=
-    `${formatHebrewDay(date)} - ${new Date(date).toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'})}`;
-  c.innerHTML='';
-  const slots=availabilityData[date]?.times||availabilityData[date]||[];
-  if(!slots.length){c.innerHTML='<p>אין שעות פנויות</p>';return;}
-  slots.forEach(slot=>{
-    const b=document.createElement('button');
-    b.textContent=slot.time;
-    b.className=slot.available?'slot-btn available':'slot-btn unavailable';
-    b.disabled=!slot.available;
-    b.onclick=()=>{
-      if(selectedButton)selectedButton.classList.remove('selected');
-      b.classList.add('selected');selectedButton=b;
-      chosenTime=slot.time;
-      document.getElementById('date').value=chosenDate;
-      document.getElementById('time').value=chosenTime;
-      document.getElementById('selected-time-display').textContent=`השעה שנבחרה: ${slot.time}`;
-      document.getElementById('form-container').style.display='block';
-      document.getElementById('response').textContent='';
-    };
-    c.appendChild(b);
-  });
+function showDayAvailability(date) {
+    chosenDate = date;
+    const c = document.getElementById('slots-container');
+    document.getElementById('selected-date-title').textContent =
+        `${formatHebrewDay(date)} - ${new Date(date).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' })}`;
+    c.innerHTML = '';
+    const slots = availabilityData[date]?.times || availabilityData[date] || [];
+    if (!slots.length) {
+        c.innerHTML = '<p>אין שעות פנויות</p>';
+        return;
+    }
+    slots.forEach(slot => {
+        // אם השעה לא זמינה, דילג על הוספה
+        if (!slot.available) return;
+        const b = document.createElement('button');
+        b.textContent = slot.time;
+        b.className = 'slot-btn available';
+        b.onclick = () => {
+            if (selectedButton) selectedButton.classList.remove('selected');
+            b.classList.add('selected');
+            selectedButton = b;
+            chosenTime = slot.time;
+            document.getElementById('date').value = chosenDate;
+            document.getElementById('time').value = chosenTime;
+            document.getElementById('selected-time-display').textContent = `השעה שנבחרה: ${slot.time}`;
+            document.getElementById('form-container').style.display = 'block';
+            document.getElementById('response').textContent = '';
+        };
+
+        c.appendChild(b);
+    });
 }
+
 function toggleBotWindow(){
   const b=document.getElementById('bot-window');
   b.style.display=b.style.display==='block'?'none':'block';
