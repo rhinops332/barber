@@ -641,30 +641,34 @@ def generate_week_slots(business_name, with_sources=False):
 
         final = []
         for t in all_times:
-            if disabled or t in booked or t in rem:
-                available = False
+            if disabled:
+                status = "disabled"
+            elif t in booked:
+                status = "booked"
+            elif t in rem or t in edited_from:
+                status = "removed"
             else:
-                # בדיקה אם יש מספיק זמן לשירות
+                # בדיקה אם יש מספיק זמן פנוי לשירות
                 start = time_to_min(t)
                 end = start + service_length
-                conflict = any(start +5 <= time_to_min(x)-5 < end for x in booked + rem)
-                available = not conflict
+                conflict = any(start+5 < time_to_min(x) < end for x in booked + rem + edited_from)
+                status = "available" if not conflict else "conflict"
 
-            if available or with_sources:  # שמירה גם לשעות לא זמינות אם רוצים מקור
-                slot = {
-                    "time": t,
-                    "available": available,
-                    "status": "available" if available else "unavailable",
-                    "service_name": service_name,
-                    "service_length": service_length
-                }
-                if with_sources:
-                    slot["source"] = get_source(t, sch, add, rem, list(zip(edited_from, edited_to)), disabled, booked)
-                final.append(slot)
+            slot = {
+                "time": t,
+                "available": status == "available",
+                "status": status,
+                "service_name": service_name,
+                "service_length": service_length
+            }
+            if with_sources:
+                slot["source"] = get_source(t, sch, add, rem, list(zip(edited_from, edited_to)), disabled, booked)
+            final.append(slot)
 
         week_slots[date_str] = {"day_name": day_name, "times": final}
 
     return week_slots
+
 
 
 def is_slot_available(business_name, date, time):
