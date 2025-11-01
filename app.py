@@ -604,74 +604,65 @@ def get_booked_times(appointments):
             bookings.setdefault(date_str, []).append(appt["time"])
     return bookings
 
-def generate_week_slots(business_name, with_sources=False):
-    weekly = load_weekly_schedule(business_name)
+def generate_week_slots(business_name, with_sources=False, for_admin=False):
+    weekly_schedule = load_weekly_schedule(business_name)
     overrides = load_overrides(business_name)
     appointments = load_appointments(business_name)
     bookings = get_booked_times(appointments)
-
     today = datetime.today()
     week_slots = {}
     heb_days = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
 
-    service_duration = int(session.get("chosen_service_time", 0) or 0)
-    service_name = session.get("chosen_service_name", "")
-    chosen_time = session.get("chosen_service_time", 0)
+    service_duration_minutes = 0
+    service_name = None
+    if "chosen_service" in session:
+        service_id = session["chosen_service"]
+        service_info = get_service_info(business_name, service_id)
+        service_duration_minutes = service_info.get("duration_minutes", 0)
+        service_name = service_info.get("name")
 
-    def time_to_min(t):
-        h, m = map(int, t.split(":"))
-        return h * 60 + m
+    chosen_time = session.get("chosen_service_time")
 
     for i in range(7):
-        date = today + timedelta(days=i)
-        date_str = date.strftime("%Y-%m-%d")
-        weekday = str(date.weekday())
-        day_name = heb_days[date.weekday()]
+        current_date = today + timedelta(days=i)
+        date_str = current_date.strftime("%Y-%m-%d")
+        weekday = current_date.weekday()
+        day_name = heb_days[weekday]
 
-        sch = weekly.get(weekday, [])
-        ov = overrides.get(date_str, {})
-        add = ov.get("add", [])
-        rem = ov.get("remove", [])
-        edited_from = ov.get("edit_from", [])
-        edited_to = ov.get("edit_to", [])
-        disabled = "__all__" in rem
+        day_key = str(weekday)
+        scheduled = weekly_schedule.get(day_key, [])
+        override = overrides.get(date_str, {"add": [], "remove": [], "edit_from": [], "edit_to": []})
+        added = override.get("add", [])
+        removed = override.get("remove", [])
+        edited_from_times = override.get("edit_from", [])
+        edited_to_times = override.get("edit_to", [])
+        disabled_day = removed == ["__all__"]
 
-        booked = bookings.get(date_str, [])
-        all_times = sorted(set(sch + add + edited_to), key=lambda x: time_to_min(x))
+        booked_times = bookings.get(date_str, [])
+        all_times = sorted(set(scheduled + added + edited_to_times))
+        final_times = []
 
-        final = []
         for idx, t in enumerate(all_times):
-            status = "available"
-            if disabled:
-                status = "disabled"
-            elif t in booked:
-                status = "booked"
-            elif t in rem or t in edited_from:
-                status = "removed"
+            available = True
 
-            # בדיקה אם יש מספיק זמן לשירות
-            if service_duration > 0 and status == "available":
-                start = time_to_min(t)
-                end = start + service_duration
-                conflict = any(
-                    time_to_min(x) >= start and time_to_min(x) < end
-                    for x in booked + rem + edited_from
-                )
-                if conflict:
-                    status = "conflict"
+            # אם אנחנו במצב ניהול – תראה גם את השעות המבוטלות והלא זמינות
+            if for_admin:
+                if t in removed or disabled_day:
+                    available = False
+            else:
+                # במצב לקוח – אל תראה בכלל שעות מבוטלות
+                if t in removed or disabled_day or t in booked_times:
+                    continue
 
-            slot = {
+            # הוספה לרשימה
+            final_times.append({
                 "time": t,
-                "available": status == "available",
-                "status": status,
+                "available": available,
                 "service_name": service_name,
-                "service_time": chosen_time,
-            }
-            if with_sources:
-                slot["source"] = get_source(t, sch, add, rem, list(zip(edited_from, edited_to)), disabled, booked)
-            final.append(slot)
+                "service_time": chosen_time
+            })
 
-        week_slots[date_str] = {"day_name": day_name, "times": final}
+        week_slots[date_str] = {"day_name": day_name, "times": final_times}
 
     return week_slots
 
