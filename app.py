@@ -604,7 +604,7 @@ def get_booked_times(appointments):
             bookings.setdefault(date_str, []).append(appt["time"])
     return bookings
 
-def generate_week_slots(business_name, with_sources=False, for_admin=False):
+def generate_week_slots(business_name, for_admin=False, with_sources=False):
     weekly_schedule = load_weekly_schedule(business_name)
     overrides = load_overrides(business_name)
     appointments = load_appointments(business_name)
@@ -613,15 +613,14 @@ def generate_week_slots(business_name, with_sources=False, for_admin=False):
     week_slots = {}
     heb_days = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
 
+    # --- לוקחים את השירות והזמן שנבחרו מה-session ---
     service_duration_minutes = 0
     service_name = None
     if "chosen_service" in session:
-        service_id = session["chosen_service"]
-        service_info = get_service_info(business_name, service_id)
-        service_duration_minutes = service_info.get("duration_minutes", 0)
-        service_name = service_info.get("name")
+        service_duration_minutes = session.get("chosen_service_time", 0)
+        service_name = session.get("chosen_service_name")
 
-    chosen_time = session.get("chosen_service_time")
+    chosen_time = session.get("chosen_service_time")  # אם רוצים להשתמש בהמשך
 
     for i in range(7):
         current_date = today + timedelta(days=i)
@@ -643,28 +642,57 @@ def generate_week_slots(business_name, with_sources=False, for_admin=False):
         final_times = []
 
         for idx, t in enumerate(all_times):
-            available = True
-
-            # אם אנחנו במצב ניהול – תראה גם את השעות המבוטלות והלא זמינות
-            if for_admin:
-                if t in removed or disabled_day:
-                    available = False
+            # קביעת זמינות בסיסית לפי יום מוסר ושעות
+            if t in edited_to_times:
+                available = True
+            elif disabled_day or t in removed or t in booked_times:
+                available = False
             else:
-                # במצב לקוח – אל תראה בכלל שעות מבוטלות
-                if t in removed or disabled_day or t in booked_times:
-                    continue
+                available = True
 
-            # הוספה לרשימה
+            # אם ללקוח ולא אדמין, דילוג על שעות לא זמינות
+            if not for_admin and not available:
+                continue
+
+            # --- בדיקה לפי משך השירות ---
+            if service_duration_minutes > 0 and available:
+                total_minutes = 0
+                current_idx = idx
+                conflict = False
+                while total_minutes < service_duration_minutes:
+                    if current_idx >= len(all_times):
+                        conflict = True
+                        break
+                    next_time = all_times[current_idx]
+                    if next_time in removed or next_time in booked_times or next_time in edited_from_times:
+                        conflict = True
+                        break
+                    t_dt = datetime.strptime(all_times[current_idx], "%H:%M")
+                    if current_idx + 1 < len(all_times):
+                        next_dt = datetime.strptime(all_times[current_idx + 1], "%H:%M")
+                        diff = (next_dt - t_dt).total_seconds() / 60
+                    else:
+                        diff = service_duration_minutes
+                    total_minutes += diff
+                    current_idx += 1
+                if conflict:
+                    if for_admin:
+                        available = False
+                    else:
+                        continue
+
             final_times.append({
                 "time": t,
                 "available": available,
                 "service_name": service_name,
-                "service_time": chosen_time
+                "service_time": chosen_time,
+                "source": get_source(t, scheduled, added, removed, list(zip(edited_from_times, edited_to_times)), disabled_day, booked_times) if with_sources else None
             })
 
         week_slots[date_str] = {"day_name": day_name, "times": final_times}
 
     return week_slots
+
 
 
 def is_slot_available(business_name, date, time):
