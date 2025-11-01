@@ -712,6 +712,23 @@ def render_template(template_name_or_list, **context):
     }
     return original_render_template(template_name_or_list, **context)
 
+def get_all_day_times(business_name, date_str):
+    weekly = load_weekly_schedule(business_name)
+    overrides = load_overrides(business_name)
+
+    date = datetime.strptime(date_str, "%Y-%m-%d")
+    weekday = str(date.weekday())
+
+    scheduled = weekly.get(weekday, [])
+    ov = overrides.get(date_str, {})
+    added = ov.get("add", [])
+    edited_to = ov.get("edit_to", [])
+
+    # מאחד את כל השעות שיכולות להיות ביום הזה
+    all_times = sorted(set(scheduled + added + edited_to))
+    return all_times
+
+
 # --- ניהול התחברות ---
 
 @app.route("/login", methods=['GET', 'POST'])
@@ -1316,20 +1333,6 @@ def update_overrides():
     if date not in overrides:
         overrides[date] = {"booked": [], "add": [], "remove": [], "edit_from": [], "edit_to": []}
 
-    if action == "remove_many":
-        times = data.get("times", [])
-        for t in times:
-            if t not in overrides[date]["remove"]:
-                overrides[date]["remove"].append(t)
-            if t in overrides[date]["add"]:
-                overrides[date]["add"].remove(t)
-            if t in overrides[date]["edit_from"]:
-                idx = overrides[date]["edit_from"].index(t)
-                overrides[date]["edit_from"].pop(idx)
-                overrides[date]["edit_to"].pop(idx)
-        save_overrides(business_name, overrides)
-        return jsonify({"message": "Multiple times removed", "overrides": overrides})
-
     elif action == "add" and time:
         if time not in overrides[date]["add"]:
             overrides[date]["add"].append(time)
@@ -1534,9 +1537,9 @@ def book_appointment():
     time = request.form.get("time", "").strip()
 
     service = session.get("chosen_service_name")
-    price = session.get("chosen_service_price")
+    length = session.get("chosen_service_length")
 
-    if not all([name, phone, date, time, service, price]):
+    if not all([name, phone, date, time, service]):
         return redirect(url_for("select_service", error="חסרים פרטים להזמנה"))
 
     business_name = session.get('business_name')
@@ -1558,28 +1561,44 @@ def book_appointment():
         "date": date,
         "time": time,
         "service": service,
-        "price": price
     }
     date_appointments.append(appointment)
     appointments[date] = date_appointments
     save_appointments(business_name, appointments)
 
-    # עדכון overrides
+    # --- עדכון overrides ---
+    def time_to_min(t):
+        h, m = map(int, t.split(":"))
+        return h * 60 + m
+
     overrides = load_overrides(business_name)
     if date not in overrides:
         overrides[date] = {"booked": [], "add": [], "remove": [], "edit_from": [], "edit_to": []}
 
-    if time not in overrides[date]["booked"]:
-        overrides[date]["booked"].append(time)
-    if time in overrides[date]["add"]:
-        overrides[date]["add"].remove(time)
-    if time in overrides[date]["remove"]:
-        overrides[date]["remove"].remove(time)
+    all_times = get_all_day_times(business_name, date)
+    service_length = int(session.get("chosen_service_length", 0))
+    start_min = time_to_min(time)
+
+    for t in all_times:
+        t_min = time_to_min(t)
+
+        if t_min < start_min:
+            continue
+        if t_min >= start_min + service_length:
+            break
+
+        if t not in overrides[date]["booked"]:
+            overrides[date]["booked"].append(t)
+        if t in overrides[date]["add"]:
+            overrides[date]["add"].remove(t)
+        if t in overrides[date]["remove"]:
+            overrides[date]["remove"].remove(t)
 
     save_overrides(business_name, overrides)
 
-   # try:
-       # send_email(name, phone, date, time, service, price)
+    # --- הודעה למשתמש ---
+    # try:
+       # send_email(name, phone, date, time, service)
  #   except Exception as e:
    #     print("Error sending email:", e)
 
@@ -1594,8 +1613,7 @@ def book_appointment():
     }
 
     return redirect(url_for("select_service"))
-
-
+  
 # --- ביטול תור ---
 @app.route("/cancel_appointment", methods=["POST"])
 def cancel_appointment():
