@@ -614,7 +614,8 @@ def generate_week_slots(business_name, with_sources=False):
     heb_days = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
 
     service_length = session.get("chosen_service_length", 0)
-    service_name = session.get("chosen_name", "")
+    service_name = session.get("chosen_service_name", "")
+    print(service_length, service_name)
 
     def time_to_min(t):
         h, m = map(int, t.split(":"))
