@@ -615,12 +615,8 @@ def generate_week_slots(business_name, with_sources=False):
 
     service_length = session.get("chosen_service_length", 0)
     service_name = session.get("chosen_service_name", "")
-    print(service_length, service_name)
 
-    def time_to_min(t):
-        h, m = map(int, t.split(":"))
-        return h * 60 + m
-
+   
     week_slots = {}
 
     for i in range(7):
@@ -644,32 +640,33 @@ def generate_week_slots(business_name, with_sources=False):
         for t in all_times:
             if disabled:
                 status = "disabled"
+                available = False
             elif t in booked:
                 status = "booked"
-            elif t in rem or t in edited_from:
+                available = False
+            elif t in rem:
                 status = "removed"
+                available = False
             else:
-                # בדיקה אם יש מספיק זמן פנוי לשירות
-                start = time_to_min(t)
-                end = start + service_length
-                conflict = any(start < time_to_min(x) < end for x in booked + rem + edited_from)
-                status = "available" if not conflict else "conflict"
+                status = "available"
+                available = True
 
             slot = {
                 "time": t,
-                "available": status == "available",
+                "available": available,
                 "status": status,
                 "service_name": service_name,
                 "service_length": service_length
             }
+
             if with_sources:
                 slot["source"] = get_source(t, sch, add, rem, list(zip(edited_from, edited_to)), disabled, booked)
+
             final.append(slot)
 
         week_slots[date_str] = {"day_name": day_name, "times": final}
 
     return week_slots
-
 
 
 def is_slot_available(business_name, date, time):
