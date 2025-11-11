@@ -670,14 +670,38 @@ def generate_week_slots(business_name, with_sources=False):
 
 
 def is_slot_available(business_name, date, time):
+    # טוען את כל השעות של היום הזה
     week_slots = generate_week_slots(business_name)
     day_info = week_slots.get(date)
     if not day_info:
         return False
+
+    # טוען את ההזמנות של אותו עסק
+    appointments = load_appointments(business_name)
+    date_appointments = appointments.get(date, [])
+
+    # פונקציה קטנה להמרת שעה למספר דקות
+    def time_to_min(t):
+        h, m = map(int, t.split(":"))
+        return h * 60 + m
+
+    time_min = time_to_min(time)
+
+    # בדיקה אם השעה המבוקשת נופלת בתוך טווח של תור אחר
+    for a in date_appointments:
+        start = time_to_min(a["time"])
+        length = int(session.get("chosen_service_length", 0))  # אורך השירות הנוכחי
+        booked_service = a.get("service", "")
+        booked_length = get_service_length(business_name, booked_service)  # פונקציה שמחזירה אורך שירות לפי שם
+        if start <= time_min < start + booked_length:
+            return False  # אם זה באמצע תור אחר — לא זמין
+
+    # בדיקה רגילה כמו שהייתה קודם
     for t in day_info["times"]:
         if t["time"] == time and t.get("available", True):
             return True
     return False
+
 
 
 def get_source(t, scheduled, added, removed, edits, disabled_day, booked_times):
