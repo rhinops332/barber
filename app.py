@@ -24,6 +24,10 @@ BUSINESSES_ROOT = os.path.join(os.getcwd(), "businesses")
 
 # --- פונקציות עזר ---
 
+def time_to_min(t):
+        h, m = map(int, t.split(":"))
+        return h * 60 + m
+    
 def load_weekly_schedule(business_name):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -681,9 +685,7 @@ def is_slot_available(business_name, date, time):
     date_appointments = appointments.get(date, [])
 
     # פונקציה קטנה להמרת שעה למספר דקות
-    def time_to_min(t):
-        h, m = map(int, t.split(":"))
-        return h * 60 + m
+    
 
     time_min = time_to_min(time)
 
@@ -1588,9 +1590,7 @@ def book_appointment():
     save_appointments(business_name, appointments)
 
     # --- עדכון overrides ---
-    def time_to_min(t):
-        h, m = map(int, t.split(":"))
-        return h * 60 + m
+    
 
     overrides = load_overrides(business_name)
     if date not in overrides:
