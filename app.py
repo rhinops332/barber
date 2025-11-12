@@ -1583,6 +1583,7 @@ def book_appointment():
 
     for t in all_times:
         print("t===:",t)
+        print("length:",t+sevice_length)    
         t_min = time_to_min(t)
 
         if t_min < start_min:
