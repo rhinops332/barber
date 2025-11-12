@@ -694,7 +694,7 @@ def is_slot_available(business_name, date, time):
         start = time_to_min(a["time"])
         length = int(session.get("chosen_service_length", 0))  # אורך השירות הנוכחי
         booked_service = a.get("service", "")
-        booked_length = get_service_length(business_name, booked_service)  # פונקציה שמחזירה אורך שירות לפי שם
+        booked_length = int(b.get("chosen_service_length", 0))
         if start <= time_min < start + booked_length:
             return False  # אם זה באמצע תור אחר — לא זמין
 
