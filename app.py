@@ -1341,7 +1341,7 @@ def update_overrides():
     if not session.get("is_admin"):
         return jsonify({"error": "Unauthorized"}), 403
 
-    data = request.get_json()
+    data = request.get_json() or {}
     action = data.get("action")
     date = data.get("date")
     time = data.get("time")
@@ -1350,85 +1350,66 @@ def update_overrides():
     business_name = session.get('business_name')
     if not business_name:
         return redirect("/login")
-    
+
     overrides = load_overrides(business_name)
 
+    # ודא שתאריך קיים
     if date not in overrides:
         overrides[date] = {"booked": [], "add": [], "remove": [], "edit_from": [], "edit_to": []}
-
-    elif action == "add" and time:
-        if time not in overrides[date]["add"]:
-            overrides[date]["add"].append(time)
-        if time in overrides[date]["remove"]:
-            overrides[date]["remove"].remove(time)
         save_overrides(business_name, overrides)
-        return jsonify({"message": "Time added", "overrides": overrides})
+
+    day = overrides[date]
+
+    # פעולות לפי סוג הבקשה
+    if action == "add" and time:
+        if time not in day["add"]:
+            day["add"].append(time)
+        day["remove"] = [t for t in day["remove"] if t != time]
 
     elif action == "remove" and time:
-        if time not in overrides[date]["remove"]:
-            overrides[date]["remove"].append(time)
-        if time in overrides[date]["add"]:
-            overrides[date]["add"].remove(time)
-        if time in overrides[date]["edit_from"]:
-            idx = overrides[date]["edit_from"].index(time)
-            overrides[date]["edit_from"].pop(idx)
-            overrides[date]["edit_to"].pop(idx)
-        save_overrides(business_name, overrides)
-        return jsonify({"message": "Time removed", "overrides": overrides})
+        if time not in day["remove"]:
+            day["remove"].append(time)
+        day["add"] = [t for t in day["add"] if t != time]
+        if time in day["edit_from"]:
+            idx = day["edit_from"].index(time)
+            day["edit_from"].pop(idx)
+            day["edit_to"].pop(idx)
 
     elif action == "edit" and time and new_time:
-        if time == new_time:
-            return jsonify({"message": "No changes made"})
-
-        # הסר אם השעה המקורית כבר קיימת ב-edit_from
-        if time in overrides[date]["edit_from"]:
-            idx = overrides[date]["edit_from"].index(time)
-            overrides[date]["edit_from"].pop(idx)
-            overrides[date]["edit_to"].pop(idx)
-
-        # הוסף את השעה הישנה ל-edit_from ואת החדשה ל-edit_to
-        overrides[date]["edit_from"].append(time)
-        overrides[date]["edit_to"].append(new_time)
-
-        # ודא שהשעה הישנה מופיעה ב-remove
-        if time not in overrides[date]["remove"]:
-            overrides[date]["remove"].append(time)
-
-        # ודא שהשעה החדשה מופיעה ב-add
-        if new_time not in overrides[date]["add"]:
-            overrides[date]["add"].append(new_time)
-
-        save_overrides(business_name, overrides)
-        return jsonify({"message": "Time edited", "overrides": overrides})
+        if time != new_time:
+            if time in day["edit_from"]:
+                idx = day["edit_from"].index(time)
+                day["edit_from"].pop(idx)
+                day["edit_to"].pop(idx)
+            day["edit_from"].append(time)
+            day["edit_to"].append(new_time)
+            if time not in day["remove"]:
+                day["remove"].append(time)
+            if new_time not in day["add"]:
+                day["add"].append(new_time)
 
     elif action == "clear" and date:
-        if date in overrides:
-            overrides.pop(date)
-        save_overrides(business_name, overrides)
-        return jsonify({"message": "Day overrides cleared", "overrides": overrides})
+        overrides.pop(date, None)
 
     elif action == "disable_day" and date:
         overrides[date] = {"add": [], "remove": ["__all__"], "edit_from": [], "edit_to": []}
-        save_overrides(business_name, overrides)
-        return jsonify({"message": "Day disabled", "overrides": overrides})
 
-    elif action == "revert" and date and time:
-        if date in overrides:
-            if time in overrides[date]["add"]:
-                overrides[date]["add"].remove(time)
-            if time in overrides[date]["remove"]:
-                overrides[date]["remove"].remove(time)
-            if time in overrides[date]["edit_from"]:
-                idx = overrides[date]["edit_from"].index(time)
-                overrides[date]["edit_from"].pop(idx)
-                overrides[date]["edit_to"].pop(idx)
-            if not overrides[date]["add"] and not overrides[date]["remove"] and not overrides[date]["edit_from"]:
-                overrides.pop(date)
-        save_overrides(business_name, overrides)
-        return jsonify({"message": "Time reverted", "overrides": overrides})
+    elif action == "revert" and time:
+        for key in ["add", "remove", "edit_from"]:
+            if time in day[key]:
+                day[key].remove(time)
+        if time in day["edit_to"]:
+            idx = day["edit_to"].index(time)
+            day["edit_to"].pop(idx)
+        if not any(day.values()):
+            overrides.pop(date, None)
 
     else:
         return jsonify({"error": "Invalid action or missing parameters"}), 400
+
+    # שמירה ועדכון
+    save_overrides(business_name, overrides)
+    return jsonify({"message": f"Action '{action}' applied", "overrides": overrides})
 
 
 @app.route("/overrides_toggle_day", methods=["POST"])
